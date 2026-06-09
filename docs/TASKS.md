@@ -66,10 +66,10 @@
 ## Phase 1 — Core engineering kernel (TDD) · *the moat*
 *Goal: a deterministic, version-pinned, fully-tested Python package that turns a `FrameSpec` into a verified `DesignResult`. Build strictly test-first.*
 
-- [~] **1.1 Domain models (Pydantic)**
-  - [x] `FrameSpec` (geometry, materials, base fixity, restraints, dead/imposed/wind context) — frozen + `extra="forbid"`; computed geometry (apex height, building length). **16 tests passing.**
+- [x] **1.1 Domain models (Pydantic)**
+  - [x] `FrameSpec` (geometry, materials, base fixity, restraints, dead/imposed/wind context) — frozen + `extra="forbid"`; computed geometry (apex height, building length).
   - [x] Validation: reject invalid geometry, unknown fields, mutation (PRD FR-1/FR-3). **Tested.**
-  - [ ] Result models `Loads`, `LoadCombination`, `AnalysisResult`, `CheckResult`, `DesignResult` — built test-first alongside their producing modules (1.4–1.12).
+  - [x] Result contracts: `LoadCase`, `LoadCombination`, `MemberForces`, `AnalysisResult`, `CheckResult` (clause required — FR-18), `SectionChoice`, `DesignResult` (passed/governing-utilisation aggregation; **empty checks never vacuously pass**). **27 model tests passing.**
 - [ ] **1.2 Section database (SAISC)**
   - [ ] Curate the v1 section list (decide IPE/HEA and/or UB/UC).
   - [ ] Load section properties (area, I, Z, plastic modulus, classification inputs…).

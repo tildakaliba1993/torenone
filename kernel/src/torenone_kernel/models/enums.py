@@ -27,3 +27,14 @@ class TerrainCategory(str, Enum):
     B = "B"
     C = "C"
     D = "D"
+
+
+class LimitState(str, Enum):
+    ULS = "ULS"  # ultimate limit state (strength)
+    SLS = "SLS"  # serviceability limit state (deflection)
+
+
+class LoadType(str, Enum):
+    DEAD = "dead"
+    IMPOSED = "imposed"
+    WIND = "wind"
