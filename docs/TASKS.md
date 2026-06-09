@@ -1,0 +1,221 @@
+# TorenOne — Tasks & Implementation Plan
+
+> The single source of truth for **what we are building and how far along we are.** Update in real time: when a task is done and its tests pass, mark it `[x]`. Governed by the [PRD](./PRD.md) and [Design & Architecture](./DESIGN-ARCHITECTURE.md).
+>
+> **Status:** v1.0 · **Last updated:** 2026-06-09
+
+---
+
+## How to use this document
+
+**Status legend:** `[ ]` not started · `[~]` in progress · `[x]` done (tests pass) · `[!]` blocked
+
+**The TDD rule (non-negotiable — human lives are at stake):**
+1. Write the test first (with the expected value from a worked example, hand calc, or the benchmark project).
+2. Run it — watch it fail.
+3. Implement until it passes.
+4. **A task is only `[x]` when its tests are written AND passing in CI.** No exceptions for kernel logic.
+
+**Discipline rule:** if work isn't in this plan, it isn't in the MVP. New ideas go to §Backlog (out of scope), not into a phase.
+
+---
+
+## Progress dashboard
+
+| Phase | Title | Status |
+|---|---|---|
+| 0 | Foundations & project setup | `[x]` |
+| 1 | Core engineering kernel (TDD) | `[ ]` |
+| 2 | Report engine | `[ ]` |
+| 3 | AI orchestration layer | `[ ]` |
+| 4 | Engineering service (FastAPI) + auth | `[ ]` |
+| 5 | Supabase backend (data + RLS) | `[ ]` |
+| 6 | Frontend (design system + screens) | `[ ]` |
+| 7 | Integration & end-to-end | `[ ]` |
+| 8 | Validation gate & hardening | `[ ]` |
+| 9 | Pilot & YC readiness | `[ ]` |
+
+---
+
+## Phase 0 — Foundations & project setup
+*Goal: repos, tooling, CI, and the design tokens in place so all later work is test-gated and consistent.*
+
+- [x] **0.1 Repositories & structure**
+  - [x] Monorepo created (`kernel/`, `service/`, `web/`, `tools/`, `docs/`); git initialised. **Decision: monorepo** (recorded in README).
+  - [x] READMEs link to PRD / Design / Tasks / References.
+- [x] **0.2 Python tooling (kernel + service)**
+  - [x] `pyproject.toml` (requires-python ≥3.11), `ruff` + `mypy` (strict) configured.
+  - [x] `pytest` + `pytest-cov` configured; pytest pathing for `kernel/src` + `tools`.
+- [x] **0.3 Frontend tooling**
+  - [x] Next.js 16.2.7 + TypeScript + Tailwind v4 scaffolded in `web/` (pinned to stable — create-next-app had pulled a preview); `eslint` + `prettier` (+ `prettier-plugin-tailwindcss`).
+  - [x] `vitest` + React Testing Library (jsdom) — **3 unit tests passing**; `playwright` configured with a smoke E2E (executes from Phase 7).
+- [x] **0.4 CI (GitHub Actions)**
+  - [x] `.github/workflows/ci.yml`: **Python job** (ruff + mypy + pytest, coverage gate) and **Web job** (npm ci → lint → typecheck → test → build) on every PR; merge blocked on red.
+- [x] **0.5 Design system foundation**
+  - [x] Steel-blue + neutral + semantic tokens — canonical `tools/torenone_tokens/tokens.py` → `web/design/tokens.css`, mapped into Tailwind v4 `@theme` in `globals.css` (dark-first).
+  - [x] Geist Sans / Geist Mono wired via `next/font` in the root layout.
+  - [x] First component `StatusBadge` (icon + label + colour — PRD FR-19) with tests; landing page renders the tokens.
+  - [x] **Test:** WCAG-AA contrast check **passing (13/13)**; web app **builds, type-checks, lints, unit-tests** green.
+  - [ ] ↪ **Moved to Phase 6:** `shadcn/ui` registry init + Supabase UI auth/storage component pulls — done when building those screens, themed to our tokens (avoids clobbering the verified palette before any screen needs it).
+- [x] **0.6 Secrets & config** — `.env.example` (secrets server-side only); `.gitignore` excludes real env; **[PROJECT-SETUP.md](./PROJECT-SETUP.md)** documents full Supabase/Vercel/GitHub isolation.
+
+**Acceptance: MET.** Kernel/tools suite green (17 tests); web app scaffolded and green (lint + types + 3 unit tests + production build); tokens render with verified AA contrast; CI gates both stacks; project fully isolated. Only deferred item is the per-screen shadcn / Supabase-UI component pulls (correctly Phase 6).
+
+---
+
+## Phase 1 — Core engineering kernel (TDD) · *the moat*
+*Goal: a deterministic, version-pinned, fully-tested Python package that turns a `FrameSpec` into a verified `DesignResult`. Build strictly test-first.*
+
+- [ ] **1.1 Domain models (Pydantic)**
+  - [ ] `FrameSpec` (geometry, materials, base fixity, restraints, load context).
+  - [ ] `Loads`, `LoadCombination`, `AnalysisResult`, `CheckResult`, `DesignResult`.
+  - [ ] Validation: reject invalid geometry (PRD FR-3). **Test:** invalid specs raise clear errors.
+- [ ] **1.2 Section database (SAISC)**
+  - [ ] Curate the v1 section list (decide IPE/HEA and/or UB/UC).
+  - [ ] Load section properties (area, I, Z, plastic modulus, classification inputs…).
+  - [ ] **Test:** spot-check known section properties against published SAISC values.
+- [ ] **1.3 Rules versioning** — `rules_version.py` constants stamped into results. **Test:** result carries version.
+- [ ] **1.4 Dead loads** — self-weight + components. **Test:** worked example.
+- [ ] **1.5 Imposed roof loads (SANS 10160-2)** — **Test:** worked example.
+- [ ] **1.6 Wind loads (SANS 10160-3)** *(highest-risk domain module)*
+  - [ ] Peak wind speed from location + terrain category.
+  - [ ] External pressure coefficients (walls + roof zones).
+  - [ ] Internal pressure coefficients (incl. dominant-opening / uplift cases).
+  - [ ] Convert zone pressures → frame line loads.
+  - [ ] **Test:** each sub-step against a hand calc / worked example; uplift case explicitly tested.
+- [ ] **1.7 Load combinations (SANS 10160-1)** — ULS + SLS limit-state combos with partial factors. **Test:** combination set matches code for a worked case.
+- [ ] **1.8 2D plane-frame analysis**
+  - [ ] Integrate **PyNite**; build the portal model (columns, rafters, apex, supports).
+  - [ ] Solve per combination → M, V, N envelopes.
+  - [ ] **Test:** frame moments/shears match a textbook worked example within tolerance.
+- [ ] **1.9 Second-order / sway check** — amplification check; flag sway-sensitive frames. **Test:** against worked example.
+- [ ] **1.10 Member checks (SANS 10162-1)** — each its own module + test:
+  - [ ] Section classification (Class 1–3; **refuse Class 4** with clear message). **Test.**
+  - [ ] Axial resistance. **Test.**
+  - [ ] Moment resistance. **Test.**
+  - [ ] Combined axial+bending interaction. **Test.**
+  - [ ] Lateral-torsional buckling (restraint-aware). **Test.**
+  - [ ] SLS deflection (apex + eaves sway) vs limits. **Test.**
+  - [ ] Each `CheckResult` carries its **SANS clause reference** + utilisation. **Test.**
+- [ ] **1.11 Auto-sizing** — iterate to lightest passing section; return utilisations. **Test:** known frame → expected lightest section.
+- [ ] **1.12 Orchestrator** — `design(frame_spec) -> DesignResult` running the full pipeline deterministically. **Test:** end-to-end kernel run on a fixture.
+- [ ] **1.13 Determinism & reproducibility** — **Test:** same input + version → identical output (run twice, assert equal).
+
+**Acceptance:** full kernel runs; ≥95% coverage; all checks carry clause refs; determinism test passes.
+
+---
+
+## Phase 2 — Report engine
+*Goal: a clause-referenced, engineer-grade calc-package PDF from a `DesignResult`.*
+
+- [ ] **2.1 Template** — Jinja2 HTML/CSS report matching Design §B.7 (cover, assumptions, loads, combinations, results, checks, schedule, diagrams, limitations).
+- [ ] **2.2 PDF rendering** — WeasyPrint HTML→PDF; brand styling, monospaced numbers.
+- [ ] **2.3 Diagrams** — Matplotlib geometry + BMD/SFD.
+- [ ] **2.4 Status rendering** — pass/fail/near-limit via icon + label + colour (never colour alone). **Test.**
+- [ ] **2.5 Audit metadata** — rules version, input spec, timestamp embedded (PRD FR-20). **Test.**
+- [ ] **2.6 Golden-file test** — render a fixture `DesignResult`; assert key values + clause refs present in output.
+
+**Acceptance:** a `DesignResult` produces a correct, branded PDF with every number traceable to a clause.
+
+---
+
+## Phase 3 — AI orchestration layer
+*Goal: text → typed `FrameSpec`, clarifying questions, and report narrative — with the LLM unable to compute numbers.*
+
+- [ ] **3.1 Anthropic client** — server-side `claude-opus-4-8`; key from env. **Test:** key never exposed client-side (config test).
+- [ ] **3.2 Spec parsing** — structured outputs (`messages.parse()` against `FrameSpec`); apply documented defaults; **never silently guess** (PRD FR-2). **Test:** sample descriptions → expected specs; missing-field cases flagged.
+- [ ] **3.3 Clarifying questions** — when input is ambiguous, return a question, not a guess. **Test.**
+- [ ] **3.4 Narrative generation** — prose only; **numbers injected from kernel**, not generated. **Test:** assert no engineering numbers originate from the model output path (architectural guard).
+- [ ] **3.5 Guardrail test** — adversarial inputs (nonsense, out-of-scope, contradictory) handled gracefully (PRD FR-3, §9).
+
+**Acceptance:** parsing reliable on a sample set; LLM provably cannot emit engineering numbers; out-of-scope handled.
+
+---
+
+## Phase 4 — Engineering service (FastAPI) + auth
+*Goal: the HTTP service that ties AI + kernel + report together, secured by Supabase JWT.*
+
+- [ ] **4.1 App skeleton** — FastAPI app, health check, structured logging.
+- [ ] **4.2 JWT verification** — verify Supabase JWT on every protected route; reject invalid. **Test:** valid passes, invalid/expired rejected.
+- [ ] **4.3 `POST /parse`** — text → `FrameSpec` (+ clarifying questions). **Test.**
+- [ ] **4.4 `POST /design`** — confirmed `FrameSpec` → run kernel → build PDF → upload to Supabase Storage → persist `run` + `report` → return result. **Test (mocked kernel/storage).**
+- [ ] **4.5 Error handling** — typed errors, safe messages, no secret leakage. **Test.**
+- [ ] **4.6 Containerise & deploy** — Dockerfile; deploy to Fly.io/Render/Railway; env wired.
+
+**Acceptance:** authenticated end-to-end request runs parse + design and stores a report; unauthenticated rejected.
+
+---
+
+## Phase 5 — Supabase backend (data + RLS)
+*Goal: multi-tenant data model with strict isolation.*
+
+- [ ] **5.1 Project & schema** — create Supabase project; tables `firms`, `profiles`, `projects`, `runs`, `reports` (Design §A.7) via migrations.
+- [ ] **5.2 Auth** — email auth; `profiles` row created on sign-up, linked to a `firm`.
+- [ ] **5.3 Storage** — bucket for report PDFs, access scoped per firm.
+- [ ] **5.4 Row-Level Security** — policies filtering every table by the user's `firm_id`.
+  - [ ] **Test:** user A cannot read/write user B's firm data (automated RLS test).
+- [ ] **5.5 Seed/dev data** — a dev firm + user for local testing.
+
+**Acceptance:** auth works; RLS proven to isolate firms; PDFs store/retrieve per firm.
+
+---
+
+## Phase 6 — Frontend (design system + screens)
+*Goal: the user-facing app implementing the Supabase-style steel-blue design system and the six MVP screens.*
+
+- [ ] **6.1 Design-system shell** — themed shadcn/ui primitives (Button, Input, Card, Table, Dialog, Tabs, Toast, Form) using Phase 0 tokens. **Test:** component/visual checks; contrast assertions.
+- [ ] **6.2 Auth screens** — Supabase UI Library sign-in/sign-up, themed. **Test:** auth flow E2E (Phase 7).
+- [ ] **6.3 Projects** — list + create, per firm. **Test.**
+- [ ] **6.4 Describe screen** — text input + examples; calls `/parse`. **Test.**
+- [ ] **6.5 Confirm screen (trust gate)** — editable structured `FrameSpec` form + geometry sketch; "Run design" CTA calls `/design`. Cannot proceed without explicit confirm (PRD FR-4). **Test.**
+- [ ] **6.6 Results screen** — utilisation table (icon+label+colour status), member sizes, deflections, diagrams, "Download calc package (PDF)". **Test.**
+- [ ] **6.7 Run history** — past runs + stored PDFs per project. **Test.**
+- [ ] **6.8 States** — loading/empty/error states for every async view. **Test.**
+
+**Acceptance:** all six screens implemented to the design system; component tests pass; accessible.
+
+---
+
+## Phase 7 — Integration & end-to-end
+*Goal: the whole happy path works in the deployed app.*
+
+- [ ] **7.1 Wire frontend ↔ FastAPI ↔ Supabase ↔ kernel** end-to-end.
+- [ ] **7.2 E2E happy path (Playwright)** — sign in → create project → describe → confirm → design → PDF stored → visible in history. **Test.**
+- [ ] **7.3 E2E multi-tenant** — second firm cannot see first firm's data. **Test.**
+- [ ] **7.4 E2E error paths** — invalid input, out-of-scope request, auth failure handled gracefully. **Test.**
+- [ ] **7.5 Performance check** — design run < 60s on the demo case (NFR-5). **Test.**
+
+**Acceptance:** green E2E suite covering happy path, isolation, errors, performance.
+
+---
+
+## Phase 8 — Validation gate & hardening
+*Goal: prove correctness against reality and lock quality before any customer touches it.*
+
+- [ ] **8.1 Benchmark project** — co-founder selects the most typical past portal frame; capture its inputs + original results.
+- [ ] **8.2 Validation test** — run benchmark through TorenOne; assert member sizes + utilisations match the original within agreed tolerances (PRD NFR-1). **THE gate — must pass.**
+- [ ] **8.3 Worked-example regression suite** — published worked examples as permanent regression tests across loads/analysis/checks.
+- [ ] **8.4 Coverage & review** — kernel ≥95%; co-founder reviews every formula + clause mapping.
+- [ ] **8.5 Security pass** — secrets server-side only; RLS verified; dependency audit.
+- [ ] **8.6 Honest-limitations audit** — every out-of-scope/approximation is stated in the report, never hidden.
+
+**Acceptance:** validation gate passed; regression suite green; co-founder sign-off on correctness.
+
+---
+
+## Phase 9 — Pilot & YC readiness
+*Goal: real usage + the evidence the application needs.*
+
+- [ ] **9.1 Polish** — final design QA against Design §B; report PDF looks stamp-worthy.
+- [ ] **9.2 Onboard 3–5 Cape Town firms** — run real projects through TorenOne.
+- [ ] **9.3 Capture pilot evidence** — time saved (1–3 days → minutes); ≥1 paying firm; testimonials/logos.
+- [ ] **9.4 Update [YC application](../TorenOne-YC-Application.md)** — progress, traction, demo, validation-gate proof.
+- [ ] **9.5 Founder demo** — record the "describe → stamped-ready calc package in minutes, validated against a real job" demo.
+
+**Acceptance (MVP DONE — per PRD §10):** all FRs tested & passing; validation gate passed; full happy path live; multi-tenant verified; CI green, kernel ≥95%; design system implemented; ≥1 real firm has run a live project.
+
+---
+
+## Backlog — explicitly OUT of MVP (do not build now)
+Logged so we stay disciplined. Revisit only after MVP ships.
+- Architect's-plan / PDF parsing (v2 flagship) · connection & base-plate design · 3D / BIM / Revit / drawings · Eurocode / ACI / AISC · other structure types (RC, multi-bay, cranes, trusses, foundations) · Class 4 sections · team collaboration · billing/subscriptions · mobile app · cost optimisation.

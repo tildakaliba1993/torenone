@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/* TorenOne design tokens — DARK-FIRST.
+   Canonical source: tools/torenone_tokens/tokens.py (WCAG AA verified in
+   tools/tests/test_contrast.py). Mirrored in web/design/tokens.css. Keep in sync. */
+:root {
+  color-scheme: dark;
+  --bg: #0e1116;
+  --surface: #14181f;
+  --surface-raised: #1b212b;
+  --border: #29313c;
+  --border-strong: #3a4452;
+  --text: #e8ecf1;
+  --text-muted: #9aa4b2;
+  --text-subtle: #6a7585;
+  --primary: #2f6fb0;
+  --primary-hover: #3a7ec2;
+  --primary-active: #275e97;
+  --accent: #5aa2e8;
+  --ring: #5aa2e8;
+  --on-primary: #ffffff;
+  --success: #3fb950;
+  --danger: #f85149;
+  --warning: #d6a02a;
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground: var(--text);
+  --color-muted: var(--text-muted);
+  --color-subtle: var(--text-subtle);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-foreground: var(--on-primary);
+  --color-accent: var(--accent);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}

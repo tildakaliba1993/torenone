@@ -1,0 +1,20 @@
+/* GENERATED from tools/torenone_tokens/tokens.py — do not edit by hand. */
+:root {
+  --bg: #0E1116;
+  --surface: #14181F;
+  --surface-raised: #1B212B;
+  --border: #29313C;
+  --border-strong: #3A4452;
+  --text: #E8ECF1;
+  --text-muted: #9AA4B2;
+  --text-subtle: #6A7585;
+  --primary: #2F6FB0;
+  --primary-hover: #3A7EC2;
+  --primary-active: #275E97;
+  --accent: #5AA2E8;
+  --ring: #5AA2E8;
+  --on-primary: #FFFFFF;
+  --success: #3FB950;
+  --danger: #F85149;
+  --warning: #D6A02A;
+}
