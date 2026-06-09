@@ -25,7 +25,7 @@
 | Phase | Title | Status |
 |---|---|---|
 | 0 | Foundations & project setup | `[x]` |
-| 1 | Core engineering kernel (TDD) | `[ ]` |
+| 1 | Core engineering kernel (TDD) | `[~]` |
 | 2 | Report engine | `[ ]` |
 | 3 | AI orchestration layer | `[ ]` |
 | 4 | Engineering service (FastAPI) + auth | `[ ]` |
@@ -66,15 +66,15 @@
 ## Phase 1 — Core engineering kernel (TDD) · *the moat*
 *Goal: a deterministic, version-pinned, fully-tested Python package that turns a `FrameSpec` into a verified `DesignResult`. Build strictly test-first.*
 
-- [ ] **1.1 Domain models (Pydantic)**
-  - [ ] `FrameSpec` (geometry, materials, base fixity, restraints, load context).
-  - [ ] `Loads`, `LoadCombination`, `AnalysisResult`, `CheckResult`, `DesignResult`.
-  - [ ] Validation: reject invalid geometry (PRD FR-3). **Test:** invalid specs raise clear errors.
+- [~] **1.1 Domain models (Pydantic)**
+  - [x] `FrameSpec` (geometry, materials, base fixity, restraints, dead/imposed/wind context) — frozen + `extra="forbid"`; computed geometry (apex height, building length). **16 tests passing.**
+  - [x] Validation: reject invalid geometry, unknown fields, mutation (PRD FR-1/FR-3). **Tested.**
+  - [ ] Result models `Loads`, `LoadCombination`, `AnalysisResult`, `CheckResult`, `DesignResult` — built test-first alongside their producing modules (1.4–1.12).
 - [ ] **1.2 Section database (SAISC)**
   - [ ] Curate the v1 section list (decide IPE/HEA and/or UB/UC).
   - [ ] Load section properties (area, I, Z, plastic modulus, classification inputs…).
   - [ ] **Test:** spot-check known section properties against published SAISC values.
-- [ ] **1.3 Rules versioning** — `rules_version.py` constants stamped into results. **Test:** result carries version.
+- [x] **1.3 Rules versioning** — `rules_version.py` (pinned editions + `as_dict()`), tested. Stamping into `DesignResult` wires in at 1.12. *(Editions still marked `VERIFY` pending the official standards.)*
 - [ ] **1.4 Dead loads** — self-weight + components. **Test:** worked example.
 - [ ] **1.5 Imposed roof loads (SANS 10160-2)** — **Test:** worked example.
 - [ ] **1.6 Wind loads (SANS 10160-3)** *(highest-risk domain module)*
