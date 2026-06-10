@@ -2,7 +2,7 @@
 
 > The single source of truth for **what we are building and how far along we are.** Update in real time: when a task is done and its tests pass, mark it `[x]`. Governed by the [PRD](./PRD.md) and [Design & Architecture](./DESIGN-ARCHITECTURE.md).
 >
-> **Status:** v1.0 · **Last updated:** 2026-06-09
+> **Status:** v1.0 · **Last updated:** 2026-06-10
 
 ---
 
@@ -86,10 +86,10 @@
   - [x] **Internal pressure coefficients (1.6c)** — enclosed (+0.2/−0.3, cl. 8.3.9.6 NOTE 2) + dominant-opening (0.75/0.90·cpe, eq. 14/15) with the favourable cpi=0 case (cl. 8.3.9.1); windward dominant opening drives uplift. 4 tests. *(μ/Figure-16 refinement deferred.)*
   - [x] **Frame line loads (1.6d)** — `wind_loads(spec)`: ze=apex → qp → net `qp·(cpe−cpi)` → windward/leeward column & rafter UDLs, enumerated over cpi cases × roof branches → `WindLoadResult`. qp hand-verified; uplift case + dominant-opening uplift explicitly tested. 5 tests.
 - [x] **1.7 Load combinations (SANS 10160-1)** — `load_combinations(spec)`: ULS STR (eq.6/7) + SLS (eq.10) with Table 3 factors (γG 1.2/0.9, STR-P 1.35; imposed 1.6, wind 1.3; SLS γG 1.1). Inaccessible-roof ψ0=0 ⇒ imposed/wind never combine; explicit favourable-permanent **uplift** combo. 6 tests. ⚠️ **PROVISIONAL — from the DRAFT SANS 10160-1; confirm factors vs the final standard** (SOURCES/REFERENCES).
-- [ ] **1.8 2D plane-frame analysis**
-  - [ ] Integrate **PyNite**; build the portal model (columns, rafters, apex, supports).
-  - [ ] Solve per combination → M, V, N envelopes.
-  - [ ] **Test:** frame moments/shears match a textbook worked example within tolerance.
+- [x] **1.8 2D plane-frame analysis**
+  - [x] Integrate **PyNite** (PyNiteFEA 1.6.2); build the portal model (columns, rafters, apex, pinned bases).
+  - [x] Solve first-order linear elastic per combination → M, V, N at col-bases, eaves, apex.
+  - [x] **Tests (14):** exact validation — simply-supported beam UDL, cantilever point load, pinned-base portal stiffness-method; PortalAnalysis contract (symmetry, vertical equilibrium, zero base moment, correct locations). All 14 passing. Unit convention: N/mm internally; kN/kN·m in AnalysisResult.
 - [ ] **1.9 Second-order / sway check** — amplification check; flag sway-sensitive frames. **Test:** against worked example.
 - [ ] **1.10 Member checks (SANS 10162-1)** — each its own module + test:
   - [ ] Section classification (Class 1–3; **refuse Class 4** with clear message). **Test.**
