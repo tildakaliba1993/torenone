@@ -26,7 +26,7 @@
 | E4 | SANS 10160-3 wind method | `vp=cr·co·vb,peak`; `cr=1.36((z'−zo)/(zg−zo))^α`; `qp=½ρvp²` | **SANS 10160-3:2019 cl. 7.3–7.4 (eq. 3–6)** — official standard | 2026-06-10 | VERIFIED vs standard (final sign-off pending) | `loads/wind.py` |
 | E5 | SA basic wind-speed zones vb,0 | 32 / 36 / 40 / 44 m/s (3 s gust) | **SANS 10160-3:2019 Figure 1** | 2026-06-10 | VERIFIED vs standard | `loads/wind.py` |
 | E6 | Wind ext. pressure — **walls** | cpe,10 zones D/E vs h/d + correlation factor | **SANS 10160-3:2019 Table 6 + cl. 8.3.2.4** — validated vs Table 6 | 2026-06-10 | VERIFIED vs standard | `loads/wind_pressure.py` |
-| E6b | Wind ext. pressure — **duopitch roof** | Table 10 (θ=0): zones F/G/H/I/J, 4 load cases | SANS 10160-3:2019 Table 10 (extracted via pdfplumber) | — | PLANNED (next) | `loads/wind_pressure.py` |
+| E6b | Wind ext. pressure — **duopitch roof** | zones H/I cpe,10, pitch 5–45°, uplift+downforce | **SANS 10160-3:2019 Table 10** (pdfplumber) — validated vs Table 10 + cross-checked vs EN 1991-1-4 Table 7.4a | 2026-06-10 | VERIFIED vs standard | `loads/wind_pressure.py` |
 | E8 | Wind **internal** pressure cpi | enclosed + dominant opening | SANS 10160-3:2019 cl. 8.3 | — | PLANNED (1.6c) | `loads/wind_pressure.py` |
 | E7 | Terrain params (zg, zo, zc, α per A/B/C/D) + air density ρ(altitude) + vb,peak = 1.0·vb | Table 1; Table 4; eq. 4 | **SANS 10160-3:2019 Table 1/3/4** — implementation **validated against the standard's own Table 3** | 2026-06-10 | VERIFIED vs standard (sign-off pending) | `loads/wind.py` |
 

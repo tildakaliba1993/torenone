@@ -8,7 +8,10 @@ from __future__ import annotations
 
 import pytest
 
-from torenone_kernel.loads.wind_pressure import wall_pressure_coefficients
+from torenone_kernel.loads.wind_pressure import (
+    duopitch_roof_pressure_coefficients,
+    wall_pressure_coefficients,
+)
 
 
 @pytest.mark.parametrize(
@@ -44,3 +47,43 @@ def test_lack_of_correlation_factor() -> None:
 
 def test_carries_clause_citation() -> None:
     assert "Table 6" in wall_pressure_coefficients(1.0).clause
+
+
+# --- Duopitch roof (SANS 10160-3:2019 Table 10, θ = 0°, zones H & I) ---
+
+
+@pytest.mark.parametrize(
+    "pitch,h_suction,h_pressure,i_suction",
+    [
+        (5.0, -0.6, 0.0, -0.6),   # Table 10 row α = 5°
+        (15.0, -0.3, 0.2, -0.4),  # row α = 15°
+        (30.0, -0.2, 0.4, -0.4),  # row α = 30°
+        (45.0, -0.0, 0.6, -0.2),  # row α = 45°
+    ],
+)
+def test_duopitch_roof_cpe_matches_table_10(
+    pitch: float, h_suction: float, h_pressure: float, i_suction: float
+) -> None:
+    r = duopitch_roof_pressure_coefficients(pitch)
+    assert r.windward_cpe_suction == pytest.approx(h_suction)
+    assert r.windward_cpe_pressure == pytest.approx(h_pressure)
+    assert r.leeward_cpe_suction == pytest.approx(i_suction)
+
+
+def test_duopitch_roof_interpolates_within_pitch() -> None:
+    # 10°, between 5° and 15°: H_suction −0.45, H_pressure +0.1, I_suction −0.5.
+    r = duopitch_roof_pressure_coefficients(10.0)
+    assert r.windward_cpe_suction == pytest.approx(-0.45)
+    assert r.windward_cpe_pressure == pytest.approx(0.1)
+    assert r.leeward_cpe_suction == pytest.approx(-0.5)
+
+
+def test_duopitch_roof_windward_has_both_uplift_and_downforce() -> None:
+    r = duopitch_roof_pressure_coefficients(10.0)
+    assert r.windward_cpe_suction < 0 < r.windward_cpe_pressure  # uplift case AND downforce case
+
+
+@pytest.mark.parametrize("pitch", [4.9, 0.5, 45.1, 60.0])
+def test_duopitch_roof_out_of_scope_raises(pitch: float) -> None:
+    with pytest.raises(NotImplementedError):
+        duopitch_roof_pressure_coefficients(pitch)
