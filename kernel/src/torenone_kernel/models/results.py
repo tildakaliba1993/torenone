@@ -7,6 +7,7 @@ examples. All models are frozen and reject unknown fields.
 
 from __future__ import annotations
 
+import types
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
@@ -112,6 +113,35 @@ class ImposedLoadResult(BaseModel):
     tributary_width_m: float = Field(gt=0)
     category: str = Field(min_length=1, description="Roof category description.")
     clause: str = Field(min_length=1, description="SANS clause/table reference.")
+
+
+class AutosizeResult(BaseModel):
+    """Output of the auto-sizing search (Task 1.11).
+
+    Contains the lightest section from the library that passes all strength checks,
+    together with every check result so the engineer can review utilisations.
+    """
+
+    model_config = _STRICT
+    member: str = Field(min_length=1, description="'rafter' or 'column'.")
+    designation: str = Field(min_length=1, description="Chosen section designation.")
+    section_class_value: int = Field(ge=1, le=3, description="SANS 10162-1 cl. 11 class (1, 2, or 3).")
+    checks: list[CheckResult] = Field(min_length=1)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def passed(self) -> bool:
+        return all(c.passed for c in self.checks)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def max_utilisation(self) -> float:
+        return max(c.utilisation for c in self.checks)
+
+    @property
+    def section(self) -> types.SimpleNamespace:
+        """Convenience accessor: r.section.designation == r.designation."""
+        return types.SimpleNamespace(designation=self.designation)
 
 
 class SwaySensitivityResult(BaseModel):
