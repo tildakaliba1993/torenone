@@ -25,6 +25,10 @@ out/
 .env.*.local
 !.env.example
 
+# Source standards — copyrighted SABS PDFs kept LOCAL only (see standards/README.md)
+standards/*.pdf
+standards/*.PDF
+
 # OS / editor
 .DS_Store
 .idea/

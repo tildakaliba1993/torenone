@@ -60,12 +60,18 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 | WCAG 2.1 contrast (AA) | design-token accessibility gate | W3C WCAG 2.1 | VERIFIED |
 
 ## 6. Resources to source (hand-off checklist for the co-founder)
-> ✅ **All standards OBTAINED 2026-06-10** — SANS 10160-1, 10160-2, 10160-3, 10162-1, and
-> "Design of Structural Steelwork to SANS 10162" (PDFs in the co-founder's possession; **kept out of
-> the repo** — we transcribe specific values with clause citations, not the documents). Values are
-> being extracted module by module, each cited and (where possible) validated against the standard's
-> own tables. **Final engineer sign-off** of the transcribed values is still required (REFERENCES §5).
-> Remaining genuinely-outstanding item: **R5** (validation data the engineer *produces*).
+> ✅ **All standards OBTAINED 2026-06-10**, stored locally in **`standards/`** (git-ignored — copyright +
+> size; see `standards/README.md` manifest). We transcribe specific values with clause citations, not the
+> documents. Values are extracted module by module, each cited and (where possible) validated against the
+> standard's own tables. **Final engineer sign-off** of transcribed values is still required (REFERENCES §5).
+>
+> **Document-quality caveats (from page-1 inspection):**
+> - ✅ **SANS 10160-3:2019** & **SANS 10162-1:2011** — official (ISBN). Wind + steel are on solid footing.
+> - ⚠️ **SANS 10160-1** is a **DRAFT (DSS, public-enquiry)** — combination partial factors **must be confirmed vs the final standard** before relied upon (1.7).
+> - ⚠️ **SANS 10160-2** page-1 looks like a course re-host — verify genuine (imposed 0.4 kN/m² already corroborated).
+> - ⚠️ **Steelwork guide** likely scanned (no text layer) — needs OCR; not the 4th ed.
+>
+> Remaining genuinely-outstanding items: **R5** (validation data the engineer *produces*) + confirm the SANS 10160-1 final-version combination factors.
 
 | # | Document | Exactly what we need | Unblocks | Priority |
 |---|---|---|---|---|
