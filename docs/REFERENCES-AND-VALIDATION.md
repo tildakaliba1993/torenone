@@ -100,9 +100,22 @@ Rules:
 - Tolerances are encoded as constants in the test suite, reviewed and signed off by the co-founder.
 - Class 4 sections are **out of scope** (PRD §6.2) — the kernel refuses them rather than approximating.
 
-## 5. Open items (block the validation gate until closed)
+## 5. Provisional code values sourced (pending engineer sign-off)
+Values sourced from free, authoritative references to unblock development in sequence. Each is
+flagged PROVISIONAL in code and MUST be confirmed by the registered engineer against the official
+SANS standard before the Phase 8 validation gate.
+
+| Value | Sourced value | Source (free, authoritative) | Used in |
+|---|---|---|---|
+| Imposed roof load — **inaccessible** roof (SANS 10160-2 Table 5) | **0.4 kN/m²** (400 N/m²) UDL | SANS 10160-2:2011 Table 5; confirmed peer-reviewed in *J. SAICE* (SciELO S1021-20192021000100005); corroborated across multiple references | `loads/imposed.py` (Task 1.5) |
+
+> Concentrated roof load (~1.0 kN, local element checks) noted but out of scope for the frame UDL.
+> Accessible-roof categories not yet sourced — out of MVP scope (the module raises rather than guessing).
+
+## 6. Open items (block the validation gate until closed)
 - [ ] Co-founder fixes Reference Frame v1's wind location (Vb, terrain) and steel grade.
 - [ ] Co-founder produces the golden reference outputs (Prokon / SAISC spreadsheet / hand calc).
 - [ ] Confirm SANS editions → update `rules_version.py` (remove `VERIFY`).
 - [x] Section data for v1 — **loaded** from the official free SAISC "Database of Structural Steel Sections" (64 sections: IPE-AA/IPE 100–200, UB, UC), cross-checked against known published values. **PROVISIONAL** pending the engineer's spot-check sign-off below. Confirm intended steel grade (e.g. S355).
+- [ ] Sign off the **provisional code values** in §5 (currently: imposed roof load 0.4 kN/m²).
 - [ ] Sign off the tolerance table above.

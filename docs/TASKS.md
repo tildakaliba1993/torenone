@@ -77,7 +77,7 @@
   - [ ] ⏳ **Final sign-off (Phase 8 gate, non-blocking):** registered engineer spot-checks the dataset vs the SAISC Red Book; data is flagged **PROVISIONAL** until then.
 - [x] **1.3 Rules versioning** — `rules_version.py` (pinned editions + `as_dict()`), tested. Stamping into `DesignResult` wires in at 1.12. *(Editions still marked `VERIFY` pending the official standards.)*
 - [x] **1.4 Dead loads** — member self-weight (mass × g) + roof/services/cladding area loads × tributary width → `DeadLoadResult` (with breakdown for the audit view). Code-agnostic; SANS partial factors deferred to 1.7. **5 tests, hand-calc verified.**
-- [ ] **1.5 Imposed roof loads (SANS 10160-2)** — **Test:** worked example.
+- [x] **1.5 Imposed roof loads (SANS 10160-2)** — inaccessible-roof UDL = 0.4 kN/m² (Table 5) × tributary → `ImposedLoadResult` (with category + clause for the audit view). Value **PROVISIONAL** (sourced from a free peer-reviewed reference; pending engineer sign-off — REFERENCES §5). Accessible roofs out of scope (raise). **4 tests.**
 - [ ] **1.6 Wind loads (SANS 10160-3)** *(highest-risk domain module)*
   - [ ] Peak wind speed from location + terrain category.
   - [ ] External pressure coefficients (walls + roof zones).

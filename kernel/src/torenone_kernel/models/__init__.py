@@ -21,6 +21,7 @@ from torenone_kernel.models.results import (
     CheckResult,
     DeadLoadResult,
     DesignResult,
+    ImposedLoadResult,
     LoadCase,
     LoadCombination,
     MemberForces,
@@ -50,5 +51,6 @@ __all__ = [
     "CheckResult",
     "SectionChoice",
     "DeadLoadResult",
+    "ImposedLoadResult",
     "DesignResult",
 ]

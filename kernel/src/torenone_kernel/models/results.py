@@ -99,6 +99,21 @@ class DeadLoadResult(BaseModel):
     tributary_width_m: float = Field(gt=0, description="Frame spacing (typical internal frame).")
 
 
+class ImposedLoadResult(BaseModel):
+    """Characteristic imposed (variable) roof load as a line load on the rafter.
+
+    Carries the category + clause citation for the audit / "show-your-working" view (FR-26).
+    The underlying code value is PROVISIONAL (see loads/imposed.py and REFERENCES doc).
+    """
+
+    model_config = _STRICT
+    roof_udl_kn_per_m: float = Field(ge=0, description="Imposed UDL on the rafter.")
+    roof_imposed_kpa: float = Field(ge=0, description="Characteristic imposed roof load (area).")
+    tributary_width_m: float = Field(gt=0)
+    category: str = Field(min_length=1, description="Roof category description.")
+    clause: str = Field(min_length=1, description="SANS clause/table reference.")
+
+
 class DesignResult(BaseModel):
     """The full output of a design run: input echo, chosen sections, checks, audit metadata."""
 
