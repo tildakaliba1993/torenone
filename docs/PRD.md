@@ -139,13 +139,33 @@ The MVP is "done" when **all** hold:
 6. The UI implements the design system in [Design & Architecture](./DESIGN-ARCHITECTURE.md) (dark theme, steel-blue, accessible contrast).
 7. At least one real Cape Town firm has run a live project through it (pilot evidence for YC).
 
-## 11. Success metrics
+## 11. Competitive positioning & differentiation
+> Full analysis: [Competitive Landscape](./COMPETITIVE-LANDSCAPE.md).
+
+The AI-structural category is active and funded — which validates the market. Competitors cluster tightly, and TorenOne is deliberately positioned away from the crowd.
+
+**The field**
+- **Genia** (~$3M funded — the most serious AI-native competitor): architect's plans → AI-generated structural *layouts* → rule-based validation → drawings + material takeoff. Concrete/layout, general buildings, US/general codes. *(Plans-in generative layout is our v2 — not our MVP.)*
+- **Stru AI**: AI agent *inside* ETABS/SAP2000/RISA; native Mathcad calc sheets; ACI/AISC/ASCE (US). Augments the legacy tool — the firm still rents it.
+- **ConGro AI**: text → design report → builds the model in ETABS; US codes; ETABS-only; general buildings ($25–100/mo).
+- **Legacy incumbents** (the displacement target): CSI/Bentley/Autodesk/Trimble/Prokon — expensive desktop, no AI-native workflow. Cloud challengers (SkyCiv, ClearCalcs) prove firms will switch, but aren't AI-native.
+
+**What we do that they don't (our moats)**
+1. **SANS + Southern Africa first** — every funded player is US-code-first; none target SANS. Founder-market fit + local network = near-zero CAC in a market they can't easily enter. (Expansion: Eurocode, rest of Africa.)
+2. **Vertical depth, not breadth** — steel portal frames made bulletproof, vs horizontal "any building." Depth earns the trust to stamp.
+3. **Replace the stack, not augment it** — our own deterministic kernel removes the ETABS rent (Stru/ConGro still require it). True challenger economics.
+4. **The stampable, clause-referenced calc package is the deliverable** — vs layouts/drawings/takeoff. The most painful, trust-sensitive artifact.
+5. **Provable correctness by construction** — the LLM never computes a number; deterministic kernel + validation gate + audit trail. In a life-safety field, generative tools cannot match this quickly.
+
+**Discipline this implies (reinforces §6):** do **not** drift toward generative layout / plan-parsing / any-building (the crowded, funded lane). Win first on reliability + SANS + steel-portal depth; plan-parsing is a deliberate v2.
+
+## 12. Success metrics
 
 - **Product:** time-to-calc-package (target: < 10 min vs. 1–3 days); validation-gate accuracy (target: 100% within tolerance on benchmark); design runs completed on real projects.
 - **Pilot:** ≥ 3 firms testing on real work before the YC interview; ≥ 1 paying (even nominal).
 - **YC narrative:** "A Cape Town firm produced a portal-frame calc package with us last week that would have taken their engineer two days."
 
-## 12. Open questions
+## 13. Open questions
 - [ ] Which past project is the validation benchmark? (Co-founder to select the most *typical* warehouse frame.)
 - [ ] Exact SLS deflection limits and load-factor set to adopt as defaults (confirm against current SANS editions).
 - [ ] Curated SAISC section list for v1 (which series: IPE/HEA, UB/UC, or both).
