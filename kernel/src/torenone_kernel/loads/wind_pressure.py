@@ -96,3 +96,44 @@ def duopitch_roof_pressure_coefficients(pitch_deg: float) -> RoofPressureCoeffic
         pitch_deg=pitch_deg,
         clause="SANS 10160-3:2019 Table 10 (θ=0°, zones H & I)",
     )
+
+
+# --- Internal pressure, cpi (SANS 10160-3:2019 cl. 8.3.9) -------------------------------------
+# Enclosed (no dominant wall): cl. 8.3.9.6 NOTE 2 — where μ is not estimated, take cpi as the more
+# onerous of +0.2 and −0.3 (both cases considered). The μ/Figure-16 refinement is deferred post-MVP.
+ENCLOSED_CPI_CASES: tuple[float, ...] = (0.2, -0.3)
+
+
+class InternalPressureCoefficients(BaseModel):
+    """The cpi value(s) to consider for the building — each becomes a wind load case."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    cpi_cases: tuple[float, ...] = Field(min_length=1, description="cpi values to consider.")
+    scenario: str = Field(min_length=1)
+    clause: str = Field(min_length=1)
+
+
+def enclosed_internal_pressure() -> InternalPressureCoefficients:
+    """cpi for an enclosed building with no dominant opening (cl. 8.3.9.6 NOTE 2)."""
+    return InternalPressureCoefficients(
+        cpi_cases=ENCLOSED_CPI_CASES,
+        scenario="enclosed (no dominant opening)",
+        clause="SANS 10160-3:2019 cl. 8.3.9.6 (NOTE 2: more onerous of +0.2 and −0.3)",
+    )
+
+
+def dominant_opening_internal_pressure(
+    cpe_at_opening: float, openings_at_least_3x: bool = False
+) -> InternalPressureCoefficients:
+    """cpi for a building with a dominant opening (cl. 8.3.9.5, eq. 14/15).
+
+    `cpe_at_opening` is the external pressure coefficient at the dominant opening (e.g. the windward
+    wall cpe for a windward roller door — the case that drives interior over-pressure / roof uplift).
+    cl. 8.3.9.1: when cpi is favourable, an additional case with cpi = 0 is also considered.
+    """
+    factor = 0.90 if openings_at_least_3x else 0.75
+    return InternalPressureCoefficients(
+        cpi_cases=(factor * cpe_at_opening, 0.0),
+        scenario=f"dominant opening (cpi = {factor:.2f}·cpe)",
+        clause="SANS 10160-3:2019 cl. 8.3.9.5 (eq. 14/15) + cl. 8.3.9.1",
+    )

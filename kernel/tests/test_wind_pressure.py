@@ -10,6 +10,8 @@ import pytest
 
 from torenone_kernel.loads.wind_pressure import (
     duopitch_roof_pressure_coefficients,
+    dominant_opening_internal_pressure,
+    enclosed_internal_pressure,
     wall_pressure_coefficients,
 )
 
@@ -87,3 +89,29 @@ def test_duopitch_roof_windward_has_both_uplift_and_downforce() -> None:
 def test_duopitch_roof_out_of_scope_raises(pitch: float) -> None:
     with pytest.raises(NotImplementedError):
         duopitch_roof_pressure_coefficients(pitch)
+
+
+# --- Internal pressure cpi (SANS 10160-3:2019 cl. 8.3.9) ---
+
+
+def test_enclosed_internal_pressure_default_cases() -> None:
+    r = enclosed_internal_pressure()
+    assert r.cpi_cases == (0.2, -0.3)  # cl. 8.3.9.6 NOTE 2
+    assert "8.3.9.6" in r.clause
+
+
+def test_dominant_opening_2x_is_075_cpe() -> None:
+    # Windward roller door: cpe at opening ≈ +0.7 -> cpi = 0.75·0.7 = 0.525.
+    r = dominant_opening_internal_pressure(0.7)
+    assert r.cpi_cases[0] == pytest.approx(0.525)
+    assert 0.0 in r.cpi_cases  # favourable case (cl. 8.3.9.1)
+
+
+def test_dominant_opening_3x_is_090_cpe() -> None:
+    r = dominant_opening_internal_pressure(0.8, openings_at_least_3x=True)
+    assert r.cpi_cases[0] == pytest.approx(0.72)  # 0.90·0.8
+
+
+def test_windward_dominant_opening_drives_uplift() -> None:
+    # cpe > 0 at a windward opening -> positive internal pressure -> pushes up on the roof.
+    assert dominant_opening_internal_pressure(0.8).cpi_cases[0] > 0

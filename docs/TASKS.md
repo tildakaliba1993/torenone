@@ -83,7 +83,7 @@
   - [x] **External pressure coefficients (1.6b)**
     - [x] **Vertical walls** — `cpe,10` zones D/E vs h/d + lack-of-correlation factor (**Table 6 + cl. 8.3.2.4**). Validated exactly vs Table 6; 7 tests.
     - [x] **Duopitch roof** — zones **H** (windward) & **I** (leeward) `cpe,10`, pitch 5–45°, both windward branches (uplift + downforce) (**Table 10, θ=0°**). Validated vs Table 10 + cross-checked vs EN 1991-1-4 Table 7.4a; 7 tests. *(Internal-frame scope; gable-edge F/G, ridge J, near-flat <5° deferred post-MVP.)*
-  - [ ] **Internal pressure coefficients (1.6c)** — enclosed + dominant-opening / uplift cases.
+  - [x] **Internal pressure coefficients (1.6c)** — enclosed (+0.2/−0.3, cl. 8.3.9.6 NOTE 2) + dominant-opening (0.75/0.90·cpe, eq. 14/15) with the favourable cpi=0 case (cl. 8.3.9.1); windward dominant opening drives uplift. 4 tests. *(μ/Figure-16 refinement deferred.)*
   - [ ] **Frame line loads (1.6d)** — net pressure `qp·(cpe−cpi)` → member UDLs; uplift case explicitly tested.
 - [ ] **1.7 Load combinations (SANS 10160-1)** — ULS + SLS limit-state combos with partial factors. **Test:** combination set matches code for a worked case.
 - [ ] **1.8 2D plane-frame analysis**

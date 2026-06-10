@@ -13,9 +13,12 @@ from torenone_kernel.loads.wind import (
     roughness_factor,
 )
 from torenone_kernel.loads.wind_pressure import (
+    InternalPressureCoefficients,
     RoofPressureCoefficients,
     WallPressureCoefficients,
+    dominant_opening_internal_pressure,
     duopitch_roof_pressure_coefficients,
+    enclosed_internal_pressure,
     wall_pressure_coefficients,
 )
 
@@ -39,4 +42,8 @@ __all__ = [
     "WallPressureCoefficients",
     "duopitch_roof_pressure_coefficients",
     "RoofPressureCoefficients",
+    # wind internal pressure coefficients
+    "enclosed_internal_pressure",
+    "dominant_opening_internal_pressure",
+    "InternalPressureCoefficients",
 ]
