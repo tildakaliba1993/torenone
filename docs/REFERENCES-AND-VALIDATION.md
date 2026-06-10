@@ -108,6 +108,7 @@ SANS standard before the Phase 8 validation gate.
 | Value | Sourced value | Source (free, authoritative) | Used in |
 |---|---|---|---|
 | Imposed roof load — **inaccessible** roof (SANS 10160-2 Table 5) | **0.4 kN/m²** (400 N/m²) UDL | SANS 10160-2:2011 Table 5; confirmed peer-reviewed in *J. SAICE* (SciELO S1021-20192021000100005); corroborated across multiple references | `loads/imposed.py` (Task 1.5) |
+| **Load combination factors** (γG 1.2/0.9, STR-P 1.35, imposed 1.6, wind 1.3, SLS γG 1.1; ψ0=0 inaccessible roof) | as listed | ⚠️ **DRAFT SANS 10160-1:2009** (Table 3/2, eq. 6/7/10) — **confirm vs FINAL published standard** | `loads/combinations.py` (Task 1.7) |
 
 > Concentrated roof load (~1.0 kN, local element checks) noted but out of scope for the frame UDL.
 > Accessible-roof categories not yet sourced — out of MVP scope (the module raises rather than guessing).
@@ -117,5 +118,6 @@ SANS standard before the Phase 8 validation gate.
 - [ ] Co-founder produces the golden reference outputs (Prokon / SAISC spreadsheet / hand calc).
 - [ ] Confirm SANS editions → update `rules_version.py` (remove `VERIFY`).
 - [x] Section data for v1 — **loaded** from the official free SAISC "Database of Structural Steel Sections" (64 sections: IPE-AA/IPE 100–200, UB, UC), cross-checked against known published values. **PROVISIONAL** pending the engineer's spot-check sign-off below. Confirm intended steel grade (e.g. S355).
-- [ ] Sign off the **provisional code values** in §5 (currently: imposed roof load 0.4 kN/m²).
+- [ ] Sign off the **provisional code values** in §5 (imposed roof load 0.4 kN/m²; SANS 10160-1 wind/steel values).
+- [ ] ⚠️ Confirm the **SANS 10160-1 load-combination factors** against the **FINAL published standard** (ours are from the DRAFT — §5 / SOURCES E9).
 - [ ] Sign off the tolerance table above.

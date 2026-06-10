@@ -1,6 +1,7 @@
 """Load computation modules. Characteristic loads only; SANS partial factors are applied at the
 combination stage (Task 1.7)."""
 
+from torenone_kernel.loads.combinations import load_combinations
 from torenone_kernel.loads.dead import GRAVITY_M_S2, dead_loads
 from torenone_kernel.loads.imposed import INACCESSIBLE_ROOF_QK_KPA, imposed_roof_loads
 from torenone_kernel.loads.wind import (
@@ -51,4 +52,6 @@ __all__ = [
     "wind_loads",
     "WindLoadResult",
     "WindLoadCase",
+    # load combinations (SANS 10160-1)
+    "load_combinations",
 ]

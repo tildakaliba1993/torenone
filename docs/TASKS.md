@@ -85,7 +85,7 @@
     - [x] **Duopitch roof** — zones **H** (windward) & **I** (leeward) `cpe,10`, pitch 5–45°, both windward branches (uplift + downforce) (**Table 10, θ=0°**). Validated vs Table 10 + cross-checked vs EN 1991-1-4 Table 7.4a; 7 tests. *(Internal-frame scope; gable-edge F/G, ridge J, near-flat <5° deferred post-MVP.)*
   - [x] **Internal pressure coefficients (1.6c)** — enclosed (+0.2/−0.3, cl. 8.3.9.6 NOTE 2) + dominant-opening (0.75/0.90·cpe, eq. 14/15) with the favourable cpi=0 case (cl. 8.3.9.1); windward dominant opening drives uplift. 4 tests. *(μ/Figure-16 refinement deferred.)*
   - [x] **Frame line loads (1.6d)** — `wind_loads(spec)`: ze=apex → qp → net `qp·(cpe−cpi)` → windward/leeward column & rafter UDLs, enumerated over cpi cases × roof branches → `WindLoadResult`. qp hand-verified; uplift case + dominant-opening uplift explicitly tested. 5 tests.
-- [ ] **1.7 Load combinations (SANS 10160-1)** — ULS + SLS limit-state combos with partial factors. **Test:** combination set matches code for a worked case.
+- [x] **1.7 Load combinations (SANS 10160-1)** — `load_combinations(spec)`: ULS STR (eq.6/7) + SLS (eq.10) with Table 3 factors (γG 1.2/0.9, STR-P 1.35; imposed 1.6, wind 1.3; SLS γG 1.1). Inaccessible-roof ψ0=0 ⇒ imposed/wind never combine; explicit favourable-permanent **uplift** combo. 6 tests. ⚠️ **PROVISIONAL — from the DRAFT SANS 10160-1; confirm factors vs the final standard** (SOURCES/REFERENCES).
 - [ ] **1.8 2D plane-frame analysis**
   - [ ] Integrate **PyNite**; build the portal model (columns, rafters, apex, supports).
   - [ ] Solve per combination → M, V, N envelopes.

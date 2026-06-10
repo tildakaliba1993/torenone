@@ -12,7 +12,7 @@ update can never silently change an existing report.
 from __future__ import annotations
 
 # Loading / actions
-SANS_10160_1 = "VERIFY"  # Basis of structural design (limit states, load combinations)
+SANS_10160_1 = "2009 (DRAFT — confirm vs final)"  # Basis of design / load combinations
 SANS_10160_2 = "VERIFY"  # Self-weight and imposed loads
 SANS_10160_3 = "2019"    # Wind actions, Edition 2.1 (confirmed from the standard)
 

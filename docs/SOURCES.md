@@ -28,6 +28,7 @@
 | E6 | Wind ext. pressure — **walls** | cpe,10 zones D/E vs h/d + correlation factor | **SANS 10160-3:2019 Table 6 + cl. 8.3.2.4** — validated vs Table 6 | 2026-06-10 | VERIFIED vs standard | `loads/wind_pressure.py` |
 | E6b | Wind ext. pressure — **duopitch roof** | zones H/I cpe,10, pitch 5–45°, uplift+downforce | **SANS 10160-3:2019 Table 10** (pdfplumber) — validated vs Table 10 + cross-checked vs EN 1991-1-4 Table 7.4a | 2026-06-10 | VERIFIED vs standard | `loads/wind_pressure.py` |
 | E8 | Wind **internal** pressure cpi | enclosed +0.2/−0.3; dominant opening 0.75/0.90·cpe; favourable cpi=0 | **SANS 10160-3:2019 cl. 8.3.9.6 NOTE 2, eq. 14/15, cl. 8.3.9.1** | 2026-06-10 | VERIFIED vs standard | `loads/wind_pressure.py` |
+| E9 | Load combination factors | γG 1.2/0.9, STR-P 1.35, imposed 1.6, wind 1.3; SLS γG 1.1, γQ 1.0; inaccessible-roof ψ0=0 | **SANS 10160-1:2009 (DRAFT) Table 3, Table 2, eq. 6/7/10** | 2026-06-10 | ⚠️ **PROVISIONAL — DRAFT standard; confirm vs final** | `loads/combinations.py` |
 | E7 | Terrain params (zg, zo, zc, α per A/B/C/D) + air density ρ(altitude) + vb,peak = 1.0·vb | Table 1; Table 4; eq. 4 | **SANS 10160-3:2019 Table 1/3/4** — implementation **validated against the standard's own Table 3** | 2026-06-10 | VERIFIED vs standard (sign-off pending) | `loads/wind.py` |
 
 > Cross-verification (E1) was done against independently-known standard IPE/UC values; the spot-check
