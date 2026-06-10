@@ -76,7 +76,7 @@
   - [x] **Spot-check tests** vs independently-known published values (IPE/UC area, Ix, elastic *and* plastic moduli, ry, J, Cw) — 8 tests passing.
   - [ ] ⏳ **Final sign-off (Phase 8 gate, non-blocking):** registered engineer spot-checks the dataset vs the SAISC Red Book; data is flagged **PROVISIONAL** until then.
 - [x] **1.3 Rules versioning** — `rules_version.py` (pinned editions + `as_dict()`), tested. Stamping into `DesignResult` wires in at 1.12. *(Editions still marked `VERIFY` pending the official standards.)*
-- [ ] **1.4 Dead loads** — self-weight + components. **Test:** worked example.
+- [x] **1.4 Dead loads** — member self-weight (mass × g) + roof/services/cladding area loads × tributary width → `DeadLoadResult` (with breakdown for the audit view). Code-agnostic; SANS partial factors deferred to 1.7. **5 tests, hand-calc verified.**
 - [ ] **1.5 Imposed roof loads (SANS 10160-2)** — **Test:** worked example.
 - [ ] **1.6 Wind loads (SANS 10160-3)** *(highest-risk domain module)*
   - [ ] Peak wind speed from location + terrain category.

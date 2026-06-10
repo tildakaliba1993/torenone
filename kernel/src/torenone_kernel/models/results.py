@@ -82,6 +82,23 @@ class SectionChoice(BaseModel):
     designation: str = Field(min_length=1)   # e.g. "IPE 400"
 
 
+class DeadLoadResult(BaseModel):
+    """Characteristic permanent (dead) loads as line loads on the frame members.
+
+    Carries a breakdown (roof area load, tributary width, self-weights) so the audit /
+    "show-your-working" view (PRD FR-26) can show how each line load was derived.
+    """
+
+    model_config = _STRICT
+    rafter_udl_kn_per_m: float = Field(ge=0, description="Total dead UDL on the rafter.")
+    column_self_weight_kn_per_m: float = Field(ge=0)
+    wall_cladding_udl_kn_per_m: float = Field(ge=0, description="Cladding dead load on the column.")
+    # Breakdown (for transparency / audit)
+    roof_area_load_kpa: float = Field(ge=0, description="Roof permanent area load (sheeting + services).")
+    rafter_self_weight_kn_per_m: float = Field(ge=0)
+    tributary_width_m: float = Field(gt=0, description="Frame spacing (typical internal frame).")
+
+
 class DesignResult(BaseModel):
     """The full output of a design run: input echo, chosen sections, checks, audit metadata."""
 

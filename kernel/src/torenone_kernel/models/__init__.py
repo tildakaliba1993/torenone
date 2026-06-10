@@ -19,6 +19,7 @@ from torenone_kernel.models.frame_spec import (
 from torenone_kernel.models.results import (
     AnalysisResult,
     CheckResult,
+    DeadLoadResult,
     DesignResult,
     LoadCase,
     LoadCombination,
@@ -48,5 +49,6 @@ __all__ = [
     "AnalysisResult",
     "CheckResult",
     "SectionChoice",
+    "DeadLoadResult",
     "DesignResult",
 ]
