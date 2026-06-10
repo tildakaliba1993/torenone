@@ -58,7 +58,8 @@ Launch beachhead: structural firms in Cape Town we already have relationships wi
 - 2D elastic plane-frame analysis + second-order / sway check.
 - Member checks (SANS 10162-1): section classification, axial resistance, moment resistance, combined axial+bending interaction, lateral-torsional buckling (with restraint positions), SLS deflection (apex + eaves sway).
 - Auto-sizing from a curated SAISC section list (lightest passing section + utilisation ratios).
-- Clause-referenced calc-report PDF.
+- **Two run modes:** *Design* (auto-size to lightest passing section) and *Check* (verify engineer-supplied sections to SANS — same checks, no auto-size). *(Competitive differentiator — §11.)*
+- Clause-referenced calc-package PDF with: a line-by-line **audit / "show-your-working"** view, a **deterministic-kernel provenance** label (numbers are computed, not AI-generated), an explicit **assumptions & limitations** block, and a **steel mass + indicative cost** readout.
 - Accounts, projects, saved runs, stored report PDFs (multi-tenant, isolated per firm).
 
 ### 6.2 OUT of scope (explicitly deferred — do not build)
@@ -97,12 +98,16 @@ Launch beachhead: structural firms in Cape Town we already have relationships wi
 - **FR-14** Combined axial + bending interaction check.
 - **FR-15** Lateral-torsional buckling check using restraint positions.
 - **FR-16** SLS deflection checks (apex vertical, eaves horizontal sway) against limits.
-- **FR-17** Auto-sizing: iterate the SAISC list to the lightest section passing all checks; report utilisation ratios for each check.
+- **FR-17** Auto-sizing (*Design mode*): iterate the SAISC list to the lightest section passing all checks; report utilisation ratios for each check.
+- **FR-24** Check mode: the system shall accept engineer-supplied member sections and run the full SANS 10162-1 checks on them (no auto-sizing), producing the same clause-referenced result. *(Lower-liability adoption wedge; no competitor equivalent — §11.)*
 
 ### Report
 - **FR-18** Generate a calc-package PDF containing: assumptions, load takedown, load combinations, analysis results, every check with its **SANS clause reference** and pass/fail, member sizes, utilisation ratios, and geometry + BMD/SFD diagrams.
 - **FR-19** Status (pass/fail/near-limit) shall never be conveyed by colour alone — always with text/icon as well.
 - **FR-20** Reports shall record the code-rule version used, the input spec, and a timestamp for audit/reproducibility.
+- **FR-25** The calc package shall report total steel mass (kg) and an indicative cost (from a configurable rate). *(Counters competitors' "material savings" pitch — §11.)*
+- **FR-26** The calc package shall present a line-by-line audit (assumptions → loads → combinations → checks → section) and label every result as **computed by the deterministic kernel, not the AI**. *(Trust/provenance differentiator — §11.)*
+- **FR-27** Every calc package shall include an explicit **assumptions, out-of-scope, and "engineer must verify"** block — honest limitations as a feature.
 
 ### Accounts & projects
 - **FR-21** Users can sign up / sign in (Supabase Auth).

@@ -100,6 +100,9 @@
 - [ ] **1.11 Auto-sizing** — iterate to lightest passing section; return utilisations. **Test:** known frame → expected lightest section.
 - [ ] **1.12 Orchestrator** — `design(frame_spec) -> DesignResult` running the full pipeline deterministically. **Test:** end-to-end kernel run on a fixture.
 - [ ] **1.13 Determinism & reproducibility** — **Test:** same input + version → identical output (run twice, assert equal).
+- [ ] **1.14 Check mode + material readout** *(competitive — PRD FR-24/25)*
+  - [ ] Orchestrator `check(frame_spec, sections) -> DesignResult`: run the full SANS 10162-1 checks on engineer-supplied sections (no auto-size). **Test.**
+  - [ ] Compute total steel mass (kg) = Σ(member length × section mass/m); indicative cost from a configurable rate; carry both on `DesignResult` (extend the contract). **Test.**
 
 **Acceptance:** full kernel runs; ≥95% coverage; all checks carry clause refs; determinism test passes.
 
@@ -114,6 +117,11 @@
 - [ ] **2.4 Status rendering** — pass/fail/near-limit via icon + label + colour (never colour alone). **Test.**
 - [ ] **2.5 Audit metadata** — rules version, input spec, timestamp embedded (PRD FR-20). **Test.**
 - [ ] **2.6 Golden-file test** — render a fixture `DesignResult`; assert key values + clause refs present in output.
+- [ ] **2.7 Competitive-advantage report features** *(PRD FR-25/26/27)*
+  - [ ] Line-by-line **audit / "show-your-working"** layout (assumptions → loads → combinations → checks → section).
+  - [ ] **Provenance label** — every number marked "computed by deterministic kernel, not AI".
+  - [ ] **Assumptions & limitations** block (assumed / out-of-scope / engineer-must-verify).
+  - [ ] **Steel mass + indicative cost** readout. **Test:** golden-file asserts each block is present.
 
 **Acceptance:** a `DesignResult` produces a correct, branded PDF with every number traceable to a clause.
 
@@ -139,6 +147,7 @@
 - [ ] **4.2 JWT verification** — verify Supabase JWT on every protected route; reject invalid. **Test:** valid passes, invalid/expired rejected.
 - [ ] **4.3 `POST /parse`** — text → `FrameSpec` (+ clarifying questions). **Test.**
 - [ ] **4.4 `POST /design`** — confirmed `FrameSpec` → run kernel → build PDF → upload to Supabase Storage → persist `run` + `report` → return result. **Test (mocked kernel/storage).**
+  - [ ] Support **Check mode** (`mode=check` with supplied sections) → runs `check()` instead of `design()` (PRD FR-24). **Test.**
 - [ ] **4.5 Error handling** — typed errors, safe messages, no secret leakage. **Test.**
 - [ ] **4.6 Containerise & deploy** — Dockerfile; deploy to Fly.io/Render/Railway; env wired.
 
@@ -169,6 +178,9 @@
 - [ ] **6.4 Describe screen** — text input + examples; calls `/parse`. **Test.**
 - [ ] **6.5 Confirm screen (trust gate)** — editable structured `FrameSpec` form + geometry sketch; "Run design" CTA calls `/design`. Cannot proceed without explicit confirm (PRD FR-4). **Test.**
 - [ ] **6.6 Results screen** — utilisation table (icon+label+colour status), member sizes, deflections, diagrams, "Download calc package (PDF)". **Test.**
+  - [ ] **Design / Check mode** toggle — Check mode lets the user enter their own sections (PRD FR-24).
+  - [ ] **Audit / "show-your-working" panel** + deterministic-kernel **provenance badge** (FR-26).
+  - [ ] **Steel mass + indicative cost** readout (FR-25); **assumptions & limitations** block (FR-27).
 - [ ] **6.7 Run history** — past runs + stored PDFs per project. **Test.**
 - [ ] **6.8 States** — loading/empty/error states for every async view. **Test.**
 
