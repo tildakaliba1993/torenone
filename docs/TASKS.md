@@ -78,13 +78,13 @@
 - [x] **1.3 Rules versioning** — `rules_version.py` (pinned editions + `as_dict()`), tested. Stamping into `DesignResult` wires in at 1.12. *(Editions still marked `VERIFY` pending the official standards.)*
 - [x] **1.4 Dead loads** — member self-weight (mass × g) + roof/services/cladding area loads × tributary width → `DeadLoadResult` (with breakdown for the audit view). Code-agnostic; SANS partial factors deferred to 1.7. **5 tests, hand-calc verified.**
 - [x] **1.5 Imposed roof loads (SANS 10160-2)** — inaccessible-roof UDL = 0.4 kN/m² (Table 5) × tributary → `ImposedLoadResult` (with category + clause for the audit view). Value **PROVISIONAL** (sourced from a free peer-reviewed reference; pending engineer sign-off — REFERENCES §5). Accessible roofs out of scope (raise). **4 tests.**
-- [~] **1.6 Wind loads (SANS 10160-3)** *(highest-risk; built in layers)*
+- [x] **1.6 Wind loads (SANS 10160-3:2019)** *(highest-risk; built in layers — all done & validated vs the standard's tables)*
   - [x] **Velocity/pressure engine (1.6a)** — full **SANS 10160-3:2019** method: terrain params (Table 1, all of A/B/C/D), power-law `cr(z)=1.36((z'−zo)/(zg−zo))^α`, `vb,peak=1.0·vb`, peak wind speed `vp`, `qp=½ρvp²`, air density vs altitude (Table 4). **Validated against the standard's own Table 3** (4×15 cells) + 10 tests. *(Real values from the official standard — earlier "PENDING terrain" now resolved.)*
   - [x] **External pressure coefficients (1.6b)**
     - [x] **Vertical walls** — `cpe,10` zones D/E vs h/d + lack-of-correlation factor (**Table 6 + cl. 8.3.2.4**). Validated exactly vs Table 6; 7 tests.
     - [x] **Duopitch roof** — zones **H** (windward) & **I** (leeward) `cpe,10`, pitch 5–45°, both windward branches (uplift + downforce) (**Table 10, θ=0°**). Validated vs Table 10 + cross-checked vs EN 1991-1-4 Table 7.4a; 7 tests. *(Internal-frame scope; gable-edge F/G, ridge J, near-flat <5° deferred post-MVP.)*
   - [x] **Internal pressure coefficients (1.6c)** — enclosed (+0.2/−0.3, cl. 8.3.9.6 NOTE 2) + dominant-opening (0.75/0.90·cpe, eq. 14/15) with the favourable cpi=0 case (cl. 8.3.9.1); windward dominant opening drives uplift. 4 tests. *(μ/Figure-16 refinement deferred.)*
-  - [ ] **Frame line loads (1.6d)** — net pressure `qp·(cpe−cpi)` → member UDLs; uplift case explicitly tested.
+  - [x] **Frame line loads (1.6d)** — `wind_loads(spec)`: ze=apex → qp → net `qp·(cpe−cpi)` → windward/leeward column & rafter UDLs, enumerated over cpi cases × roof branches → `WindLoadResult`. qp hand-verified; uplift case + dominant-opening uplift explicitly tested. 5 tests.
 - [ ] **1.7 Load combinations (SANS 10160-1)** — ULS + SLS limit-state combos with partial factors. **Test:** combination set matches code for a worked case.
 - [ ] **1.8 2D plane-frame analysis**
   - [ ] Integrate **PyNite**; build the portal model (columns, rafters, apex, supports).

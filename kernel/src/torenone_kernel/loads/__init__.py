@@ -12,6 +12,7 @@ from torenone_kernel.loads.wind import (
     peak_wind_speed,
     roughness_factor,
 )
+from torenone_kernel.loads.wind_loads import WindLoadCase, WindLoadResult, wind_loads
 from torenone_kernel.loads.wind_pressure import (
     InternalPressureCoefficients,
     RoofPressureCoefficients,
@@ -46,4 +47,8 @@ __all__ = [
     "enclosed_internal_pressure",
     "dominant_opening_internal_pressure",
     "InternalPressureCoefficients",
+    # wind frame load assembly
+    "wind_loads",
+    "WindLoadResult",
+    "WindLoadCase",
 ]
