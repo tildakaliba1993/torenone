@@ -2,7 +2,7 @@
 
 > The single source of truth for **what we are building and how far along we are.** Update in real time: when a task is done and its tests pass, mark it `[x]`. Governed by the [PRD](./PRD.md) and [Design & Architecture](./DESIGN-ARCHITECTURE.md).
 >
-> **Status:** v1.0 · **Last updated:** 2026-06-10 (1.11 done)
+> **Status:** v1.0 · **Last updated:** 2026-06-11 (1.12 done)
 
 ---
 
@@ -105,7 +105,7 @@
   - [x] Steel material fy — `checks/material.py`; fy(S355JR, t≤16)=355 MPa etc. (PROVISIONAL — EN 10025-2, engineer sign-off required).
   - [x] Every `CheckResult` carries SANS clause reference + utilisation. **Tested.** Total new: **44 tests**.
 - [x] **1.11 Auto-sizing** — `checks/autosize.py`: `autosize_member(library, fy_mpa, cu_kn, vu_kn, mu_knm, KL_mm, LTB_mm, ...)` → `AutosizeResult`. Iterates `by_increasing_mass()`, runs all SANS 10162-1 strength checks (classification, axial Cr, shear Vr, moment Mr/LTB, beam-column interaction); raises `NoSectionFoundError` if none pass. `AutosizeResult` carries designation, section_class_value, full check list + computed `passed`/`max_utilisation`. Added `section` convenience property for test access. **16 tests** — mini-library (TINY fails Mu, MEDIUM passes), lightest verification, real 64-section SAISC library smoke tests. All passing.
-- [ ] **1.12 Orchestrator** — `design(frame_spec) -> DesignResult` running the full pipeline deterministically. **Test:** end-to-end kernel run on a fixture.
+- [x] **1.12 Orchestrator** — `design.py`: `design(spec) → DesignResult`. Full pipeline: dead+imposed loads → ULS-1 iterative sizing (≤5 iterations converging rafter+column sections) → SLS-1 vertical deflection via FEA (PyNite apex DY, Annex D L/240) → sway sensitivity (cl. 8.7) → DesignResult with all checks + warnings. Post-sizing deflection upgrade loop advances rafter to next heavier section when deflection governs. `node_displacements()` method added to `PortalAnalysis` for FEA deflections. Out-of-scope: wind combos + K≠1 effective lengths (both in warnings). **13 tests** covering contract, correctness, determinism. All passing. Total: 214 tests.
 - [ ] **1.13 Determinism & reproducibility** — **Test:** same input + version → identical output (run twice, assert equal).
 - [ ] **1.14 Check mode + material readout** *(competitive — PRD FR-24/25)*
   - [ ] Orchestrator `check(frame_spec, sections) -> DesignResult`: run the full SANS 10162-1 checks on engineer-supplied sections (no auto-size). **Test.**

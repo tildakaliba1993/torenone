@@ -374,3 +374,67 @@ class PortalAnalysis:
             combination=combination_name,
             forces=[col_base_L, eaves_L, apex, eaves_R, col_base_R],
         )
+
+    def node_displacements(
+        self,
+        combination_name: str,
+        rafter_udl_kn_per_m: float,
+        column_axial_kn_per_m: float = 0.0,
+    ) -> dict[str, dict[str, float]]:
+        """Analyse and return node displacements (mm) at portal key points.
+
+        Same loading as :meth:`run`; runs a fresh analysis to return DX/DY at each node.
+
+        Returns
+        -------
+        dict mapping node name → {"DX": float, "DY": float} (mm).
+            Nodes: "BL", "EL", "AP", "ER", "BR".
+        """
+        geom = self.spec.geometry
+        span_mm      = geom.span_m          * 1_000.0
+        eaves_h_mm   = geom.eaves_height_m  * 1_000.0
+        apex_h_mm    = geom.apex_height_m   * 1_000.0
+        half_span_mm = span_mm / 2.0
+
+        w_raf_n_mm = rafter_udl_kn_per_m
+        w_col_n_mm = column_axial_kn_per_m
+
+        m = _new_model()
+        _add_section(m, "col_sec", self.col_sec)
+        _add_section(m, "raf_sec", self.raf_sec)
+
+        m.add_node("BL",          0,          0, 0)
+        m.add_node("EL",          0,  eaves_h_mm, 0)
+        m.add_node("AP", half_span_mm, apex_h_mm, 0)
+        m.add_node("ER",      span_mm, eaves_h_mm, 0)
+        m.add_node("BR",      span_mm,          0, 0)
+
+        _pin_support(m, "BL")
+        _pin_support(m, "BR")
+        _fix_out_of_plane(m, "EL")
+        _fix_out_of_plane(m, "AP")
+        _fix_out_of_plane(m, "ER")
+
+        m.add_member("COL_L", "BL", "EL", "steel", "col_sec")
+        m.add_member("RAF_L", "EL", "AP", "steel", "raf_sec")
+        m.add_member("RAF_R", "AP", "ER", "steel", "raf_sec")
+        m.add_member("COL_R", "ER", "BR", "steel", "col_sec")
+
+        if rafter_udl_kn_per_m != 0.0:
+            m.add_member_dist_load("RAF_L", "Fy", -w_raf_n_mm, -w_raf_n_mm, case="DL")
+            m.add_member_dist_load("RAF_R", "Fy", -w_raf_n_mm, -w_raf_n_mm, case="DL")
+        if column_axial_kn_per_m != 0.0:
+            m.add_member_dist_load("COL_L", "Fy", -w_col_n_mm, -w_col_n_mm, case="DL")
+            m.add_member_dist_load("COL_R", "Fy", -w_col_n_mm, -w_col_n_mm, case="DL")
+
+        m.add_load_combo(_COMBO, {"DL": 1.0})
+        m.analyze_linear(log=False, check_stability=False)
+
+        result: dict[str, dict[str, float]] = {}
+        for node_name in ("BL", "EL", "AP", "ER", "BR"):
+            node = m.nodes[node_name]
+            result[node_name] = {
+                "DX": node.DX[_COMBO],   # lateral displacement (mm)
+                "DY": node.DY[_COMBO],   # vertical displacement (mm, positive = up)
+            }
+        return result

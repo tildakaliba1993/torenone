@@ -70,6 +70,7 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 | SANS 10162-1:2011 Annex D Table D.1 | Deflection limits: L/240 inelastic roof covering (vertical), H/400 building sway wind (informative — non-normative) | standards/SANS 10162-1.pdf p.98 | VERIFIED (informative) |
 | fy for S355JR/S275JR | fy from EN 10025-2 (referenced cl. 5.1.3): 355/345/335 MPa for t≤16/40/63mm | EN 10025-2:2004 Table 7 (not in standards/ folder — PROVISIONAL pending engineer sign-off) | PROVISIONAL |
 | SANS 10162-1 cl. 10.4.2.1 | KL/r ≤ 200 maximum slenderness limit for compression members | standards/SANS 10162-1.pdf p.28 | VERIFIED |
+| PyNite node.DX/DY[combo] | Node displacement API — FEA apex deflection (DY, mm); eaves sway (DX, mm) | Inspected PyNite 1.6.2 source (verified in prior tasks) | VERIFIED |
 | Task 1.11 auto-sizer | No new code values introduced — re-uses cl. 11.2 (classification), 13.3.1 (Cr), 13.4.1.1 (Vr), 13.5/13.6 (Mr/LTB), 13.8.2 (interaction) sourced in 1.10 | — | VERIFIED (all constituent values verified above) |
 | Pydantic / pytest / vitest / Playwright | kernel + web testing | PyPI / npm | VERIFIED |
 | Claude model | `claude-opus-4-8` (AI orchestration layer) | Anthropic (per claude-api skill) | VERIFIED |
