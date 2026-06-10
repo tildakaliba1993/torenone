@@ -14,7 +14,7 @@ from __future__ import annotations
 # Loading / actions
 SANS_10160_1 = "VERIFY"  # Basis of structural design (limit states, load combinations)
 SANS_10160_2 = "VERIFY"  # Self-weight and imposed loads
-SANS_10160_3 = "2018"    # Wind actions (Edition 2) — VERIFY
+SANS_10160_3 = "2019"    # Wind actions, Edition 2.1 (confirmed from the standard)
 
 # Steel design
 SANS_10162_1 = "2011"    # Limit-states design of hot-rolled steelwork — confirmed via public refs; VERIFY

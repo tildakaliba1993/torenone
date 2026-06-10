@@ -23,10 +23,10 @@
 | E1 | SAISC steel section properties (64: IPE-AA/IPE 100–200, UB, UC) | full section props (A, I, Sx, Zx, rx/ry, J, Cw, geom) | Official **SAISC "Database of Structural Steel Sections"** (free PDF), supplied by co-founder; parsed via `tools/build_saisc_sections.py` | 2026-06-10 | PROVISIONAL (pending Pr.Eng spot-check vs Red Book) | `kernel/.../sections/data/saisc_sections.json` |
 | E2 | Imposed roof load — inaccessible roof | **0.4 kN/m²** UDL (SANS 10160-2 Table 5) | SANS 10160-2:2011 Table 5; confirmed peer-reviewed: *J. SAICE* via SciELO `S1021-20192021000100005`; corroborated across multiple refs | 2026-06-10 | PROVISIONAL (pending sign-off) | `kernel/.../loads/imposed.py` (1.5) |
 | E3 | Gravitational acceleration g | 9.81 m/s² (mass→weight) | Universal physical constant | 2026-06-10 | VERIFIED | `kernel/.../loads/dead.py` (1.4) |
-| E4 | SANS 10160-3 wind **method (form)** | `cr(z)=kr·ln(z/z0)`; `vp=cr·co·vb,peak`; `qp=½ρvp²` | SkyCiv SANS 10160 docs; SciELO wind papers; EN 1991-1-4 form | 2026-06-10 | VERIFIED (form) | `loads/wind.py` (1.6) |
-| E5 | SA fundamental basic wind-speed zones | `vb,0 = 32, 36, 40, 44 m/s` (10 m, terrain B) | Peer-reviewed SciELO `S1021-20192017000400001` / `...400002` | 2026-06-10 | PROVISIONAL | `loads/wind.py` (1.6) |
-| E6 | Wind pressure coefficients (cpe walls/roof, cpi) | per **EN 1991-1-4** (SANS adopts; "differs only on map + terrain") | EN 1991-1-4 (freely documented); SkyCiv note | 2026-06-10 | PROVISIONAL (confirm SANS = EN) | `loads/wind.py` (1.6) |
-| E7 | **SANS terrain roughness table** (z0, zmin, zg per A/B/C/D) + vb,peak factor + air density ρ | SANS 10160-3 Tables 1 & 2 | ⛔ **NOT in any legitimate free source** — in the standard only; pirated copies exist but rejected | 2026-06-10 | **BLOCKED — needs co-founder to read ~12 values off SANS 10160-3** | `loads/wind.py` (1.6) |
+| E4 | SANS 10160-3 wind method | `vp=cr·co·vb,peak`; `cr=1.36((z'−zo)/(zg−zo))^α`; `qp=½ρvp²` | **SANS 10160-3:2019 cl. 7.3–7.4 (eq. 3–6)** — official standard | 2026-06-10 | VERIFIED vs standard (final sign-off pending) | `loads/wind.py` |
+| E5 | SA basic wind-speed zones vb,0 | 32 / 36 / 40 / 44 m/s (3 s gust) | **SANS 10160-3:2019 Figure 1** | 2026-06-10 | VERIFIED vs standard | `loads/wind.py` |
+| E6 | Wind pressure coefficients (cpe/cpi) | _to extract next (1.6b)_ | SANS 10160-3:2019 (cl. 8 + tables) | — | PLANNED | `loads/wind.py` |
+| E7 | Terrain params (zg, zo, zc, α per A/B/C/D) + air density ρ(altitude) + vb,peak = 1.0·vb | Table 1; Table 4; eq. 4 | **SANS 10160-3:2019 Table 1/3/4** — implementation **validated against the standard's own Table 3** | 2026-06-10 | VERIFIED vs standard (sign-off pending) | `loads/wind.py` |
 
 > Cross-verification (E1) was done against independently-known standard IPE/UC values; the spot-check
 > tests live in `kernel/tests/test_saisc_dataset.py`.
@@ -60,8 +60,12 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 | WCAG 2.1 contrast (AA) | design-token accessibility gate | W3C WCAG 2.1 | VERIFIED |
 
 ## 6. Resources to source (hand-off checklist for the co-founder)
-> All are SANS standards SA firms keep on hand — **not new purchases**, just specific tables/values
-> to transcribe. We need the *values*, not the documents.
+> ✅ **All standards OBTAINED 2026-06-10** — SANS 10160-1, 10160-2, 10160-3, 10162-1, and
+> "Design of Structural Steelwork to SANS 10162" (PDFs in the co-founder's possession; **kept out of
+> the repo** — we transcribe specific values with clause citations, not the documents). Values are
+> being extracted module by module, each cited and (where possible) validated against the standard's
+> own tables. **Final engineer sign-off** of the transcribed values is still required (REFERENCES §5).
+> Remaining genuinely-outstanding item: **R5** (validation data the engineer *produces*).
 
 | # | Document | Exactly what we need | Unblocks | Priority |
 |---|---|---|---|---|

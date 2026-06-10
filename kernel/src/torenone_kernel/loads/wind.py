@@ -1,93 +1,88 @@
-"""Wind actions per SANS 10160-3 (PRD FR-7).
+"""Wind actions per SANS 10160-3:2019 (Edition 2.1) — PRD FR-7.
 
-This module is built in layers:
-  1. Velocity/pressure ENGINE — the formulas (roughness factor, peak wind speed, peak velocity
-     pressure). These are public/Eurocode-aligned and fully tested here.
-  2. SANS-specific TERRAIN DATA (z0, zmin per category) + the vb,peak factor + air density ρ —
-     these are the detailed content of SANS 10160-3 Tables 1 & 2 and are NOT available in any
-     legitimate free source (see SOURCES.md E7). They are intentionally left PENDING: the
-     registry below is empty, so any attempt to use a SANS terrain category raises a clear error
-     until the registered engineer supplies the ~12 values. NOTHING is fabricated.
+All values are transcribed from the official standard (clause/table cited per item). The
+velocity/pressure engine is validated against the standard's OWN Table 3 (cr vs height) in the
+test suite — i.e. it reproduces the code's published table to within rounding.
 
-Method (SANS 10160-3, aligned with EN 1991-1-4):
-  cr(z) = kr · ln(z/z0)         for zmin ≤ z ≤ zmax   (cr held at cr(zmin) below zmin)
-  kr    = 0.19 · (z0 / z0_II)^0.07,  z0_II = 0.05 m    (EN 1991-1-4 form)
-  vp(z) = cr(z) · co(z) · vb,peak
-  qp(z) = ½ · ρ · vp(z)²
+Method (SANS 10160-3:2019, clauses 7.3–7.4):
+  vp(z)   = cr(z) · co(z) · vb,peak                         (eq. 3)
+  vb,peak = 1.0 · vb                                        (eq. 4)
+  cr(z)   = 1.36 · ((z' − zo)/(zg − zo))^α,  z' = max(z, zc)  (eq. 5; params: Table 1)
+  qp(z)   = ½ · ρ · vp²(z)                                  (eq. 6; ρ: Table 4 vs altitude)
 """
 
 from __future__ import annotations
-
-import math
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from torenone_kernel.models.enums import TerrainCategory
 
-_Z0_REFERENCE_M = 0.05  # terrain category II reference roughness length (EN 1991-1-4)
+# vb,peak = 1.0·vb — the map (Figure 1) is already a 3 s gust, no conversion (eq. 4 + NOTE).
+PEAK_FACTOR = 1.0
 
-# SANS fundamental basic wind-speed zones vb,0 (m/s) at 10 m in terrain category B.
-# Sourced (peer-reviewed SciELO); PROVISIONAL — see SOURCES.md E5.
+# Fundamental basic wind-speed zones vb,0 (m/s), SANS 10160-3:2019 Figure 1 (3 s gust).
 SA_BASIC_WIND_SPEED_ZONES_MS: tuple[float, ...] = (32.0, 36.0, 40.0, 44.0)
 
 
-# --- 1. Velocity / pressure engine (public formulas — fully tested) -------------------------
+class TerrainParameters(BaseModel):
+    """One row of SANS 10160-3:2019 Table 1 — Parameters of wind profile."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    zg_m: float = Field(gt=0, description="Gradient height.")
+    zo_m: float = Field(ge=0, description="Height of the reference plane.")
+    zc_m: float = Field(gt=0, description="Cut-off height (no further reduction below).")
+    alpha: float = Field(gt=0, description="Profile exponent.")
 
 
-def kr_from_z0(z0_m: float, z0_reference_m: float = _Z0_REFERENCE_M) -> float:
-    """Terrain factor kr = 0.19·(z0/z0,II)^0.07 (EN 1991-1-4 form)."""
-    return 0.19 * (z0_m / z0_reference_m) ** 0.07
+# SANS 10160-3:2019 Table 1 — Parameters of wind profile (zg, zo, zc, α).
+TERRAIN_PARAMETERS: dict[TerrainCategory, TerrainParameters] = {
+    TerrainCategory.A: TerrainParameters(zg_m=250, zo_m=0, zc_m=1, alpha=0.070),
+    TerrainCategory.B: TerrainParameters(zg_m=300, zo_m=0, zc_m=2, alpha=0.095),
+    TerrainCategory.C: TerrainParameters(zg_m=350, zo_m=3, zc_m=5, alpha=0.120),
+    TerrainCategory.D: TerrainParameters(zg_m=400, zo_m=5, zc_m=10, alpha=0.150),
+}
+
+# SANS 10160-3:2019 Table 4 — air density ρ (kg/m³) vs site altitude (m); linear interpolation.
+_AIR_DENSITY_TABLE: tuple[tuple[float, float], ...] = (
+    (0.0, 1.20),
+    (500.0, 1.12),
+    (1000.0, 1.06),
+    (1500.0, 1.00),
+    (2000.0, 0.94),
+)
 
 
-def roughness_factor(z_m: float, *, z0_m: float, zmin_m: float, kr: float) -> float:
-    """cr(z) = kr·ln(z/z0), held constant at cr(zmin) for z < zmin."""
-    z = max(z_m, zmin_m)
-    return kr * math.log(z / z0_m)
+def air_density(site_altitude_m: float) -> float:
+    """ρ (kg/m³) by linear interpolation of Table 4; clamped to its [0, 2000] m range."""
+    pts = _AIR_DENSITY_TABLE
+    if site_altitude_m <= pts[0][0]:
+        return pts[0][1]
+    if site_altitude_m >= pts[-1][0]:
+        return pts[-1][1]
+    for (a0, r0), (a1, r1) in zip(pts, pts[1:]):
+        if a0 <= site_altitude_m <= a1:
+            return r0 + (r1 - r0) * (site_altitude_m - a0) / (a1 - a0)
+    return pts[-1][1]  # unreachable
+
+
+def roughness_factor(z_m: float, category: TerrainCategory) -> float:
+    """cr(z) per eq. (5) + Table 1; held constant at cr(zc) below the cut-off height zc."""
+    p = TERRAIN_PARAMETERS[category]
+    z_eff = max(z_m, p.zc_m)
+    return 1.36 * ((z_eff - p.zo_m) / (p.zg_m - p.zo_m)) ** p.alpha
 
 
 def peak_wind_speed(
     z_m: float,
-    *,
-    z0_m: float,
-    zmin_m: float,
-    vb_peak_ms: float,
-    kr: float | None = None,
+    category: TerrainCategory,
+    basic_wind_speed_ms: float,
     co: float = 1.0,
 ) -> float:
-    """vp(z) = cr(z)·co·vb,peak. kr defaults to the EN form if not supplied."""
-    if kr is None:
-        kr = kr_from_z0(z0_m)
-    return roughness_factor(z_m, z0_m=z0_m, zmin_m=zmin_m, kr=kr) * co * vb_peak_ms
+    """vp(z) = cr(z)·co·vb,peak, with vb,peak = 1.0·vb (eq. 3, 4)."""
+    vb_peak = PEAK_FACTOR * basic_wind_speed_ms
+    return roughness_factor(z_m, category) * co * vb_peak
 
 
-def peak_velocity_pressure_kpa(vp_ms: float, rho_kg_m3: float) -> float:
-    """qp = ½·ρ·vp²  (Pa), returned in kPa."""
-    return 0.5 * rho_kg_m3 * vp_ms**2 / 1000.0
-
-
-# --- 2. SANS-specific terrain data (PENDING — see SOURCES.md E7) -----------------------------
-
-
-class TerrainParameters(BaseModel):
-    """SANS 10160-3 terrain roughness parameters for one category."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-    z0_m: float = Field(gt=0, description="Roughness length (SANS 10160-3 Table 1).")
-    zmin_m: float = Field(gt=0, description="Minimum height (SANS 10160-3 Table 1).")
-
-
-# Intentionally EMPTY. Fill from SANS 10160-3 Table 1 once the registered engineer supplies the
-# values (z0, zmin per A/B/C/D). Until then the kernel must NOT invent them.
-_SANS_TERRAIN: dict[TerrainCategory, TerrainParameters] = {}
-
-
-def sans_terrain_parameters(category: TerrainCategory) -> TerrainParameters:
-    """Return SANS 10160-3 terrain parameters for a category, or raise if still PENDING."""
-    try:
-        return _SANS_TERRAIN[category]
-    except KeyError:
-        raise NotImplementedError(
-            f"SANS 10160-3 terrain parameters (z0, zmin) for category {category.value} are PENDING "
-            "— the registered engineer must supply SANS 10160-3 Table 1 values (see SOURCES.md E7). "
-            "The kernel will not fabricate them."
-        ) from None
+def peak_velocity_pressure_kpa(vp_ms: float, air_density_kg_m3: float) -> float:
+    """qp = ½·ρ·vp² (eq. 6), returned in kPa."""
+    return 0.5 * air_density_kg_m3 * vp_ms**2 / 1000.0

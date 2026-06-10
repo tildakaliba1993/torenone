@@ -79,11 +79,10 @@
 - [x] **1.4 Dead loads** — member self-weight (mass × g) + roof/services/cladding area loads × tributary width → `DeadLoadResult` (with breakdown for the audit view). Code-agnostic; SANS partial factors deferred to 1.7. **5 tests, hand-calc verified.**
 - [x] **1.5 Imposed roof loads (SANS 10160-2)** — inaccessible-roof UDL = 0.4 kN/m² (Table 5) × tributary → `ImposedLoadResult` (with category + clause for the audit view). Value **PROVISIONAL** (sourced from a free peer-reviewed reference; pending engineer sign-off — REFERENCES §5). Accessible roofs out of scope (raise). **4 tests.**
 - [~] **1.6 Wind loads (SANS 10160-3)** *(highest-risk; built in layers)*
-  - [x] **Velocity/pressure engine (1.6a)** — `kr`, roughness factor `cr(z)=kr·ln(z/z0)`, peak wind speed `vp`, peak velocity pressure `qp=½ρvp²`; SA wind-speed zones (32/36/40/44 m/s, sourced). **8 tests, hand-calc verified.**
-  - [ ] ⛔ **SANS terrain table PENDING** (z0/zmin per A/B/C/D + vb,peak factor + ρ) — not in any free source (SOURCES.md E7); registry empty, lookups raise (no fabrication). Needs co-founder: ~12 values off SANS 10160-3 Table 1/2.
-  - [ ] **External pressure coefficients (1.6b)** — walls + duopitch roof zones, from EN 1991-1-4 (SANS-adopted); test vs Eurocode examples. *(Sourceable free — buildable next.)*
+  - [x] **Velocity/pressure engine (1.6a)** — full **SANS 10160-3:2019** method: terrain params (Table 1, all of A/B/C/D), power-law `cr(z)=1.36((z'−zo)/(zg−zo))^α`, `vb,peak=1.0·vb`, peak wind speed `vp`, `qp=½ρvp²`, air density vs altitude (Table 4). **Validated against the standard's own Table 3** (4×15 cells) + 10 tests. *(Real values from the official standard — earlier "PENDING terrain" now resolved.)*
+  - [ ] **External pressure coefficients (1.6b)** — walls + duopitch roof zones, from **SANS 10160-3:2019** (cl. 8 + tables); test against the standard's tabulated values.
   - [ ] **Internal pressure coefficients (1.6c)** — enclosed + dominant-opening / uplift cases.
-  - [ ] **Frame line loads (1.6d)** — net pressure `qp·(cpe−cpi)` → member UDLs; uplift case explicitly tested. *(Needs the terrain table + cpe/cpi.)*
+  - [ ] **Frame line loads (1.6d)** — net pressure `qp·(cpe−cpi)` → member UDLs; uplift case explicitly tested.
 - [ ] **1.7 Load combinations (SANS 10160-1)** — ULS + SLS limit-state combos with partial factors. **Test:** combination set matches code for a worked case.
 - [ ] **1.8 2D plane-frame analysis**
   - [ ] Integrate **PyNite**; build the portal model (columns, rafters, apex, supports).

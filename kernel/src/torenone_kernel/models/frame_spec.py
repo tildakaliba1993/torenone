@@ -86,9 +86,12 @@ class ImposedLoadInputs(BaseModel):
 class WindContext(BaseModel):
     model_config = _STRICT
     basic_wind_speed_ms: float = Field(
-        gt=0, description="Basic wind speed from the SANS 10160-3 map (m/s)."
+        gt=0, description="Basic wind speed vb from the SANS 10160-3 map (m/s)."
     )
-    terrain_category: TerrainCategory = Field(description="SANS 10160-3 terrain category — VERIFY.")
+    terrain_category: TerrainCategory = Field(description="SANS 10160-3:2019 terrain category.")
+    site_altitude_m: float = Field(
+        default=0.0, ge=0, description="Site altitude above sea level (m) — for air density (Table 4)."
+    )
     has_dominant_opening: bool = Field(
         default=False,
         description="Large dominant opening (e.g. roller door) => governing internal-pressure / uplift cases.",
