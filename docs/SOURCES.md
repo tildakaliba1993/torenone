@@ -59,5 +59,20 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 | Claude model | `claude-opus-4-8` (AI orchestration layer) | Anthropic (per claude-api skill) | VERIFIED |
 | WCAG 2.1 contrast (AA) | design-token accessibility gate | W3C WCAG 2.1 | VERIFIED |
 
+## 6. Resources to source (hand-off checklist for the co-founder)
+> All are SANS standards SA firms keep on hand — **not new purchases**, just specific tables/values
+> to transcribe. We need the *values*, not the documents.
+
+| # | Document | Exactly what we need | Unblocks | Priority |
+|---|---|---|---|---|
+| R1 | **SANS 10160-3** (Wind actions) | Table 1/2: z₀, zmin, zg for terrain **A/B/C/D**; the `vb,peak` factor vs `vb,0`; air density ρ; cpe/cpi tables **or** confirm = EN 1991-1-4 | 1.6c/1.6d wind (in progress) | 🔴 first |
+| R2 | **SANS 10160-1** (Basis of design) | ULS + SLS load-combination equations, partial factors (γ), ψ factors; SLS deflection limits | 1.7 load combinations | 🔴 |
+| R3 | **SANS 10162-1** (Steel design) | φ, fy (S355 incl. thickness); Class 1/2/3 b-t/h-w limits; Cr (n, K); Mr; LTB (Mu, ω₂); beam-column interaction (U₁, ω₁) | 1.10 member checks → 1.11/1.12 | 🔴 |
+| R4 | **SANS 10160-2** (Imposed) | Table 5 — confirm inaccessible-roof **0.4 kN/m²** (provisional E2) | 1.5 sign-off | 🟡 |
+| R5 | Validation data (he *produces*) | Reference Frame v1: Vb zone + terrain + grade; golden outputs from Prokon/SAISC spreadsheet; spot-check the 64 sections | Phase 8 validation gate | 🟡 |
+| R6 | *(optional)* SAISC "Design of Structural Steelwork to SANS 10162" (4th ed.) | Worked examples + validated spreadsheets | 1.10 + validation | ⚪ optional |
+
+> We will source EN 1991-1-4 (wind coefficients) and CSA S16 (steel method) **free** ourselves — not on this list.
+
 ---
 *Add a row the moment a new source, dataset, or key value enters the project.*
