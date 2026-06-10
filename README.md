@@ -11,6 +11,9 @@ review-ready SANS calculation package in minutes.
 - [docs/DESIGN-ARCHITECTURE.md](docs/DESIGN-ARCHITECTURE.md) — architecture + UI design system
 - [docs/TASKS.md](docs/TASKS.md) — phased implementation plan (live progress)
 - [docs/REFERENCES-AND-VALIDATION.md](docs/REFERENCES-AND-VALIDATION.md) — code basis, benchmark, tolerances
+- [docs/SOURCES.md](docs/SOURCES.md) — **living** source & resource register (provenance for every value)
+- [docs/COMPETITIVE-LANDSCAPE.md](docs/COMPETITIVE-LANDSCAPE.md) — competitors & our differentiation
+- [docs/PROJECT-SETUP.md](docs/PROJECT-SETUP.md) — Supabase/Vercel/GitHub isolation
 
 ## Repository layout (monorepo)
 ```
