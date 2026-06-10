@@ -59,6 +59,16 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 | Geist Sans / Mono | UI + monospace fonts | `next/font` | VERIFIED |
 | PyNite (PyNiteFEA 1.6.2) | first-order linear-elastic plane-frame solver (Tasks 1.8–1.9); E=200 000 N/mm² G=77 000 N/mm² (PROVISIONAL pending SANS 10162-1 cl. 5.2 confirm at 1.10) | PyPI (`pip install PyNiteFEA`) | VERIFIED |
 | SANS 10162-1:2011 cl. 8.7 | U2 sway amplification formula + notional load 0.005×gravity; sway-sensitive threshold U2>1.4 is CSA S16 basis (SANS text does not state explicit cutoff — PROVISIONAL) | standards/SANS 10162-1.pdf p.21 | PROVISIONAL |
+| SANS 10162-1:2011 cl. 3.2 | E = 200 000 MPa, G = 77 000 MPa (confirmed in Symbols section) | standards/SANS 10162-1.pdf p.12 | VERIFIED |
+| SANS 10162-1:2011 cl. 13.1a | φ = 0.90 (structural steel resistance factor) | standards/SANS 10162-1.pdf p.33 | VERIFIED |
+| SANS 10162-1:2011 cl. 13.3.1 | Cr formula, n=1.34 hot-rolled; λ formula; KL/r≤200 limit | standards/SANS 10162-1.pdf p.34 | VERIFIED |
+| SANS 10162-1:2011 cl. 11.2 Table 4 | Flange b/t limits 145/170/200·√fy (class 1/2/3); web h/t limits 1100/1700/1900·(1-reduction)·√fy | standards/SANS 10162-1.pdf p.29–31 | VERIFIED |
+| SANS 10162-1:2011 cl. 13.4.1.1 | Vr=φ·Av·0.66·fy (pure shear, kv=5.34 no stiffeners); inelastic shear buckling limits | standards/SANS 10162-1.pdf p.36–37 | VERIFIED |
+| SANS 10162-1:2011 cl. 13.5 | Mr=φ·Zpl·fy (class 1/2), Mr=φ·Ze·fy (class 3) | standards/SANS 10162-1.pdf p.38 | VERIFIED |
+| SANS 10162-1:2011 cl. 13.6 | Mcr formula; Mr=1.15φMp(1-0.28Mp/Mcr)≤φMp (case 1) or Mr=φMcr (case 2); ω2 formula | standards/SANS 10162-1.pdf p.38–39 | VERIFIED |
+| SANS 10162-1:2011 cl. 13.8.2+13.8.4 | Interaction Cu/Cr+0.85·U1·Mu/Mr≤1; U1=ω1/(1-Cu/Ce); ω1 values | standards/SANS 10162-1.pdf p.40–43 | VERIFIED |
+| SANS 10162-1:2011 Annex D Table D.1 | Deflection limits: L/240 inelastic roof covering (vertical), H/400 building sway wind (informative — non-normative) | standards/SANS 10162-1.pdf p.98 | VERIFIED (informative) |
+| fy for S355JR/S275JR | fy from EN 10025-2 (referenced cl. 5.1.3): 355/345/335 MPa for t≤16/40/63mm | EN 10025-2:2004 Table 7 (not in standards/ folder — PROVISIONAL pending engineer sign-off) | PROVISIONAL |
 | Pydantic / pytest / vitest / Playwright | kernel + web testing | PyPI / npm | VERIFIED |
 | Claude model | `claude-opus-4-8` (AI orchestration layer) | Anthropic (per claude-api skill) | VERIFIED |
 | WCAG 2.1 contrast (AA) | design-token accessibility gate | W3C WCAG 2.1 | VERIFIED |

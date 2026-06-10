@@ -2,7 +2,7 @@
 
 > The single source of truth for **what we are building and how far along we are.** Update in real time: when a task is done and its tests pass, mark it `[x]`. Governed by the [PRD](./PRD.md) and [Design & Architecture](./DESIGN-ARCHITECTURE.md).
 >
-> **Status:** v1.0 · **Last updated:** 2026-06-10 (1.9 done)
+> **Status:** v1.0 · **Last updated:** 2026-06-10 (1.10 done)
 
 ---
 
@@ -95,14 +95,15 @@
   - [x] `compute_sway_check()` — applies notional H = 0.005×gravity at eaves, runs first-order PyNite analysis, extracts drift, returns `SwaySensitivityResult`.
   - [x] Sway-sensitive flag: U2 > 1.4 (PROVISIONAL — CSA S16 basis; SANS 10162-1 cl. 8.7 does not state an explicit cutoff in text examined — engineer sign-off required).
   - [x] **Tests (17):** exact U2 formula; θ=0.2→U2=1.25, θ=0.5→U2=2.0; cantilever derivation cross-check; portal integration — notional force, U2≥1, stiff not sensitive, slender sensitive, U2 increases with gravity, θ≥1 raises, stability index consistent. All passing.
-- [ ] **1.10 Member checks (SANS 10162-1)** — each its own module + test:
-  - [ ] Section classification (Class 1–3; **refuse Class 4** with clear message). **Test.**
-  - [ ] Axial resistance. **Test.**
-  - [ ] Moment resistance. **Test.**
-  - [ ] Combined axial+bending interaction. **Test.**
-  - [ ] Lateral-torsional buckling (restraint-aware). **Test.**
-  - [ ] SLS deflection (apex + eaves sway) vs limits. **Test.**
-  - [ ] Each `CheckResult` carries its **SANS clause reference** + utilisation. **Test.**
+- [x] **1.10 Member checks (SANS 10162-1)** — each its own module + test:
+  - [x] Section classification (Class 1–3; **refuse Class 4** with clear message) — `checks/classification.py`; cl. 11.2 Table 4; flange b/t and web h/t limits with Cu effect. **8 tests.**
+  - [x] Axial resistance — `checks/axial.py`; cl. 13.3.1 Cr=φ·A·fy·(1+λ²ⁿ)^(-1/n), n=1.34 hot-rolled; slenderness limit KL/r≤200 (raises SlendernessError). **5 tests.**
+  - [x] Shear resistance — `checks/shear.py`; cl. 13.4.1.1 elastic analysis, Vr=φ·Av·0.66·fy (pure shear regime, kv=5.34 no stiffeners). **3 tests.**
+  - [x] Moment resistance — `checks/bending.py`; cl. 13.5 laterally supported (class 1/2=Zpl, class 3=Ze); cl. 13.6 LTB (Mcr formula, case 1/2 dispatch). **9 tests.**
+  - [x] Combined axial+bending interaction — `checks/interaction.py`; cl. 13.8.2 (class 1/2: Cu/Cr+0.85·U1·Mu/Mr≤1); U1 factor cl. 13.8.4. **9 tests.**
+  - [x] SLS deflection — `checks/deflection.py`; Annex D Table D.1 vertical L/240 (inelastic covering) + horizontal H/400 sway (informative, flagged). **8 tests.**
+  - [x] Steel material fy — `checks/material.py`; fy(S355JR, t≤16)=355 MPa etc. (PROVISIONAL — EN 10025-2, engineer sign-off required).
+  - [x] Every `CheckResult` carries SANS clause reference + utilisation. **Tested.** Total new: **44 tests**.
 - [ ] **1.11 Auto-sizing** — iterate to lightest passing section; return utilisations. **Test:** known frame → expected lightest section.
 - [ ] **1.12 Orchestrator** — `design(frame_spec) -> DesignResult` running the full pipeline deterministically. **Test:** end-to-end kernel run on a fixture.
 - [ ] **1.13 Determinism & reproducibility** — **Test:** same input + version → identical output (run twice, assert equal).
