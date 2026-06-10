@@ -6,7 +6,11 @@ review-ready SANS calculation package in minutes.
 > **Accuracy is absolute — human lives are at stake.** Every engineering number is produced by a
 > deterministic, version-pinned, unit-tested kernel. The AI never computes. We build test-first.
 
+## 👉 New session? Read [docs/HANDOVER.md](docs/HANDOVER.md) FIRST.
+It has full context + the exact next task (1.8 analysis engine).
+
 ## Documents (read these first)
+- [docs/HANDOVER.md](docs/HANDOVER.md) — **session handover: current state + what to do next**
 - [docs/PRD.md](docs/PRD.md) — product requirements (the bible of the MVP)
 - [docs/DESIGN-ARCHITECTURE.md](docs/DESIGN-ARCHITECTURE.md) — architecture + UI design system
 - [docs/TASKS.md](docs/TASKS.md) — phased implementation plan (live progress)
