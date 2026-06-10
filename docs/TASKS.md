@@ -80,7 +80,9 @@
 - [x] **1.5 Imposed roof loads (SANS 10160-2)** — inaccessible-roof UDL = 0.4 kN/m² (Table 5) × tributary → `ImposedLoadResult` (with category + clause for the audit view). Value **PROVISIONAL** (sourced from a free peer-reviewed reference; pending engineer sign-off — REFERENCES §5). Accessible roofs out of scope (raise). **4 tests.**
 - [~] **1.6 Wind loads (SANS 10160-3)** *(highest-risk; built in layers)*
   - [x] **Velocity/pressure engine (1.6a)** — full **SANS 10160-3:2019** method: terrain params (Table 1, all of A/B/C/D), power-law `cr(z)=1.36((z'−zo)/(zg−zo))^α`, `vb,peak=1.0·vb`, peak wind speed `vp`, `qp=½ρvp²`, air density vs altitude (Table 4). **Validated against the standard's own Table 3** (4×15 cells) + 10 tests. *(Real values from the official standard — earlier "PENDING terrain" now resolved.)*
-  - [ ] **External pressure coefficients (1.6b)** — walls + duopitch roof zones, from **SANS 10160-3:2019** (cl. 8 + tables); test against the standard's tabulated values.
+  - [~] **External pressure coefficients (1.6b)**
+    - [x] **Vertical walls** — `cpe,10` zones D (windward) & E (leeward) vs h/d + lack-of-correlation factor (**SANS 10160-3:2019 Table 6 + cl. 8.3.2.4**). Validated exactly vs Table 6; 7 tests.
+    - [ ] **Duopitch roof** — Table 10 (θ=0°): zones F/G/H/I/J, `cpe,10`, pitch interpolation, **four load cases** (NOTE 1). Reliably extracted (pdfplumber); careful focused build next.
   - [ ] **Internal pressure coefficients (1.6c)** — enclosed + dominant-opening / uplift cases.
   - [ ] **Frame line loads (1.6d)** — net pressure `qp·(cpe−cpi)` → member UDLs; uplift case explicitly tested.
 - [ ] **1.7 Load combinations (SANS 10160-1)** — ULS + SLS limit-state combos with partial factors. **Test:** combination set matches code for a worked case.

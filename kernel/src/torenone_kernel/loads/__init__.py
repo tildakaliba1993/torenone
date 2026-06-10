@@ -12,6 +12,10 @@ from torenone_kernel.loads.wind import (
     peak_wind_speed,
     roughness_factor,
 )
+from torenone_kernel.loads.wind_pressure import (
+    WallPressureCoefficients,
+    wall_pressure_coefficients,
+)
 
 __all__ = [
     # dead
@@ -28,4 +32,7 @@ __all__ = [
     "TERRAIN_PARAMETERS",
     "TerrainParameters",
     "SA_BASIC_WIND_SPEED_ZONES_MS",
+    # wind external pressure coefficients
+    "wall_pressure_coefficients",
+    "WallPressureCoefficients",
 ]
