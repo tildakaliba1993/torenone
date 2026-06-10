@@ -48,6 +48,16 @@ _PHI = 0.90   # cl. 13.1a
 _E   = 200_000.0  # MPa
 
 
+class SectionIneligibleError(ValueError):
+    """Raised by run_member_checks() when a section cannot be checked at all.
+
+    Covers: Class4Error (section classification out of MVP scope),
+    SlendernessError (KL/r > 200), and NotImplementedError (tension-field shear).
+    The caller receives this instead of a partial check list; it should produce a
+    diagnostic CheckResult with passed=False and the error message as detail.
+    """
+
+
 class NoSectionFoundError(ValueError):
     """Raised when no section in the library satisfies all strength checks.
 
@@ -59,7 +69,7 @@ class NoSectionFoundError(ValueError):
     """
 
 
-def _check_one_section(
+def run_member_checks(
     section: SectionProperties,
     fy_mpa: float,
     cu_kn: float,
@@ -67,33 +77,46 @@ def _check_one_section(
     mu_knm: float,
     KL_mm: float,
     LTB_mm: float,
-    omega2: float,
-    U1: float,
-    n: float,
-    member: str,
-) -> Optional[AutosizeResult]:
-    """Run all strength checks on one section.
+    omega2: float = 1.0,
+    U1: float = 1.0,
+    n: float = 1.34,
+    member: str = "member",
+) -> list[CheckResult]:
+    """Run all SANS 10162-1:2011 strength checks on *section* and return every result.
 
-    Returns an AutosizeResult if ALL checks pass, else None.
-    Raises Class4Error, SlendernessError, or NotImplementedError for the caller to catch
-    (these indicate a section should be skipped, not a code error).
+    Unlike ``autosize_member``, this function:
+    * **Always** returns the full check list — even when one or more checks fail.
+    * Never skips sections silently.
+
+    Raises
+    ------
+    SectionIneligibleError
+        When the section cannot be checked at all: Class 4 (cl. 11.2), slenderness
+        KL/r > 200 (cl. 10.4.2.1), or tension-field shear (not implemented in MVP).
+        The caller should convert this to a diagnostic failed CheckResult if needed.
     """
     checks: list[CheckResult] = []
 
     # ---- 1. Section classification (cl. 11.2) ----
-    cu_for_class = max(cu_kn, 0.0)  # classification uses compressive Cu ≥ 0
-    cls_result = classify_section(section, fy_mpa, cu_for_class)  # raises Class4Error if class 4
+    cu_for_class = max(cu_kn, 0.0)
+    try:
+        cls_result = classify_section(section, fy_mpa, cu_for_class)
+    except Class4Error as exc:
+        raise SectionIneligibleError(str(exc)) from exc
     sec_class = cls_result.overall_class
 
     # ---- 2. Axial compressive resistance Cr (cl. 13.3.1) ----
-    cr_kn = cr_flexural(
-        area_mm2=section.area_mm2,
-        fy_mpa=fy_mpa,
-        KL_mm=KL_mm,
-        r_mm=section.radius_gyration_ry_mm,  # weak axis (conservative for columns)
-        n=n,
-    )  # raises SlendernessError if KL/r > 200
-    cu_eff = max(cu_kn, 0.0)  # use 0 for tension (tension is not the governing case here)
+    try:
+        cr_kn = cr_flexural(
+            area_mm2=section.area_mm2,
+            fy_mpa=fy_mpa,
+            KL_mm=KL_mm,
+            r_mm=section.radius_gyration_ry_mm,
+            n=n,
+        )
+    except SlendernessError as exc:
+        raise SectionIneligibleError(str(exc)) from exc
+    cu_eff = max(cu_kn, 0.0)
     axial_util = cu_eff / cr_kn if cr_kn > 0 else 0.0
     checks.append(CheckResult(
         name=f"{member}: axial Cr",
@@ -104,7 +127,10 @@ def _check_one_section(
 
     # ---- 3. Shear resistance Vr (cl. 13.4.1.1) ----
     hw_mm = section.depth_mm - 2.0 * section.flange_thickness_mm
-    vr_kn = vr_web(hw_mm, section.web_thickness_mm, fy_mpa)  # raises NotImplementedError for TF
+    try:
+        vr_kn = vr_web(hw_mm, section.web_thickness_mm, fy_mpa)
+    except NotImplementedError as exc:
+        raise SectionIneligibleError(str(exc)) from exc
     vu_eff = abs(vu_kn)
     shear_util = vu_eff / vr_kn if vr_kn > 0 else 0.0
     checks.append(CheckResult(
@@ -116,7 +142,6 @@ def _check_one_section(
 
     # ---- 4. Bending resistance Mr with LTB (cl. 13.5/13.6) ----
     if LTB_mm <= 1.0:
-        # Effectively fully restrained → laterally supported
         mr_kn_m = mr_laterally_supported(sec_class, section.plastic_modulus_zx_mm3,
                                           section.elastic_modulus_sx_mm3, fy_mpa)
     else:
@@ -135,7 +160,7 @@ def _check_one_section(
     ))
 
     # ---- 5. Beam-column interaction (cl. 13.8.2/13.8.3) ----
-    result_interaction = beam_column_check(
+    checks.append(beam_column_check(
         cu_kn=cu_eff,
         cr_kn=cr_kn,
         mu_knm=mu_eff,
@@ -143,17 +168,44 @@ def _check_one_section(
         U1=U1,
         section_class=sec_class,
         check_name=f"{member}: beam-column interaction",
-    )
-    checks.append(result_interaction)
+    ))
 
-    # All checks must pass
+    return checks
+
+
+def _check_one_section(
+    section: SectionProperties,
+    fy_mpa: float,
+    cu_kn: float,
+    vu_kn: float,
+    mu_knm: float,
+    KL_mm: float,
+    LTB_mm: float,
+    omega2: float,
+    U1: float,
+    n: float,
+    member: str,
+) -> Optional[AutosizeResult]:
+    """Thin wrapper: run checks and return AutosizeResult if all pass, else None.
+
+    Raises Class4Error, SlendernessError, or NotImplementedError (as
+    SectionIneligibleError) for the autosize search loop to skip the section.
+    """
+    try:
+        checks = run_member_checks(section, fy_mpa, cu_kn, vu_kn, mu_knm,
+                                   KL_mm, LTB_mm, omega2, U1, n, member)
+    except SectionIneligibleError as exc:
+        # Re-raise the underlying cause so the autosize loop sees the original error type
+        raise exc.__cause__ from None  # type: ignore[misc]
+
     if not all(c.passed for c in checks):
         return None
-
     return AutosizeResult(
         member=member,
         designation=section.designation,
-        section_class_value=int(sec_class),
+        section_class_value=int(
+            classify_section(section, fy_mpa, max(cu_kn, 0.0)).overall_class
+        ),
         checks=checks,
     )
 

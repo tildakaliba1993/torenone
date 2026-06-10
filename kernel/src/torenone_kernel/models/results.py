@@ -176,6 +176,22 @@ class DesignResult(BaseModel):
     checks: list[CheckResult]
     rules_version: dict[str, str]
     warnings: tuple[str, ...] = ()
+    total_steel_mass_kg: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description=(
+            "Per-frame steel mass (kg) = Σ(member length × mass/m). "
+            "Covers the two columns and two rafter halves of a single frame."
+        ),
+    )
+    indicative_cost_zar: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description=(
+            "Indicative fabricated steel cost (ZAR) = total_steel_mass_kg × rate. "
+            "Rate is PROVISIONAL — market prices vary; confirm with fabricator."
+        ),
+    )
 
     @computed_field  # type: ignore[prop-decorator]
     @property

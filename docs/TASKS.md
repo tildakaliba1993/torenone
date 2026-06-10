@@ -2,7 +2,7 @@
 
 > The single source of truth for **what we are building and how far along we are.** Update in real time: when a task is done and its tests pass, mark it `[x]`. Governed by the [PRD](./PRD.md) and [Design & Architecture](./DESIGN-ARCHITECTURE.md).
 >
-> **Status:** v1.0 · **Last updated:** 2026-06-11 (1.13 done)
+> **Status:** v1.0 · **Last updated:** 2026-06-11 (1.14 done)
 
 ---
 
@@ -107,9 +107,12 @@
 - [x] **1.11 Auto-sizing** — `checks/autosize.py`: `autosize_member(library, fy_mpa, cu_kn, vu_kn, mu_knm, KL_mm, LTB_mm, ...)` → `AutosizeResult`. Iterates `by_increasing_mass()`, runs all SANS 10162-1 strength checks (classification, axial Cr, shear Vr, moment Mr/LTB, beam-column interaction); raises `NoSectionFoundError` if none pass. `AutosizeResult` carries designation, section_class_value, full check list + computed `passed`/`max_utilisation`. Added `section` convenience property for test access. **16 tests** — mini-library (TINY fails Mu, MEDIUM passes), lightest verification, real 64-section SAISC library smoke tests. All passing.
 - [x] **1.12 Orchestrator** — `design.py`: `design(spec) → DesignResult`. Full pipeline: dead+imposed loads → ULS-1 iterative sizing (≤5 iterations converging rafter+column sections) → SLS-1 vertical deflection via FEA (PyNite apex DY, Annex D L/240) → sway sensitivity (cl. 8.7) → DesignResult with all checks + warnings. Post-sizing deflection upgrade loop advances rafter to next heavier section when deflection governs. `node_displacements()` method added to `PortalAnalysis` for FEA deflections. Out-of-scope: wind combos + K≠1 effective lengths (both in warnings). **13 tests** covering contract, correctness, determinism. All passing. Total: 214 tests.
 - [x] **1.13 Determinism & reproducibility** — `test_determinism.py`: systematic multi-fixture proof. Three frame specs (15m standard, 20m wide, 12m restrained). Tests: (a) two calls identical `_json_dump()` per spec; (b) byte-identical `json.dumps(sort_keys=True)`; (c) `model_dump(mode="json")` round-trip lossless; (d) `rules_version` complete (all 5 standard keys present, non-empty, matches `rules_version.as_dict()`); (e) input-sensitivity — 4 parametric checks confirm different specs give different results. **26 tests.** All passing. Total: 240 tests.
-- [ ] **1.14 Check mode + material readout** *(competitive — PRD FR-24/25)*
-  - [ ] Orchestrator `check(frame_spec, sections) -> DesignResult`: run the full SANS 10162-1 checks on engineer-supplied sections (no auto-size). **Test.**
-  - [ ] Compute total steel mass (kg) = Σ(member length × section mass/m); indicative cost from a configurable rate; carry both on `DesignResult` (extend the contract). **Test.**
+- [x] **1.14 Check mode + material readout** *(competitive — PRD FR-24/25)*
+  - [x] `check(spec, sections, cost_rate_zar_per_kg) → DesignResult` — engineer supplies section designations; kernel runs full SANS 10162-1 checks (classification, axial, shear, moment/LTB, interaction, sway, SLS deflection) without auto-sizing. `FrameUnstableError` from tiny sections is caught and reported as a failed CheckResult with diagnostic detail.
+  - [x] `total_steel_mass_kg` (2 × rafter-half-len × raf_kg/m + 2 × eaves_h × col_kg/m) and `indicative_cost_zar` (mass × rate, default R20/kg PROVISIONAL) added to `DesignResult` with `Optional[float]` defaults (no existing tests broken). Both `design()` and `check()` populate them.
+  - [x] Refactored `autosize.py`: extracted `run_member_checks()` (public, always returns checks even on failure) from `_check_one_section`; introduced `SectionIneligibleError` wrapper for Class4/slenderness/TF errors.
+  - [x] `DEFAULT_COST_RATE_ZAR_PER_KG = 20.0` exported from `design.py` for test/audit use.
+  - [x] **23 new tests** in `test_check_mode.py`: contract, correctness (passing/failing sections), check-vs-design pass-fail consistency, mass formula, cost formula, custom rate. **263 total passing.**
 
 **Acceptance:** full kernel runs; ≥95% coverage; all checks carry clause refs; determinism test passes.
 
