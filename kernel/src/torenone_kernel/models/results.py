@@ -114,6 +114,29 @@ class ImposedLoadResult(BaseModel):
     clause: str = Field(min_length=1, description="SANS clause/table reference.")
 
 
+class SwaySensitivityResult(BaseModel):
+    """Second-order sway check result — SANS 10162-1:2011 cl. 8.7.
+
+    U2 = 1/(1 − ΣΔu·Cu/(ΣVu·h))
+
+    Sway-sensitivity threshold U2 > 1.4 is the CSA S16 basis value. SANS 10162-1 cl. 8.7
+    does not state an explicit numerical cutoff; **this threshold is PROVISIONAL** pending
+    registered-engineer sign-off.
+    """
+
+    model_config = _STRICT
+    combination: str = Field(min_length=1)
+    U2: float = Field(ge=1.0, description="SANS 10162-1 cl. 8.7 sway amplification factor.")
+    stability_index: float = Field(
+        ge=0.0, description="θ = ΣΔu·Cu/(ΣVu·h) = 1 − 1/U2."
+    )
+    eaves_drift_mm: float = Field(ge=0.0, description="Lateral sway at eaves under notional force (mm).")
+    notional_force_kn: float = Field(gt=0.0, description="0.005 × total factored gravity (cl. 8.7).")
+    is_sway_sensitive: bool = Field(
+        description="True if U2 > 1.4 (PROVISIONAL threshold — CSA S16 basis)."
+    )
+
+
 class DesignResult(BaseModel):
     """The full output of a design run: input echo, chosen sections, checks, audit metadata."""
 

@@ -2,7 +2,7 @@
 
 > The single source of truth for **what we are building and how far along we are.** Update in real time: when a task is done and its tests pass, mark it `[x]`. Governed by the [PRD](./PRD.md) and [Design & Architecture](./DESIGN-ARCHITECTURE.md).
 >
-> **Status:** v1.0 · **Last updated:** 2026-06-10
+> **Status:** v1.0 · **Last updated:** 2026-06-10 (1.9 done)
 
 ---
 
@@ -90,7 +90,11 @@
   - [x] Integrate **PyNite** (PyNiteFEA 1.6.2); build the portal model (columns, rafters, apex, pinned bases).
   - [x] Solve first-order linear elastic per combination → M, V, N at col-bases, eaves, apex.
   - [x] **Tests (14):** exact validation — simply-supported beam UDL, cantilever point load, pinned-base portal stiffness-method; PortalAnalysis contract (symmetry, vertical equilibrium, zero base moment, correct locations). All 14 passing. Unit convention: N/mm internally; kN/kN·m in AnalysisResult.
-- [ ] **1.9 Second-order / sway check** — amplification check; flag sway-sensitive frames. **Test:** against worked example.
+- [x] **1.9 Second-order / sway check** — SANS 10162-1:2011 cl. 8.7 U2 amplification factor.
+  - [x] `u2_factor()` — pure formula U2 = 1/(1−θ); raises `FrameUnstableError` for θ ≥ 1.0.
+  - [x] `compute_sway_check()` — applies notional H = 0.005×gravity at eaves, runs first-order PyNite analysis, extracts drift, returns `SwaySensitivityResult`.
+  - [x] Sway-sensitive flag: U2 > 1.4 (PROVISIONAL — CSA S16 basis; SANS 10162-1 cl. 8.7 does not state an explicit cutoff in text examined — engineer sign-off required).
+  - [x] **Tests (17):** exact U2 formula; θ=0.2→U2=1.25, θ=0.5→U2=2.0; cantilever derivation cross-check; portal integration — notional force, U2≥1, stiff not sensitive, slender sensitive, U2 increases with gravity, θ≥1 raises, stability index consistent. All passing.
 - [ ] **1.10 Member checks (SANS 10162-1)** — each its own module + test:
   - [ ] Section classification (Class 1–3; **refuse Class 4** with clear message). **Test.**
   - [ ] Axial resistance. **Test.**

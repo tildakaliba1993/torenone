@@ -57,7 +57,8 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 | Tailwind CSS | v4 (`@theme`-based) | npm | VERIFIED |
 | shadcn/ui + Supabase UI Library | design-system foundation (Phase 6) | supabase.com/ui (blog), ui.shadcn.com | VERIFIED |
 | Geist Sans / Mono | UI + monospace fonts | `next/font` | VERIFIED |
-| PyNite (PyNiteFEA 1.6.2) | first-order linear-elastic plane-frame solver (Task 1.8); E=200 000 N/mm² G=77 000 N/mm² (steel constants — PROVISIONAL pending SANS 10162-1 cl. 5.2 confirm at 1.10) | PyPI (`pip install PyNiteFEA`) | VERIFIED |
+| PyNite (PyNiteFEA 1.6.2) | first-order linear-elastic plane-frame solver (Tasks 1.8–1.9); E=200 000 N/mm² G=77 000 N/mm² (PROVISIONAL pending SANS 10162-1 cl. 5.2 confirm at 1.10) | PyPI (`pip install PyNiteFEA`) | VERIFIED |
+| SANS 10162-1:2011 cl. 8.7 | U2 sway amplification formula + notional load 0.005×gravity; sway-sensitive threshold U2>1.4 is CSA S16 basis (SANS text does not state explicit cutoff — PROVISIONAL) | standards/SANS 10162-1.pdf p.21 | PROVISIONAL |
 | Pydantic / pytest / vitest / Playwright | kernel + web testing | PyPI / npm | VERIFIED |
 | Claude model | `claude-opus-4-8` (AI orchestration layer) | Anthropic (per claude-api skill) | VERIFIED |
 | WCAG 2.1 contrast (AA) | design-token accessibility gate | W3C WCAG 2.1 | VERIFIED |
