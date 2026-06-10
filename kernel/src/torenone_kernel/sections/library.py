@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
+from importlib.resources import files
 from pathlib import Path
 
 from torenone_kernel.sections.properties import SectionProperties
@@ -29,6 +30,21 @@ class SectionLibrary:
     @classmethod
     def from_records(cls, records: Iterable[dict[str, object]]) -> SectionLibrary:
         return cls(SectionProperties(**record) for record in records)
+
+    @classmethod
+    def load_default(cls) -> SectionLibrary:
+        """Load the packaged SAISC section dataset.
+
+        ⚠️ PROVISIONAL data — parsed from the SAISC 'Database of Structural Steel Sections'
+        and pending a registered engineer's spot-check sign-off (see the data file's `_meta`
+        and PRD Phase 8). Use for development; not yet cleared for production design output.
+        """
+        raw = (
+            files("torenone_kernel.sections")
+            .joinpath("data/saisc_sections.json")
+            .read_text(encoding="utf-8")
+        )
+        return cls.from_records(json.loads(raw)["sections"])
 
     @classmethod
     def load_json(cls, path: str | Path) -> SectionLibrary:

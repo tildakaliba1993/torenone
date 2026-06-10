@@ -70,10 +70,11 @@
   - [x] `FrameSpec` (geometry, materials, base fixity, restraints, dead/imposed/wind context) — frozen + `extra="forbid"`; computed geometry (apex height, building length).
   - [x] Validation: reject invalid geometry, unknown fields, mutation (PRD FR-1/FR-3). **Tested.**
   - [x] Result contracts: `LoadCase`, `LoadCombination`, `MemberForces`, `AnalysisResult`, `CheckResult` (clause required — FR-18), `SectionChoice`, `DesignResult` (passed/governing-utilisation aggregation; **empty checks never vacuously pass**). **27 model tests passing.**
-- [~] **1.2 Section database (SAISC)**
-  - [x] `SectionProperties` schema (area, I, Sx, Zx, rx/ry, J, Cw, geometry) + `SectionLibrary` (lookup, dedupe, lightest-first ordering, JSON loader). Machinery tested with synthetic non-design fixtures.
-  - [ ] ⛔ **Blocked on co-founder:** curate the v1 section list (IPE/HEA and/or UB/UC) and supply real SAISC Red Book values.
-  - [ ] **Test:** spot-check the real section properties against published SAISC values (once data is in).
+- [x] **1.2 Section database (SAISC)**
+  - [x] `SectionProperties` schema + `SectionLibrary` (lookup, dedupe, lightest-first ordering, JSON loader, `load_default()`).
+  - [x] Real data loaded from the official **SAISC "Database of Structural Steel Sections"** (free PDF) via a documented, re-runnable parser (`tools/build_saisc_sections.py`): **64 sections** — IPE-AA/IPE 100–200, Universal Beams, Universal Columns; 0 Class-4. Provenance + units in the data file `_meta`.
+  - [x] **Spot-check tests** vs independently-known published values (IPE/UC area, Ix, elastic *and* plastic moduli, ry, J, Cw) — 8 tests passing.
+  - [ ] ⏳ **Final sign-off (Phase 8 gate, non-blocking):** registered engineer spot-checks the dataset vs the SAISC Red Book; data is flagged **PROVISIONAL** until then.
 - [x] **1.3 Rules versioning** — `rules_version.py` (pinned editions + `as_dict()`), tested. Stamping into `DesignResult` wires in at 1.12. *(Editions still marked `VERIFY` pending the official standards.)*
 - [ ] **1.4 Dead loads** — self-weight + components. **Test:** worked example.
 - [ ] **1.5 Imposed roof loads (SANS 10160-2)** — **Test:** worked example.

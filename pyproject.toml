@@ -18,6 +18,9 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["kernel/src"]
 
+[tool.setuptools.package-data]
+torenone_kernel = ["sections/data/*.json"]
+
 [tool.pytest.ini_options]
 pythonpath = ["kernel/src", "tools"]
 testpaths = ["kernel/tests", "tools/tests"]

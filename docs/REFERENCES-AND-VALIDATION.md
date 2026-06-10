@@ -104,5 +104,5 @@ Rules:
 - [ ] Co-founder fixes Reference Frame v1's wind location (Vb, terrain) and steel grade.
 - [ ] Co-founder produces the golden reference outputs (Prokon / SAISC spreadsheet / hand calc).
 - [ ] Confirm SANS editions → update `rules_version.py` (remove `VERIFY`).
-- [ ] Curate the SAISC section list for v1 (which series + grade).
+- [x] Section data for v1 — **loaded** from the official free SAISC "Database of Structural Steel Sections" (64 sections: IPE-AA/IPE 100–200, UB, UC), cross-checked against known published values. **PROVISIONAL** pending the engineer's spot-check sign-off below. Confirm intended steel grade (e.g. S355).
 - [ ] Sign off the tolerance table above.
