@@ -23,7 +23,10 @@
 | E1 | SAISC steel section properties (64: IPE-AA/IPE 100–200, UB, UC) | full section props (A, I, Sx, Zx, rx/ry, J, Cw, geom) | Official **SAISC "Database of Structural Steel Sections"** (free PDF), supplied by co-founder; parsed via `tools/build_saisc_sections.py` | 2026-06-10 | PROVISIONAL (pending Pr.Eng spot-check vs Red Book) | `kernel/.../sections/data/saisc_sections.json` |
 | E2 | Imposed roof load — inaccessible roof | **0.4 kN/m²** UDL (SANS 10160-2 Table 5) | SANS 10160-2:2011 Table 5; confirmed peer-reviewed: *J. SAICE* via SciELO `S1021-20192021000100005`; corroborated across multiple refs | 2026-06-10 | PROVISIONAL (pending sign-off) | `kernel/.../loads/imposed.py` (1.5) |
 | E3 | Gravitational acceleration g | 9.81 m/s² (mass→weight) | Universal physical constant | 2026-06-10 | VERIFIED | `kernel/.../loads/dead.py` (1.4) |
-| E4 | SANS 10160-3 wind parameters (terrain categories, peak wind speed, pressure coefficients) | _in progress (Task 1.6)_ | _see §2 lineage + sources logged as researched_ | — | PLANNED | `kernel/.../loads/wind.py` |
+| E4 | SANS 10160-3 wind **method (form)** | `cr(z)=kr·ln(z/z0)`; `vp=cr·co·vb,peak`; `qp=½ρvp²` | SkyCiv SANS 10160 docs; SciELO wind papers; EN 1991-1-4 form | 2026-06-10 | VERIFIED (form) | `loads/wind.py` (1.6) |
+| E5 | SA fundamental basic wind-speed zones | `vb,0 = 32, 36, 40, 44 m/s` (10 m, terrain B) | Peer-reviewed SciELO `S1021-20192017000400001` / `...400002` | 2026-06-10 | PROVISIONAL | `loads/wind.py` (1.6) |
+| E6 | Wind pressure coefficients (cpe walls/roof, cpi) | per **EN 1991-1-4** (SANS adopts; "differs only on map + terrain") | EN 1991-1-4 (freely documented); SkyCiv note | 2026-06-10 | PROVISIONAL (confirm SANS = EN) | `loads/wind.py` (1.6) |
+| E7 | **SANS terrain roughness table** (z0, zmin, zg per A/B/C/D) + vb,peak factor + air density ρ | SANS 10160-3 Tables 1 & 2 | ⛔ **NOT in any legitimate free source** — in the standard only; pirated copies exist but rejected | 2026-06-10 | **BLOCKED — needs co-founder to read ~12 values off SANS 10160-3** | `loads/wind.py` (1.6) |
 
 > Cross-verification (E1) was done against independently-known standard IPE/UC values; the spot-check
 > tests live in `kernel/tests/test_saisc_dataset.py`.
