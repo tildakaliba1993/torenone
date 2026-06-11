@@ -2,7 +2,7 @@
 
 > The single source of truth for **what we are building and how far along we are.** Update in real time: when a task is done and its tests pass, mark it `[x]`. Governed by the [PRD](./PRD.md) and [Design & Architecture](./DESIGN-ARCHITECTURE.md).
 >
-> **Status:** v1.0 · **Last updated:** 2026-06-11 (4.1 done — FastAPI app skeleton: health + structured logging)
+> **Status:** v1.0 · **Last updated:** 2026-06-11 (4.2 done — Supabase JWT verification; protected routes reject invalid/expired/missing)
 
 ---
 
@@ -154,7 +154,7 @@
 *Goal: the HTTP service that ties AI + kernel + report together, secured by Supabase JWT.*
 
 - [x] **4.1 App skeleton** — FastAPI app, health check, structured logging. `service/src/torenone_service/`: `create_app()` factory (no import-time side effects beyond logging), `GET /health` liveness endpoint (`{status, service, version}`), and per-request structured-logging middleware (method/path/status/duration_ms). `logging_config.py` = stdout JSON formatter that promotes any `extra={}` to top-level fields (container-friendly; no secrets logged). `main.py` = ASGI entrypoint (`uvicorn torenone_service.main:app`). Deps: fastapi + uvicorn (service extra), httpx (dev, TestClient). **13 tests** (`service/tests/test_app.py`): health 200 + shape, GET-only (405), 404, OpenAPI served, JSON formatter (valid JSON / extra fields / exc_info / single-line), `configure_logging` idempotent single-handler, request middleware emits structured fields + valid JSON. All passing (Python 3.11; ruff + mypy clean — service now in the mypy gate). Full suite: **556 passed**.
-- [ ] **4.2 JWT verification** — verify Supabase JWT on every protected route; reject invalid. **Test:** valid passes, invalid/expired rejected.
+- [x] **4.2 JWT verification** — verify Supabase JWT on every protected route; reject invalid. `service/src/torenone_service/auth.py`: `AuthConfig` (HS256 secret from `SUPABASE_JWT_SECRET`, audience `authenticated` from `SUPABASE_JWT_AUD`; secret redacted in repr/str); `decode_token()` verifies signature + expiry + audience + required `exp`/`sub` claims → `AuthenticatedUser(user_id, email, role)` or `AuthError`; `require_user` FastAPI dependency (HTTPBearer) → 401 on missing/invalid/expired, 503 if unconfigured. Protected `GET /me` route added; `/health` stays public. App stores `auth_config` on `app.state` (injectable for tests; loaded from env otherwise). **27 tests** (`service/tests/test_auth.py`): decode unit (valid/expired/bad-sig/wrong-aud/missing-sub/missing-exp/garbage/aud-disabled), `/me` valid→200, rejects (missing/non-Bearer/expired/bad-sig/wrong-aud/garbage→401, WWW-Authenticate header, no secret leak), unconfigured→503 (health still 200), `AuthConfig.from_env` + redaction. ruff `extend-immutable-calls` added for FastAPI `Depends` (B008). All passing (Python 3.11; ruff + mypy clean). Full suite: **583 passed**.
 - [ ] **4.3 `POST /parse`** — text → `FrameSpec` (+ clarifying questions). **Test.**
 - [ ] **4.4 `POST /design`** — confirmed `FrameSpec` → run kernel → build PDF → upload to Supabase Storage → persist `run` + `report` → return result. **Test (mocked kernel/storage).**
   - [ ] Support **Check mode** (`mode=check` with supplied sections) → runs `check()` instead of `design()` (PRD FR-24). **Test.**

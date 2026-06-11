@@ -14,17 +14,46 @@ from __future__ import annotations
 import time
 from collections.abc import Awaitable, Callable
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from starlette.responses import Response
 
+from torenone_service.auth import (
+    AuthConfig,
+    AuthenticatedUser,
+    MissingJWTSecretError,
+    require_user,
+)
 from torenone_service.logging_config import configure_logging, get_logger
 
 SERVICE_NAME = "torenone-engineering-service"
 SERVICE_VERSION = "0.1.0"
 
 
-def create_app() -> FastAPI:
-    """Build and return the FastAPI application."""
+def _optional_auth_config_from_env() -> AuthConfig | None:
+    """Load AuthConfig from env, or None (logging a warning) if the secret is unset.
+
+    The app still starts unconfigured so liveness checks work; protected routes then
+    return 503 until the secret is provided.
+    """
+    try:
+        return AuthConfig.from_env()
+    except MissingJWTSecretError:
+        get_logger().warning(
+            "auth_not_configured",
+            extra={"reason": "SUPABASE_JWT_SECRET not set; protected routes return 503"},
+        )
+        return None
+
+
+def create_app(*, auth_config: AuthConfig | None = None) -> FastAPI:
+    """Build and return the FastAPI application.
+
+    Parameters
+    ----------
+    auth_config:
+        Injected JWT verification config (tests). If omitted, it is loaded from the
+        environment (``SUPABASE_JWT_SECRET``); if that is absent, protected routes 503.
+    """
     configure_logging()
     logger = get_logger()
 
@@ -32,6 +61,9 @@ def create_app() -> FastAPI:
         title=SERVICE_NAME,
         version=SERVICE_VERSION,
         summary="TorenOne engineering service — AI orchestration + kernel + report.",
+    )
+    app.state.auth_config = (
+        auth_config if auth_config is not None else _optional_auth_config_from_env()
     )
 
     @app.middleware("http")
@@ -55,12 +87,17 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict[str, str]:
-        """Liveness probe — no external dependencies are checked."""
+        """Liveness probe — no external dependencies are checked (public)."""
         return {
             "status": "ok",
             "service": SERVICE_NAME,
             "version": SERVICE_VERSION,
         }
+
+    @app.get("/me")
+    async def me(user: AuthenticatedUser = Depends(require_user)) -> AuthenticatedUser:
+        """Return the authenticated caller — protected (requires a valid Supabase JWT)."""
+        return user
 
     logger.info(
         "service_startup",

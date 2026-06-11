@@ -6,7 +6,22 @@ kernel stays pure.
 """
 
 from torenone_service.app import SERVICE_NAME, SERVICE_VERSION, create_app
+from torenone_service.auth import (
+    AuthConfig,
+    AuthenticatedUser,
+    MissingJWTSecretError,
+    require_user,
+)
 
 __version__ = SERVICE_VERSION
 
-__all__ = ["create_app", "SERVICE_NAME", "SERVICE_VERSION", "__version__"]
+__all__ = [
+    "create_app",
+    "SERVICE_NAME",
+    "SERVICE_VERSION",
+    "__version__",
+    "AuthConfig",
+    "AuthenticatedUser",
+    "MissingJWTSecretError",
+    "require_user",
+]

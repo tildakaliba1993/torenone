@@ -19,6 +19,7 @@ service = [
     "openai>=2.0",
     "fastapi>=0.115",
     "uvicorn>=0.30",
+    "pyjwt>=2.8",
 ]
 # PDF rendering — needs system pango/cairo (not installed in CI; PDF tests skip there).
 pdf = [
@@ -54,6 +55,21 @@ select = ["E", "F", "I", "B", "UP"]
 # UP042 wants enum.StrEnum (Python 3.11+). The kernel test-suite also runs on 3.9,
 # so the `(str, Enum)` pattern is kept intentionally.
 ignore = ["UP042"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency-injection markers are designed to be called in argument
+# defaults (Depends/Query/etc.) — that is the documented idiom, not a B008 bug.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Security",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Header",
+    "fastapi.Cookie",
+    "fastapi.Body",
+    "fastapi.Form",
+    "fastapi.File",
+]
 
 [tool.ruff.lint.per-file-ignores]
 # These modules must mutate sys.path / probe an optional dependency BEFORE importing
