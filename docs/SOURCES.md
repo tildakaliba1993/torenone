@@ -76,6 +76,8 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 | Pydantic / pytest / vitest / Playwright | kernel + web testing | PyPI / npm | VERIFIED |
 | OpenAI model | `gpt-5.5` primary / `gpt-5.4-mini` fallback (AI orchestration layer; Structured Outputs + function calling) | OpenAI API docs (developers.openai.com, verified 2026-06-11) | VERIFIED |
 | Task 3.2 spec parsing | No new engineering values introduced — the LLM only transcribes/classifies user-stated inputs; all applied defaults (services 0.0 kPa, wall 0.0 kPa, roof inaccessible, altitude 0 m, no dominant opening, S355JR, pinned base, unrestrained) are the already-sourced `FrameSpec` model defaults | `models/frame_spec.py` (defaults documented in Phase 1) | VERIFIED (no new values) |
+| Task 1.15 connections (bolts) | φb=0.80, φbr=0.80 (cl. 13.1); Tr=0.75·φb·As·Fu, Vr=0.60·φb·As·Fu, Br=3·φbr·t·d·Fu (cl. 13.12). Bolt 8.8 Fu=800, 10.9 Fu=1000 MPa; ISO stress areas M16/20/24/30 = 157/245/353/561 mm² | SANS 10162-1 / CSA S16 practice — **standard PDF absent from `standards/`** | **PROVISIONAL — engineer sign-off required** |
+| Task 1.15 connections (welds/plate) | φw=0.67, fillet Vr=0.67·φw·(0.707·leg)·Xu (cl. 13.13.2.2); electrode Xu=480 MPa (E48xx); end-plate plastic bending (T-stub, simplified, no prying/modes 2-3); flange-force-couple moment method; plate Fy/Fu by grade | SANS 10162-1 / CSA S16 practice — not transcribed from PDF | **PROVISIONAL — engineer sign-off required** |
 | WCAG 2.1 contrast (AA) | design-token accessibility gate | W3C WCAG 2.1 | VERIFIED |
 
 ## 6. Resources to source (hand-off checklist for the co-founder)

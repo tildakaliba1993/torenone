@@ -82,6 +82,32 @@ class SectionChoice(BaseModel):
     designation: str = Field(min_length=1)   # e.g. "IPE 400"
 
 
+class ConnectionDesignResult(BaseModel):
+    """A designed portal-frame moment connection (eaves or apex) — Task 1.15.
+
+    Carries the chosen bolted end-plate configuration plus every connection check.
+    PROVISIONAL — see torenone_kernel.connections (pending engineer sign-off).
+    """
+
+    model_config = _STRICT
+    location: str = Field(min_length=1)         # "eaves" | "apex"
+    description: str = Field(min_length=1)       # human-readable chosen configuration
+    design_moment_knm: float = Field(ge=0.0)
+    design_shear_kn: float = Field(ge=0.0)
+    design_axial_kn: float = 0.0
+    checks: list[CheckResult] = Field(min_length=1)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def passed(self) -> bool:
+        return bool(self.checks) and all(c.passed for c in self.checks)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def max_utilisation(self) -> float:
+        return max((c.utilisation for c in self.checks), default=0.0)
+
+
 class DeadLoadResult(BaseModel):
     """Characteristic permanent (dead) loads as line loads on the frame members.
 
