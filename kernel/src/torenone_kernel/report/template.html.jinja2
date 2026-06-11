@@ -241,9 +241,33 @@
 </table>
 
 <!-- ================================================================ -->
-<!-- 3. DESIGN RESULTS SUMMARY                                        -->
+<!-- 3. DIAGRAMS (Task 2.3)                                           -->
 <!-- ================================================================ -->
-<h2>3. Design Results Summary</h2>
+<h2>3. Frame Diagrams</h2>
+
+<h3>Frame Geometry</h3>
+<div style="text-align:center; margin-bottom:10pt;">
+  <img src="data:image/png;base64,{{ geom_png_b64 }}"
+       alt="Portal frame geometry diagram"
+       style="max-width:100%; height:auto; border:0.5pt solid var(--color-border);">
+</div>
+
+<h3>Bending Moment Diagram + Shear Force Diagram — Governing ULS-1 Combination</h3>
+<p style="font-size:8.5pt; color:var(--color-muted); margin-bottom:4pt;">
+  Forces computed by first-order elastic plane-frame analysis (PyNiteFEA).
+  Moments plotted perpendicular to member axis; positive offset = sagging convention.
+  Values in kN·m (BMD) and kN (SFD).
+</p>
+<div style="text-align:center; margin-bottom:10pt;">
+  <img src="data:image/png;base64,{{ bmd_sfd_b64 }}"
+       alt="Bending moment diagram and shear force diagram"
+       style="max-width:100%; height:auto; border:0.5pt solid var(--color-border);">
+</div>
+
+<!-- ================================================================ -->
+<!-- 4. DESIGN RESULTS SUMMARY                                        -->
+<!-- ================================================================ -->
+<h2>4. Design Results Summary</h2>
 
 <table>
   <tr><th>Member</th><th>Section</th><th class="num">Governing util.</th><th>Status</th></tr>
@@ -283,7 +307,7 @@
 <!-- ================================================================ -->
 <!-- 4. CODE CHECKS (SANS 10162-1:2011)                               -->
 <!-- ================================================================ -->
-<h2>4. Code Checks — SANS 10162-1:2011</h2>
+<h2>5. Code Checks — SANS 10162-1:2011</h2>
 <p style="font-size:8.5pt; color:var(--color-muted); margin-bottom:6pt;">
   Utilisation = demand / capacity. Values &le; 1.00 indicate compliance.
   All clauses refer to SANS 10162-1:2011 unless otherwise stated.
@@ -333,7 +357,7 @@
 <!-- ================================================================ -->
 <!-- 5. STEEL SCHEDULE                                                 -->
 <!-- ================================================================ -->
-<h2>5. Steel Schedule</h2>
+<h2>6. Steel Schedule</h2>
 <table>
   <tr>
     <th>Member</th>
@@ -374,7 +398,7 @@
 <!-- ================================================================ -->
 <!-- 6. STANDARDS AND RULES VERSION (PRD FR-20)                       -->
 <!-- ================================================================ -->
-<h2>6. Standards and Rules Version</h2>
+<h2>7. Standards and Rules Version</h2>
 <table>
   <tr><th style="width:40%">Standard</th><th>Version / edition used</th></tr>
   {% for key, val in rules_version.items() %}

@@ -18,6 +18,7 @@ Design constraints
 
 from __future__ import annotations
 
+import base64
 import dataclasses
 import math
 from datetime import date
@@ -27,6 +28,7 @@ from typing import Any
 import jinja2
 
 from torenone_kernel.models.results import DesignResult
+from torenone_kernel.report.diagrams import bmd_sfd_png, frame_geometry_png
 from torenone_kernel.sections.library import SectionLibrary
 
 _TEMPLATE_PATH = Path(__file__).parent / "template.html.jinja2"
@@ -144,6 +146,10 @@ def render_html(result: DesignResult) -> str:
     # fy from rules_version if present, else standard S355 value
     fy_mpa = 355  # S355JR t<=16mm (from EN 10025-2, PROVISIONAL)
 
+    # Diagrams — rendered as base64-encoded PNG data URIs for embedding in HTML/PDF
+    geom_png_b64  = base64.b64encode(frame_geometry_png(result.frame_spec)).decode("ascii")
+    bmd_sfd_b64   = base64.b64encode(bmd_sfd_png(result)).decode("ascii")
+
     ctx: dict[str, Any] = {
         "generated_date": date.today().isoformat(),
         "geom": geom,
@@ -164,6 +170,8 @@ def render_html(result: DesignResult) -> str:
         "cost_rate_zar_per_kg": cost_rate,
         "rules_version": result.rules_version,
         "provisional_warnings": _PROVISIONAL_WARNINGS,
+        "geom_png_b64": geom_png_b64,
+        "bmd_sfd_b64": bmd_sfd_b64,
     }
 
     return template.render(**ctx)
