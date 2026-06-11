@@ -23,6 +23,7 @@ and validate against the standards' own tables where possible — we never redis
 | `SANS 10160-1.pdf` | 80 | Basis of design / load combinations | ⚠️ **DRAFT (DSS — public-enquiry stage).** Combination partial factors **must be confirmed vs the final published SANS 10160-1** before use (1.7). |
 | `SANS 10160-2.pdf` | 38 | Self-weight & imposed loads | ⚠️ Page-1 metadata looks like a course re-host — verify genuine standard content. (Imposed 0.4 kN/m² already independently corroborated.) |
 | `Design of Structural Steelwork to SANS 10162.pdf` | 575 | Design guide / worked examples | ⚠️ Likely **scanned** (no text layer on p.1); needs OCR to use. Not the 4th edition. |
+| `SANS 10100-1.pdf` | 214 | **SANS 10100-1 (SABS 0100-1 Ed. 2.2)** — Structural use of concrete, Part 1: Design (BS 8110 basis) | ✅ Official (ISBN 0-626-12497-2). Received 2026-06-11. Used in **1.17 pad footings** — flexure 4.3.3, shear 4.3.4 (vc eq. 2, v_max 4.3.4.1), bases 4.10, min steel 4.11.4. Clauses read & transcribed. |
 
 ## How the kernel uses these
 Values are extracted **programmatically** (exact text, never eyeballed), each **cited by clause/table**
