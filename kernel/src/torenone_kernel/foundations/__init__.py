@@ -15,9 +15,17 @@ from torenone_kernel.foundations.baseplate import (
     check_baseplate,
     design_baseplate,
 )
+from torenone_kernel.foundations.pad_footing import (
+    PadFooting,
+    check_pad_footing,
+    design_pad_footing,
+)
 
 __all__ = [
     "BasePlate",
     "check_baseplate",
     "design_baseplate",
+    "PadFooting",
+    "check_pad_footing",
+    "design_pad_footing",
 ]

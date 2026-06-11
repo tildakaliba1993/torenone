@@ -133,6 +133,33 @@ class BaseplateDesignResult(BaseModel):
         return max((c.utilisation for c in self.checks), default=0.0)
 
 
+class PadFootingDesignResult(BaseModel):
+    """A designed concrete pad footing — Task 1.17.
+
+    ⚠️ PROVISIONAL — concrete design (SANS 10100-1) clauses were not available in
+    `standards/`; see torenone_kernel.foundations.pad_footing (engineer sign-off req'd).
+    """
+
+    model_config = _STRICT
+    description: str = Field(min_length=1)
+    plan_size_mm: float = Field(gt=0.0)          # square footing side B
+    thickness_mm: float = Field(gt=0.0)          # footing depth D
+    allowable_bearing_kpa: float = Field(gt=0.0)
+    design_service_axial_kn: float = Field(ge=0.0)
+    design_factored_axial_kn: float = Field(ge=0.0)
+    checks: list[CheckResult] = Field(min_length=1)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def passed(self) -> bool:
+        return bool(self.checks) and all(c.passed for c in self.checks)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def max_utilisation(self) -> float:
+        return max((c.utilisation for c in self.checks), default=0.0)
+
+
 class DeadLoadResult(BaseModel):
     """Characteristic permanent (dead) loads as line loads on the frame members.
 
