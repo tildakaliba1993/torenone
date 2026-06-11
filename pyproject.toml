@@ -5,12 +5,22 @@ description = "TorenOne — AI structural engineer (kernel + service)"
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.6",
+    "numpy>=2.4",
+    # FEA engine — exact-pinned: identical inputs must give byte-identical results
+    # (PRD NFR-3 determinism); a different PyNite build can shift computed forces.
+    "PyNiteFEA==3.0.0",
+    "matplotlib>=3.10",   # report diagrams (Agg backend)
+    "jinja2>=3.1",        # report HTML templating
 ]
 
 [project.optional-dependencies]
 # Engineering service (Phase 3+) — AI orchestration layer.
 service = [
     "openai>=2.0",
+]
+# PDF rendering — needs system pango/cairo (not installed in CI; PDF tests skip there).
+pdf = [
+    "weasyprint>=60",
 ]
 dev = [
     "pytest>=8.0",
