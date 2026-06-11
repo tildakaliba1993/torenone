@@ -2,7 +2,7 @@
 
 > System architecture + UI design system for the MVP. Governed by the [PRD](./PRD.md). Work tracked in [Tasks](./TASKS.md).
 >
-> **Status:** v1.0 · **Last updated:** 2026-06-09
+> **Status:** v1.1 · **Last updated:** 2026-06-11 (added kernel last-mile modules: connections/foundations/costing; spec-review + interactive visual feedback screens)
 
 ---
 
@@ -45,9 +45,9 @@
 ### A.4 Data flow — one design run
 1. Frontend sends the user's text + project id to **FastAPI** (with Supabase JWT).
 2. FastAPI verifies the JWT, calls **OpenAI** with Structured Outputs → typed `FrameSpec`.
-3. Frontend renders the **confirm screen**; user edits/confirms; confirmed `FrameSpec` returns to FastAPI.
-4. FastAPI invokes the **kernel**: loads → combinations → analysis (+2nd-order) → SANS checks → auto-size. *(LLM not involved.)*
-5. FastAPI builds the **PDF** (numbers from kernel; narrative from OpenAI), uploads it to **Supabase Storage**, writes a `run` + `report` row to **Postgres**.
+3. Frontend renders the **spec-review/confirm screen** — the parsed `FrameSpec` as **editable fields**; the engineer overrides (terrain, pitch, loads, sections) and confirms; the confirmed `FrameSpec` returns to FastAPI. *(Nothing computes before this — FR-4/FR-32.)*
+4. FastAPI invokes the **kernel**: loads → combinations → analysis (+2nd-order) → SANS member checks → auto-size → **connections + baseplates + pad footing** → **steel tonnage + cost**. *(LLM not involved.)*
+5. Frontend renders an **interactive 2D frame model + BMD/SFD** for review; on export, FastAPI builds the **PDF** (numbers from kernel; narrative from OpenAI), uploads it to **Supabase Storage**, writes a `run` + `report` row to **Postgres**.
 6. Frontend reads the run/report from Supabase and shows results + download.
 
 ### A.5 The kernel architecture (the moat)
@@ -61,9 +61,13 @@ kernel/
   combinations/  # sans10160_1.py  (ULS/SLS limit-state combinations)
   analysis/      # plane_frame.py (wraps PyNite, 2D), second_order.py
   checks/        # sans10162_1/  classification, axial, moment, interaction, ltb, deflection
+  connections/   # eaves (knee) + apex joints — bolt group / end-plate / weld (SANS 10162-1)
+  foundations/   # baseplate.py (pinned/fixed, SANS 10162-1) + pad_footing.py (SANS 10100-1)
+  costing/       # steel tonnage + indicative cost from chosen sections (engineer-supplied rate)
   design/        # auto_size.py (lightest passing section)
   rules_version.py  # e.g. SANS_10162_1 = "2011"  → stamped into every report
 ```
+*The `connections/`, `foundations/`, `costing/` modules are the "last mile" — they complete the single-bay portal frame so the engineer never leaves TorenOne. They are scope-limited to this one structure (no universal connection/foundation designer).*
 Principles: deterministic, side-effect-free, every rule module version-pinned, validated against worked examples + the benchmark project.
 
 ### A.6 AI integration
@@ -171,13 +175,13 @@ White text token for use on `--primary`/semantic fills: `#FFFFFF`.
 1. **Auth** — Supabase UI Library sign-in/sign-up, themed.
 2. **Projects** — list + create; per-firm.
 3. **Describe** — text input + examples; submit to parse.
-4. **Confirm** — editable structured `FrameSpec` form + geometry sketch; explicit "Run design" CTA (the trust gate).
-5. **Results** — utilisation table (pass/fail), member sizes, key deflections, BMD/SFD + geometry diagrams, "Download calc package (PDF)".
+4. **Confirm / Spec review (trust gate)** — the parsed `FrameSpec` as **editable fields** (geometry, wind terrain, roof pitch, loads, optional sections) + geometry sketch; the engineer overrides anything before the explicit "Run design" CTA. The AI prepares; the engineer is the authoritative pilot (FR-4/FR-32).
+5. **Results** — utilisation table (members **+ connections + baseplates + footing**, pass/fail), member sizes, key deflections, **interactive 2D frame model + BMD/SFD** (lightweight SVG/canvas, not only buried in the PDF), **steel tonnage + cost** (with editable cost-per-ton), "Download calc package (PDF)". Design / Check-mode toggle.
 6. **Run history** — past runs per project, with stored PDFs.
 
 ### B.7 Report (PDF) design
 - Matches the brand: clean, engineer-grade, monospaced numbers, clause references in the margin/inline.
-- Sections: cover (project, date, rules version) · assumptions · load takedown · combinations · analysis results · checks (clause + pass/fail + utilisation) · member schedule · diagrams · limitations/notes.
+- Sections: cover (project, date, rules version) · assumptions · load takedown · combinations · analysis results · member checks (clause + pass/fail + utilisation) · **connection design (eaves, apex)** · **column baseplates** · **pad footing** · member schedule · **steel tonnage + cost** · diagrams · limitations/notes.
 - Status never colour-only; every number traceable to a clause (PRD FR-18/19/20).
 
 ### B.8 Accessibility checklist (enforced)

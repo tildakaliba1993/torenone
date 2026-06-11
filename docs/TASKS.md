@@ -2,7 +2,7 @@
 
 > The single source of truth for **what we are building and how far along we are.** Update in real time: when a task is done and its tests pass, mark it `[x]`. Governed by the [PRD](./PRD.md) and [Design & Architecture](./DESIGN-ARCHITECTURE.md).
 >
-> **Status:** v1.0 · **Last updated:** 2026-06-11 (4.4 done — POST /design: confirmed FrameSpec → kernel → PDF → store; design + check modes)
+> **Status:** v1.1 · **Last updated:** 2026-06-11 (advisor improvements folded in: kernel last-mile 1.15–1.18, report 2.8, frontend 6.5/6.6; 4.4 done — POST /design)
 
 ---
 
@@ -34,6 +34,10 @@
 | 7 | Integration & end-to-end | `[ ]` |
 | 8 | Validation gate & hardening | `[ ]` |
 | 9 | Pilot & YC readiness | `[ ]` |
+
+> **Scope addition (2026-06-11, advisor-aligned) — "complete the wedge."** We are *completing the single-bay portal frame end-to-end* (connections, baseplates, footing, tonnage cost) so the engineer never leaves TorenOne — not broadening to new structures. New work folds into the existing phases: **kernel last mile → Phase 1 ext (1.15–1.18)**, **report → 2.8**, **frontend spec-review + visual feedback + cost/ton → 6.5/6.6**. Check mode (#5) and tonnage/cost (#4, partial) are already shipped.
+>
+> **Execution order from here:** finish the in-flight Phase 4 service core (**4.5 error handling**) → **kernel last mile (1.15–1.18)** → **report 2.8** → resume the normal sequence (Phase 5 Supabase, Phase 6 frontend …). This keeps everything green and never reopens already-passing work destructively.
 
 ---
 
@@ -114,7 +118,15 @@
   - [x] `DEFAULT_COST_RATE_ZAR_PER_KG = 20.0` exported from `design.py` for test/audit use.
   - [x] **23 new tests** in `test_check_mode.py`: contract, correctness (passing/failing sections), check-vs-design pass-fail consistency, mass formula, cost formula, custom rate. **263 total passing.**
 
-**Acceptance:** full kernel runs; ≥95% coverage; all checks carry clause refs; determinism test passes.
+### Phase 1 extension — "the last mile" (connections, foundations, costing) · *scope addition 2026-06-11 (advisor-aligned)*
+*Goal: complete the **single-bay portal frame** end-to-end so the engineer never leaves TorenOne to finish this structure. Scope-limited to this one frame — NOT a general connection/foundation designer (PRD §6.2). Same discipline as Phase 1: test-first, every value transcribed from the SANS PDFs in `standards/` or flagged **PROVISIONAL** pending co-founder sign-off; numbers come from kernel functions only. Re-uses the PyNite member/base forces already computed.*
+
+- [ ] **1.15 Connections — eaves (knee) + apex (SANS 10162-1)** — `connections/`: design the two portal-frame joints for their governing design forces (M, V, N from the analysis). Bolt-group capacity (shear/tension/bearing), end-plate bending, weld sizing — each a `CheckResult` with clause ref + utilisation. **Scope-limited to these two joints.** Values transcribed from SANS 10162-1 (connections clauses) or **PROVISIONAL** pending the standard + engineer sign-off. **Test-first** vs a worked example/hand calc.
+- [ ] **1.16 Column baseplates (SANS 10162-1)** — `foundations/baseplate.py`: size the baseplate (plate dimensions + thickness, bearing on grout/concrete, anchor-bolt tension/shear) for the base reactions, pinned **and** fixed. `CheckResult`s with clauses. PROVISIONAL where transcription pending. **Test-first.**
+- [ ] **1.17 Pad footings (SANS 10100-1)** — `foundations/pad_footing.py`: size a simple concrete pad from the PyNite base reactions — plan area vs an **engineer-supplied allowable bearing pressure** (new `FrameSpec` input, never assumed), footing thickness + reinforcement to SANS 10100-1. ⚠️ Concrete = a **new standard surface**; flag **PROVISIONAL** pending SANS 10100-1 in `standards/` + co-founder sign-off. **Test-first.**
+- [ ] **1.18 Last-mile integration + costing/tonnage** — extend `DesignResult` with `connections`, `baseplate`, `footing`, and `total_steel_tonnes`; wire all of the above into `design()` **and** `check()` so every run is complete. Surface tonnage (= mass/1000) and keep the existing engineer-supplied cost rate (FR-31). Add the new `FrameSpec` inputs (allowable bearing pressure; any connection assumptions) with documented PROVISIONAL defaults shown on the confirm screen. Extend determinism + golden tests. **Test-first.**
+
+**Acceptance (Phase 1 + extension):** full kernel runs **including connections, baseplates, footing, tonnage**; ≥95% coverage; all checks carry clause refs; determinism test passes; every PROVISIONAL item is flagged in `SOURCES.md` + the report.
 
 ---
 
@@ -132,8 +144,9 @@
   - [x] **Provenance label** — every number marked "computed by deterministic kernel, not AI".
   - [x] **Assumptions & limitations** block (assumed / out-of-scope / engineer-must-verify).
   - [x] **Steel mass + indicative cost** readout. **Test:** golden-file asserts each block is present.
+- [ ] **2.8 Last-mile report sections** *(follows kernel ext 1.15–1.18)* — add PDF sections for **connection design (eaves + apex)**, **column baseplates**, **pad footing**, and a **steel tonnage + cost** summary, each clause-referenced with pass/fail + utilisation (FR-18/25). Re-pin the golden-file test. **Test.**
 
-**Acceptance:** a `DesignResult` produces a correct, branded PDF with every number traceable to a clause.
+**Acceptance:** a `DesignResult` produces a correct, branded PDF with every number (members **+ connections + baseplates + footing + tonnage cost**) traceable to a clause.
 
 ---
 
@@ -161,6 +174,7 @@
   - **13 tests** (`service/tests/test_design_route.py`): design happy path (result+report, matches kernel, builder/store called, custom cost rate), check mode (valid sections, missing→422, unknown designation→422), guards (auth 401, invalid/missing spec→422, bad mode→422), plus a WeasyPrint-gated end-to-end test producing a real `%PDF` (skips in CI). Kernel runs for real (CI-safe); PDF/store are injected fakes. All passing (Python 3.11; ruff + mypy clean). Full suite: **606 passed** (CI: 597 + 9 skipped).
 - [ ] **4.5 Error handling** — typed errors, safe messages, no secret leakage. **Test.**
 - [ ] **4.6 Containerise & deploy** — Dockerfile; deploy to Fly.io/Render/Railway; env wired.
+- [x] **Check mode shipped** *(advisor improvement #5)* — already live as `POST /design` with `mode=check` (Task 4.4); kernel `check()` from Task 1.14. *Optional polish: add a `POST /check` alias for clarity/marketing — non-blocking.* The `/design` response already carries the new last-mile fields once 1.18 lands (additive — no route change).
 
 **Acceptance:** authenticated end-to-end request runs parse + design and stores a report; unauthenticated rejected.
 
@@ -187,11 +201,12 @@
 - [ ] **6.2 Auth screens** — Supabase UI Library sign-in/sign-up, themed. **Test:** auth flow E2E (Phase 7).
 - [ ] **6.3 Projects** — list + create, per firm. **Test.**
 - [ ] **6.4 Describe screen** — text input + examples; calls `/parse`. **Test.**
-- [ ] **6.5 Confirm screen (trust gate)** — editable structured `FrameSpec` form + geometry sketch; "Run design" CTA calls `/design`. Cannot proceed without explicit confirm (PRD FR-4). **Test.**
-- [ ] **6.6 Results screen** — utilisation table (icon+label+colour status), member sizes, deflections, diagrams, "Download calc package (PDF)". **Test.**
+- [ ] **6.5 Spec-review / confirm screen (trust gate)** — the parsed `FrameSpec` as **editable fields** the engineer can override (geometry, **wind terrain, roof pitch, loads**, optional sections, allowable bearing pressure) + geometry sketch; clarifying questions surfaced inline; "Run design" CTA calls `/design`. Cannot proceed without explicit confirm — the AI prepares, the engineer is the authoritative pilot (PRD FR-4/FR-32). **Test.**
+- [ ] **6.6 Results screen** — utilisation table (icon+label+colour status) for **members + connections + baseplates + footing**, member sizes, deflections, "Download calc package (PDF)". **Test.**
+  - [ ] **Interactive visual feedback** (FR-32) — 2D stick-model of the PyNite frame + interactive **BMD/SFD** (lightweight SVG/canvas), shown on the web *before* PDF export, not only buried in the PDF.
   - [ ] **Design / Check mode** toggle — Check mode lets the user enter their own sections (PRD FR-24).
   - [ ] **Audit / "show-your-working" panel** + deterministic-kernel **provenance badge** (FR-26).
-  - [ ] **Steel mass + indicative cost** readout (FR-25); **assumptions & limitations** block (FR-27).
+  - [ ] **Steel tonnage + cost** readout with **editable cost-per-ton** input (FR-25/FR-31); **assumptions & limitations** block (FR-27).
 - [ ] **6.7 Run history** — past runs + stored PDFs per project. **Test.**
 - [ ] **6.8 States** — loading/empty/error states for every async view. **Test.**
 
@@ -241,4 +256,6 @@
 
 ## Backlog — explicitly OUT of MVP (do not build now)
 Logged so we stay disciplined. Revisit only after MVP ships.
-- Architect's-plan / PDF parsing (v2 flagship) · connection & base-plate design · 3D / BIM / Revit / drawings · Eurocode / ACI / AISC · other structure types (RC, multi-bay, cranes, trusses, foundations) · Class 4 sections · team collaboration · billing/subscriptions · mobile app · cost optimisation.
+- Architect's-plan / PDF parsing (v2 flagship) · **general/universal** connection designer (we build *only* the single-bay portal's eaves/apex/baseplate — §1.15–1.16) · **general foundation/geotechnical** design beyond the simple pad footing (§1.17) · 3D / BIM / Revit / drawings · Eurocode / ACI / AISC · other structure types (RC frames, multi-storey, multi-bay, cranes, trusses) · Class 4 sections · team collaboration · billing/subscriptions · mobile app · cost optimisation.
+
+> **What NOT to do right now (advisor guardrails):** no multi-storey buildings · no concrete frames (the only concrete element is the simple pad footing) · no AISC/Eurocode yet · no generic FEA node-drawing UI. Stay on the single-bay SANS steel portal-frame wedge; *complete it* before widening.
