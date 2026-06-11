@@ -47,6 +47,14 @@ _PROVISIONAL_WARNINGS = [
 
 _DEFAULT_COST_RATE: float = 20.0  # R/kg — kept local to avoid circular import
 
+# ---- Status rendering (PRD FR-19) ----------------------------------------
+# Three-tier status: PASS / NEAR LIMIT / FAIL.
+# "Near limit" = utilisation ≥ threshold AND ≤ 1.0 — warrants engineer attention
+# but does not constitute a code failure.
+# Threshold of 0.85 (within 15 % of capacity) is a widely-used engineering convention;
+# no SANS clause mandates a specific threshold so this is a display-layer choice.
+NEAR_LIMIT_THRESHOLD: float = 0.85
+
 
 @dataclasses.dataclass
 class _ScheduleRow:
@@ -172,6 +180,7 @@ def render_html(result: DesignResult) -> str:
         "provisional_warnings": _PROVISIONAL_WARNINGS,
         "geom_png_b64": geom_png_b64,
         "bmd_sfd_b64": bmd_sfd_b64,
+        "near_limit_threshold": NEAR_LIMIT_THRESHOLD,
     }
 
     return template.render(**ctx)
