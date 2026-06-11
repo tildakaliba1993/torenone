@@ -5,6 +5,11 @@ asks clarifying questions, and drafts report narrative — using OpenAI ``gpt-5.
 The LLM never computes engineering numbers; the kernel does all arithmetic.
 """
 
+from torenone_ai.clarify import (
+    ClarifyingQuestion,
+    clarification_prompt,
+    clarifying_questions,
+)
 from torenone_ai.client import build_client, build_client_from_env
 from torenone_ai.config import (
     DEFAULT_FALLBACK_MODEL,
@@ -37,4 +42,8 @@ __all__ = [
     "build_frame_spec",
     "parse_description",
     "parse_description_from_env",
+    # Clarifying questions (Task 3.3)
+    "ClarifyingQuestion",
+    "clarifying_questions",
+    "clarification_prompt",
 ]
