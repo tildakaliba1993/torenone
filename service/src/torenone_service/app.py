@@ -14,7 +14,7 @@ from __future__ import annotations
 import time
 from collections.abc import Awaitable, Callable
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from starlette.responses import Response
 from torenone_ai import parse_description
 
@@ -29,8 +29,22 @@ from torenone_service.auth import (
     MissingJWTSecretError,
     require_user,
 )
+from torenone_service.design_service import DesignError, run_design
 from torenone_service.logging_config import configure_logging, get_logger
-from torenone_service.schemas import ParseRequest, ParseResponse
+from torenone_service.reports import (
+    InMemoryReportStore,
+    ReportBuilder,
+    ReportStore,
+    WeasyPrintReportBuilder,
+    get_report_builder,
+    get_report_store,
+)
+from torenone_service.schemas import (
+    DesignRequest,
+    DesignResponse,
+    ParseRequest,
+    ParseResponse,
+)
 
 SERVICE_NAME = "torenone-engineering-service"
 SERVICE_VERSION = "0.1.0"
@@ -56,6 +70,8 @@ def create_app(
     *,
     auth_config: AuthConfig | None = None,
     ai_runtime: AIRuntime | None = None,
+    report_builder: ReportBuilder | None = None,
+    report_store: ReportStore | None = None,
 ) -> FastAPI:
     """Build and return the FastAPI application.
 
@@ -67,6 +83,9 @@ def create_app(
     ai_runtime:
         Injected OpenAI client + model (tests). If omitted, it is built from the
         environment (``OPENAI_API_KEY``); if that is absent, AI routes 503.
+    report_builder / report_store:
+        Injected report PDF builder + persistence (tests). Default to WeasyPrint +
+        an in-process store; a Supabase-backed store is wired in Phase 5.
     """
     configure_logging()
     logger = get_logger()
@@ -81,6 +100,12 @@ def create_app(
     )
     app.state.ai_runtime = (
         ai_runtime if ai_runtime is not None else optional_ai_runtime_from_env()
+    )
+    app.state.report_builder = (
+        report_builder if report_builder is not None else WeasyPrintReportBuilder()
+    )
+    app.state.report_store = (
+        report_store if report_store is not None else InMemoryReportStore()
     )
 
     @app.middleware("http")
@@ -134,6 +159,44 @@ def create_app(
             extra={"user_id": user.user_id, "status": response.status},
         )
         return response
+
+    @app.post("/design")
+    def design(
+        body: DesignRequest,
+        user: AuthenticatedUser = Depends(require_user),
+        builder: ReportBuilder = Depends(get_report_builder),
+        store: ReportStore = Depends(get_report_store),
+    ) -> DesignResponse:
+        """Run the kernel on a confirmed FrameSpec, build + store the PDF, return it.
+
+        Protected. ``mode=design`` auto-sizes; ``mode=check`` verifies supplied
+        sections (PRD FR-24). Input-driven kernel failures become 422; a failed
+        *check* (passed=False) is a normal 200 result.
+        """
+        try:
+            result = run_design(body)
+        except DesignError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.message
+            ) from exc
+
+        pdf_bytes = builder.build_pdf(result)
+        stored = store.save_report(
+            user_id=user.user_id,
+            project_id=body.project_id,
+            result=result,
+            pdf_bytes=pdf_bytes,
+        )
+        logger.info(
+            "design",
+            extra={
+                "user_id": user.user_id,
+                "mode": body.mode,
+                "passed": result.passed,
+                "report_id": stored.report_id,
+            },
+        )
+        return DesignResponse(result=result, report=stored)
 
     logger.info(
         "service_startup",

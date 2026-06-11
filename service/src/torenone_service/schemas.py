@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from torenone_ai import ParseResult, clarifying_questions
-from torenone_kernel.models.frame_spec import FrameSpec
+from torenone_kernel.models.frame_spec import FrameGeometry, FrameSpec
+from torenone_kernel.models.results import DesignResult, SectionChoice
+
+# Computed (output-only) geometry fields, stripped from inbound specs so a spec
+# round-tripped from /parse (which serialises them) re-validates under extra="forbid".
+_GEOMETRY_COMPUTED: frozenset[str] = frozenset(FrameGeometry.model_computed_fields)
 
 # ---------------------------------------------------------------------------
 # /parse
@@ -106,3 +111,53 @@ def _json_value(value: object) -> bool | float | str | None:
     if isinstance(value, bool | float | str) or value is None:
         return value
     return str(value)
+
+
+# ---------------------------------------------------------------------------
+# /design
+# ---------------------------------------------------------------------------
+
+
+class DesignRequest(BaseModel):
+    """A confirmed FrameSpec to design, or to check against supplied sections."""
+
+    spec: FrameSpec
+    mode: Literal["design", "check"] = "design"
+    sections: list[SectionChoice] | None = Field(
+        default=None,
+        description="Engineer-supplied sections (required for mode=check).",
+    )
+    cost_rate_zar_per_kg: float | None = Field(
+        default=None, gt=0, description="Override the default fabricated-steel cost rate."
+    )
+    project_id: str | None = Field(
+        default=None, description="Project to attach the run/report to (persistence)."
+    )
+
+    @field_validator("spec", mode="before")
+    @classmethod
+    def _drop_computed_geometry(cls, value: Any) -> Any:
+        """Strip read-only computed geometry fields so a serialised spec re-validates."""
+        if isinstance(value, dict):
+            geometry = value.get("geometry")
+            if isinstance(geometry, dict) and any(k in geometry for k in _GEOMETRY_COMPUTED):
+                cleaned = {k: v for k, v in geometry.items() if k not in _GEOMETRY_COMPUTED}
+                return {**value, "geometry": cleaned}
+        return value
+
+
+class StoredReport(BaseModel):
+    """A persisted report PDF (storage reference, not the bytes)."""
+
+    run_id: str
+    report_id: str
+    storage_path: str
+    content_type: str = "application/pdf"
+    size_bytes: int
+
+
+class DesignResponse(BaseModel):
+    """The kernel result plus a reference to the stored calc-package PDF."""
+
+    result: DesignResult
+    report: StoredReport
