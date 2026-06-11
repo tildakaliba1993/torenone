@@ -17,6 +17,16 @@ from torenone_ai.config import (
     AIConfig,
     MissingAPIKeyError,
 )
+from torenone_ai.narrative import (
+    NarrativeError,
+    NarrativeGuardError,
+    NarrativeResult,
+    assert_prose_has_no_literal_numbers,
+    build_narrative_facts,
+    deterministic_narrative,
+    generate_narrative,
+    render_narrative,
+)
 from torenone_ai.parsing import (
     Assumption,
     FrameSpecExtraction,
@@ -46,4 +56,13 @@ __all__ = [
     "ClarifyingQuestion",
     "clarifying_questions",
     "clarification_prompt",
+    # Narrative generation (Task 3.4)
+    "NarrativeResult",
+    "NarrativeError",
+    "NarrativeGuardError",
+    "build_narrative_facts",
+    "deterministic_narrative",
+    "generate_narrative",
+    "render_narrative",
+    "assert_prose_has_no_literal_numbers",
 ]
