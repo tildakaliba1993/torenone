@@ -5,7 +5,13 @@ parsing & narrative only), runs the **kernel** (all computation), generates the 
 PDF, and persists runs/reports to Supabase.
 
 **Status:** the **AI orchestration layer** (Phase 3) lives in `service/src/torenone_ai/`.
-The FastAPI app + HTTP routes land in **Phase 4** (see [docs/TASKS.md](../docs/TASKS.md)).
+The **FastAPI app** (Phase 4) lives in `service/src/torenone_service/` — app skeleton
+(health + structured logging) done; auth + `/parse` + `/design` routes in progress.
+
+Run locally:
+```bash
+uvicorn torenone_service.main:app --reload   # GET /health -> {"status":"ok",...}
+```
 
 Hard rules:
 - The OpenAI key lives here, never in the browser. It is read from `OPENAI_API_KEY`
@@ -16,8 +22,15 @@ Hard rules:
 ## Layout
 ```
 service/
-  src/torenone_ai/      # Phase 3 — AI orchestration (OpenAI client, parsing, narrative)
-    config.py           #   server-side config: API key + model from env, key never exposed
-    client.py           #   thin OpenAI client factory (lazy SDK import)
-  tests/                # Phase 3+ service tests (run on the default interpreter)
+  src/torenone_ai/        # Phase 3 — AI orchestration
+    config.py             #   server-side config: API key + model from env, key never exposed
+    client.py             #   thin OpenAI client factory (lazy SDK import)
+    parsing.py            #   text -> FrameSpec (Structured Outputs, never guesses)
+    clarify.py            #   clarifying questions for incomplete/invalid input
+    narrative.py          #   report prose; numbers injected from kernel only
+  src/torenone_service/   # Phase 4 — FastAPI app
+    app.py                #   create_app(): GET /health + per-request structured logging
+    logging_config.py     #   JSON log formatter
+    main.py               #   ASGI entrypoint (uvicorn torenone_service.main:app)
+  tests/                  # service tests (run on Python 3.11)
 ```

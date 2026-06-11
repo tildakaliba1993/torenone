@@ -2,7 +2,7 @@
 
 > The single source of truth for **what we are building and how far along we are.** Update in real time: when a task is done and its tests pass, mark it `[x]`. Governed by the [PRD](./PRD.md) and [Design & Architecture](./DESIGN-ARCHITECTURE.md).
 >
-> **Status:** v1.0 · **Last updated:** 2026-06-11 (Phase 3 complete — AI orchestration: OpenAI client, parsing, clarifying questions, guarded narrative, adversarial guardrails)
+> **Status:** v1.0 · **Last updated:** 2026-06-11 (4.1 done — FastAPI app skeleton: health + structured logging)
 
 ---
 
@@ -28,7 +28,7 @@
 | 1 | Core engineering kernel (TDD) | `[~]` |
 | 2 | Report engine | `[x]` |
 | 3 | AI orchestration layer | `[x]` |
-| 4 | Engineering service (FastAPI) + auth | `[ ]` |
+| 4 | Engineering service (FastAPI) + auth | `[~]` |
 | 5 | Supabase backend (data + RLS) | `[ ]` |
 | 6 | Frontend (design system + screens) | `[ ]` |
 | 7 | Integration & end-to-end | `[ ]` |
@@ -153,7 +153,7 @@
 ## Phase 4 — Engineering service (FastAPI) + auth
 *Goal: the HTTP service that ties AI + kernel + report together, secured by Supabase JWT.*
 
-- [ ] **4.1 App skeleton** — FastAPI app, health check, structured logging.
+- [x] **4.1 App skeleton** — FastAPI app, health check, structured logging. `service/src/torenone_service/`: `create_app()` factory (no import-time side effects beyond logging), `GET /health` liveness endpoint (`{status, service, version}`), and per-request structured-logging middleware (method/path/status/duration_ms). `logging_config.py` = stdout JSON formatter that promotes any `extra={}` to top-level fields (container-friendly; no secrets logged). `main.py` = ASGI entrypoint (`uvicorn torenone_service.main:app`). Deps: fastapi + uvicorn (service extra), httpx (dev, TestClient). **13 tests** (`service/tests/test_app.py`): health 200 + shape, GET-only (405), 404, OpenAPI served, JSON formatter (valid JSON / extra fields / exc_info / single-line), `configure_logging` idempotent single-handler, request middleware emits structured fields + valid JSON. All passing (Python 3.11; ruff + mypy clean — service now in the mypy gate). Full suite: **556 passed**.
 - [ ] **4.2 JWT verification** — verify Supabase JWT on every protected route; reject invalid. **Test:** valid passes, invalid/expired rejected.
 - [ ] **4.3 `POST /parse`** — text → `FrameSpec` (+ clarifying questions). **Test.**
 - [ ] **4.4 `POST /design`** — confirmed `FrameSpec` → run kernel → build PDF → upload to Supabase Storage → persist `run` + `report` → return result. **Test (mocked kernel/storage).**

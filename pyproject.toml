@@ -14,9 +14,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Engineering service (Phase 3+) — AI orchestration layer.
+# Engineering service (Phase 3+) — AI orchestration layer + FastAPI app.
 service = [
     "openai>=2.0",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
 ]
 # PDF rendering — needs system pango/cairo (not installed in CI; PDF tests skip there).
 pdf = [
@@ -29,6 +31,7 @@ dev = [
     # mypy 2.x, whose new rules broke the lint/type gate. Bump deliberately.
     "ruff==0.15.16",
     "mypy==2.1.0",
+    "httpx>=0.27",   # FastAPI TestClient transport
 ]
 
 [tool.setuptools.packages.find]
