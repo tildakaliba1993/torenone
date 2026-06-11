@@ -2,7 +2,7 @@
 
 > The single source of truth for **what we are building and how far along we are.** Update in real time: when a task is done and its tests pass, mark it `[x]`. Governed by the [PRD](./PRD.md) and [Design & Architecture](./DESIGN-ARCHITECTURE.md).
 >
-> **Status:** v1.1 · **Last updated:** 2026-06-11 (1.18 done — last-mile integrated into design()/check(); kernel now designs the COMPLETE frame; next: report 2.8 then resume Phase 4/5)
+> **Status:** v1.1 · **Last updated:** 2026-06-12 (2.8 done — report renders connections/baseplate/footing/tonnage; last-mile complete end-to-end; next: resume Phase 4 (4.5) → Phase 5)
 
 ---
 
@@ -146,7 +146,9 @@
   - [x] **Provenance label** — every number marked "computed by deterministic kernel, not AI".
   - [x] **Assumptions & limitations** block (assumed / out-of-scope / engineer-must-verify).
   - [x] **Steel mass + indicative cost** readout. **Test:** golden-file asserts each block is present.
-- [ ] **2.8 Last-mile report sections** *(follows kernel ext 1.15–1.18)* — add PDF sections for **connection design (eaves + apex)**, **column baseplates**, **pad footing**, and a **steel tonnage + cost** summary, each clause-referenced with pass/fail + utilisation (FR-18/25). Re-pin the golden-file test. **Test.**
+- [x] **2.8 Last-mile report sections** — report now has dedicated sections: **6. Connection Design** (eaves + apex), **7. Column Baseplate**, **8. Pad Footing** (or a "not designed — no allowable bearing" note), each with the design forces + a clause-referenced checks table (pass/fail + utilisation via a reusable `checks_table` Jinja macro); **9. Steel Schedule, Tonnage & Cost** now shows **total steel tonnage** (FR-25). The main member code-checks table (§5) is filtered to member checks (renderer `_DETAIL_CHECK_PREFIXES`), so the detail checks render once in their own sections (no duplication); sections renumbered (Standards 10, Show-Your-Working 11, Audit 12). Template sections guard `None`/empty (hand-built results render safely). Golden-file test auto-bootstraps (no manual re-pin needed). **8 tests** (`kernel/tests/test_last_mile_report.py`): connection/baseplate/footing sections + checks present, SANS 10100-1 cited, footing-omitted note, tonnage rendered, cost present, no-duplication. Two brittle pre-existing report tests fixed (4-dp governing format; comma-grouped area). All passing (ruff + mypy clean; 3.11 PDF path green). Full suite: **691 passed**.
+
+**Acceptance:** a `DesignResult` produces a correct, branded PDF — members **+ connections + baseplates + footing + tonnage cost** — with every number traceable to a clause. **Phase 2 complete (incl. last-mile).**
 
 **Acceptance:** a `DesignResult` produces a correct, branded PDF with every number (members **+ connections + baseplates + footing + tonnage cost**) traceable to a clause.
 

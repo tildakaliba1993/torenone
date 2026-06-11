@@ -342,11 +342,11 @@ class TestSectionCapacityWorking:
         assert str(int(fy)) in html, f"fy = {fy} MPa not found in HTML"
 
     def test_section_area_present(self, html, result):
-        """Section area A (mm²) must appear for the show-your-working."""
+        """Section area A (mm²) must appear (report renders it comma-grouped)."""
         from torenone_kernel.sections.library import SectionLibrary
         lib = SectionLibrary.load_default()
         raf = lib.get(next(s.designation for s in result.sections if s.member == "rafter"))
-        val = str(int(raf.area_mm2))
+        val = f"{int(raf.area_mm2):,}"   # matches the template's "{:,.0f}" formatting
         assert val in html, f"Rafter area A = {val} mm² not found in HTML"
 
     def test_capacity_clauses_present(self, html):

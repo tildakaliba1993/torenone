@@ -177,6 +177,29 @@
   {%- endif -%}
 {%- endmacro %}
 
+{# Macro: checks_table(checks) — a clause-referenced utilisation + status table #}
+{% macro checks_table(checks) -%}
+<table>
+  <tr>
+    <th style="width:34%">Check</th>
+    <th style="width:30%">Clause</th>
+    <th style="width:14%" class="num">Utilisation</th>
+    <th style="width:22%">Status</th>
+  </tr>
+  {% for c in checks %}
+  <tr>
+    <td>{{ c.name }}</td>
+    <td style="font-family: var(--font-mono); font-size:8pt;">{{ c.clause }}</td>
+    <td class="num">{{ "%.4f"|format(c.utilisation) }}</td>
+    <td>
+      {{ status_badge(c.utilisation, c.passed) }}
+      {% if c.detail %}<br><span style="font-size:7.5pt; color:var(--color-muted);">{{ c.detail }}</span>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{%- endmacro %}
+
 <!-- ================================================================ -->
 <!-- COVER                                                             -->
 <!-- ================================================================ -->
@@ -321,53 +344,91 @@
 <!-- ================================================================ -->
 <!-- 4. CODE CHECKS (SANS 10162-1:2011)                               -->
 <!-- ================================================================ -->
-<h2>5. Code Checks — SANS 10162-1:2011</h2>
+<h2>5. Member Code Checks — SANS 10162-1:2011</h2>
 <p style="font-size:8.5pt; color:var(--color-muted); margin-bottom:6pt;">
   Utilisation = demand / capacity. Values &le; 1.00 indicate compliance.
   All clauses refer to SANS 10162-1:2011 unless otherwise stated.
+  Connection, baseplate and footing checks are in sections 6&ndash;8.
 </p>
-
-<table>
-  <tr>
-    <th style="width:36%">Check</th>
-    <th style="width:28%">Clause</th>
-    <th style="width:16%" class="num">Utilisation</th>
-    <th style="width:20%">Status</th>
-  </tr>
-  {% for c in checks %}
-  <tr>
-    <td>{{ c.name }}</td>
-    <td style="font-family: var(--font-mono); font-size:8.5pt;">{{ c.clause }}</td>
-    <td class="num">
-      {{ "%.4f"|format(c.utilisation) }}
-      {% set u = c.utilisation %}
-      {% if u <= 0.8 %}
-        {% set bar_class = "util-low" %}
-      {% elif u <= 1.0 %}
-        {% set bar_class = "util-mid" %}
-      {% else %}
-        {% set bar_class = "util-high" %}
-      {% endif %}
-      {% set bar_width = [u * 60, 60] | min %}
-      <br>
-      <span class="util-bar-wrap">
-        <span class="util-bar {{ bar_class }}" style="width:{{ bar_width }}pt;"></span>
-      </span>
-    </td>
-    <td>
-      {{ status_badge(c.utilisation, c.passed) }}
-      {% if c.detail %}
-      <br><span style="font-size:7.5pt; color:var(--color-muted);">{{ c.detail }}</span>
-      {% endif %}
-    </td>
-  </tr>
-  {% endfor %}
-</table>
+{{ checks_table(member_checks) }}
 
 <!-- ================================================================ -->
-<!-- 5. STEEL SCHEDULE                                                 -->
+<!-- 6. CONNECTION DESIGN — eaves + apex (PRD FR-28)                   -->
 <!-- ================================================================ -->
-<h2>6. Steel Schedule</h2>
+<h2>6. Connection Design (eaves &amp; apex)</h2>
+{% if connections %}
+<div class="box box-prov" style="font-size:8.5pt; margin-bottom:8pt;">
+  Bolted end-plate moment connections by the flange-force-couple method. ⚠️
+  <strong>PROVISIONAL</strong> — SANS 10162-1 connection coefficients pending registered-engineer
+  sign-off (see assumptions). Scope-limited to the single-bay portal-frame eaves &amp; apex joints.
+</div>
+{% for conn in connections %}
+<h3>6.{{ loop.index }} {{ conn.location | capitalize }} connection</h3>
+<p style="font-size:8.5pt; margin:2pt 0 4pt;">
+  <strong>{{ conn.description }}</strong><br>
+  <span style="color:var(--color-muted);">Design forces:
+    M = {{ "%.1f"|format(conn.design_moment_knm) }} kN&middot;m,
+    V = {{ "%.1f"|format(conn.design_shear_kn) }} kN,
+    N = {{ "%.1f"|format(conn.design_axial_kn) }} kN ·
+    governing utilisation {{ "%.2f"|format(conn.max_utilisation) }}
+    {{ status_badge(conn.max_utilisation, conn.passed) }}</span>
+</p>
+{{ checks_table(conn.checks) }}
+{% endfor %}
+{% else %}
+<p style="font-size:8.5pt; color:var(--color-muted);">No connection design in this result.</p>
+{% endif %}
+
+<!-- ================================================================ -->
+<!-- 7. COLUMN BASEPLATE (PRD FR-29)                                   -->
+<!-- ================================================================ -->
+<h2>7. Column Baseplate{% if baseplate %} ({{ baseplate.base_fixity }}){% endif %}</h2>
+{% if baseplate %}
+<div class="box box-prov" style="font-size:8.5pt; margin-bottom:8pt;">
+  ⚠️ <strong>PROVISIONAL</strong> — SANS 10162-1 / concrete-bearing coefficients pending
+  engineer sign-off.
+</div>
+<p style="font-size:8.5pt; margin:2pt 0 4pt;">
+  <strong>{{ baseplate.description }}</strong><br>
+  <span style="color:var(--color-muted);">Base reactions:
+    N = {{ "%.1f"|format(baseplate.design_axial_kn) }} kN,
+    V = {{ "%.1f"|format(baseplate.design_shear_kn) }} kN,
+    M = {{ "%.1f"|format(baseplate.design_moment_knm) }} kN&middot;m ·
+    governing utilisation {{ "%.2f"|format(baseplate.max_utilisation) }}
+    {{ status_badge(baseplate.max_utilisation, baseplate.passed) }}</span>
+</p>
+{{ checks_table(baseplate.checks) }}
+{% else %}
+<p style="font-size:8.5pt; color:var(--color-muted);">No baseplate design in this result.</p>
+{% endif %}
+
+<!-- ================================================================ -->
+<!-- 8. PAD FOOTING (SANS 10100-1, PRD FR-30)                          -->
+<!-- ================================================================ -->
+<h2>8. Pad Footing</h2>
+{% if footing %}
+<p style="font-size:8.5pt; margin:2pt 0 4pt;">
+  Reinforced-concrete pad to <strong>SANS 10100-1</strong>.<br>
+  <strong>{{ footing.description }}</strong><br>
+  <span style="color:var(--color-muted);">
+    Service axial {{ "%.1f"|format(footing.design_service_axial_kn) }} kN ·
+    factored {{ "%.1f"|format(footing.design_factored_axial_kn) }} kN ·
+    allowable bearing {{ "%.0f"|format(footing.allowable_bearing_kpa) }} kPa ·
+    governing utilisation {{ "%.2f"|format(footing.max_utilisation) }}
+    {{ status_badge(footing.max_utilisation, footing.passed) }}</span>
+</p>
+{{ checks_table(footing.checks) }}
+{% else %}
+<div class="box box-prov" style="font-size:8.5pt;">
+  <strong>Pad footing not designed.</strong> No allowable bearing pressure was supplied
+  (a site/geotechnical input — never assumed). Provide it to complete the foundation design.
+</div>
+{% endif %}
+
+<!-- ================================================================ -->
+<!-- 9. STEEL SCHEDULE + TONNAGE + COST                               -->
+<!-- ================================================================ -->
+<h2>9. Steel Schedule, Tonnage &amp; Cost</h2>
 <table>
   <tr>
     <th>Member</th>
@@ -389,6 +450,12 @@
     <td colspan="4" style="text-align:right; padding-right:6pt;">Total per frame</td>
     <td class="num">{{ "%.1f"|format(total_mass_kg) }} kg</td>
   </tr>
+  {% if total_steel_tonnes is not none %}
+  <tr style="font-weight:bold; background:#EFF6FF;">
+    <td colspan="4" style="text-align:right; padding-right:6pt;">Total steel tonnage</td>
+    <td class="num">{{ "%.3f"|format(total_steel_tonnes) }} t</td>
+  </tr>
+  {% endif %}
 </table>
 
 <table>
@@ -408,7 +475,7 @@
 <!-- ================================================================ -->
 <!-- 6. STANDARDS AND RULES VERSION (PRD FR-20)                       -->
 <!-- ================================================================ -->
-<h2>7. Standards and Rules Version</h2>
+<h2>10. Standards and Rules Version</h2>
 <table>
   <tr><th style="width:40%">Standard</th><th>Version / edition used</th></tr>
   {% for key, val in rules_version.items() %}
@@ -422,15 +489,15 @@
 <!-- ================================================================ -->
 <!-- 8. SHOW YOUR WORKING — Line-by-line audit (PRD FR-26)            -->
 <!-- ================================================================ -->
-<h2>8. Show Your Working — Line-by-Line Audit</h2>
+<h2>11. Show Your Working — Line-by-Line Audit</h2>
 <div class="box" style="font-size:8.5pt; margin-bottom:8pt;">
   <strong>FR-26 provenance:</strong> Every number in this section is
   <strong>computed by the TorenOne deterministic kernel</strong> — not by an AI language model.
   Values are traceable to the SANS clauses cited. No arithmetic is performed by AI.
 </div>
 
-<!-- 8.1 Characteristic Loads -->
-<h3>8.1 Characteristic Loads (Dead + Imposed)</h3>
+<!-- 11.1 Characteristic Loads -->
+<h3>11.1 Characteristic Loads (Dead + Imposed)</h3>
 <table>
   <tr><th style="width:35%">Load component</th><th>Working</th><th class="num">Value</th><th class="num">Unit</th></tr>
 
@@ -491,8 +558,8 @@
   </tr>
 </table>
 
-<!-- 8.2 Factored ULS-1 Loads -->
-<h3>8.2 Factored Loads — {{ uls1_name }} ({{ combo_clause }})</h3>
+<!-- 11.2 Factored ULS-1 Loads -->
+<h3>11.2 Factored Loads — {{ uls1_name }} ({{ combo_clause }})</h3>
 <table>
   <tr><th style="width:30%">Component</th><th>Characteristic (kN/m)</th>
       <th>&gamma; factor</th><th class="num">Factored (kN/m)</th></tr>
@@ -521,8 +588,8 @@
   </tr>
 </table>
 
-<!-- 8.3 Governing Analysis Forces -->
-<h3>8.3 Governing Analysis Forces — {{ uls1_name }}</h3>
+<!-- 11.3 Governing Analysis Forces -->
+<h3>11.3 Governing Analysis Forces — {{ uls1_name }}</h3>
 <p style="font-size:8.5pt; color:var(--color-muted); margin-bottom:4pt;">
   First-order elastic plane-frame analysis (PyNiteFEA). Forces at key structural locations.
 </p>
@@ -549,9 +616,9 @@
   </tr>
 </table>
 
-<!-- 8.4 Member Capacity Working -->
+<!-- 11.4 Member Capacity Working -->
 {% for mw in member_workings %}
-<h3>8.{{ loop.index + 3 }} {{ mw.member | capitalize }} Capacity — {{ mw.designation }}</h3>
+<h3>11.{{ loop.index + 3 }} {{ mw.member | capitalize }} Capacity — {{ mw.designation }}</h3>
 
 <h4 style="font-size:9pt; color:var(--color-brand-light); margin: 6pt 0 3pt;">Section Properties</h4>
 <table>
@@ -618,7 +685,7 @@
 <!-- ================================================================ -->
 <!-- 9. AUDIT METADATA (PRD FR-20)                                    -->
 <!-- ================================================================ -->
-<h2>9. Audit Metadata</h2>
+<h2>12. Audit Metadata</h2>
 <p style="font-size:8.5pt; color:var(--color-muted); margin-bottom:6pt;">
   FR-20: Reports record the code-rule version, complete input spec, and a timestamp
   so that results can be reproduced exactly from the same inputs.

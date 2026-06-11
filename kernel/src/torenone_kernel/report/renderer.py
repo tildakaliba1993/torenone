@@ -66,6 +66,10 @@ _DEFAULT_COST_RATE: float = 20.0  # R/kg — kept local to avoid circular import
 # no SANS clause mandates a specific threshold so this is a display-layer choice.
 NEAR_LIMIT_THRESHOLD: float = 0.85
 
+# Check-name prefixes for the "last mile" details (rendered in their own report
+# sections, so they are excluded from the main member code-checks table).
+_DETAIL_CHECK_PREFIXES: tuple[str, ...] = ("connection:", "baseplate:", "footing:")
+
 
 # ---- Audit fingerprint (PRD FR-20) ---------------------------------------
 
@@ -333,6 +337,12 @@ def render_html(result: DesignResult) -> str:
     generated_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     fingerprint  = report_fingerprint(result)
 
+    # Member checks for the main code-checks table (the connection/baseplate/footing
+    # checks render in their own dedicated sections — Task 2.8 — to avoid duplication).
+    member_checks = [
+        c for c in result.checks if not c.name.startswith(_DETAIL_CHECK_PREFIXES)
+    ]
+
     ctx: dict[str, Any] = {
         "generated_at": generated_at,   # full ISO-8601 UTC datetime
         "generated_date": generated_at, # backward-compat alias used in footer
@@ -345,8 +355,15 @@ def render_html(result: DesignResult) -> str:
         "fy_mpa": fy_mpa,
         "sections": result.sections,
         "checks": result.checks,
+        "member_checks": member_checks,
         "result_passed": result.passed,
         "governing_utilisation": result.governing_utilisation,
+        # Last-mile structured results (Task 1.18) for dedicated report sections (Task 2.8)
+        "connections": result.connections,
+        "baseplate": result.baseplate,
+        "footing": result.footing,
+        "total_steel_tonnes": result.total_steel_tonnes,
+        "foundation_allowable_bearing_kpa": result.frame_spec.foundation.allowable_bearing_kpa,
         "member_util": member_util,
         "member_pass": member_pass,
         "schedule": schedule,
