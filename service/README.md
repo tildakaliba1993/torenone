@@ -29,8 +29,11 @@ service/
     clarify.py            #   clarifying questions for incomplete/invalid input
     narrative.py          #   report prose; numbers injected from kernel only
   src/torenone_service/   # Phase 4 — FastAPI app
-    app.py                #   create_app(): GET /health + per-request structured logging
-    logging_config.py     #   JSON log formatter
+    app.py                #   create_app(): /health (public), /me + /parse (protected)
+    auth.py               #   Supabase JWT verification (require_user dependency)
+    ai_runtime.py         #   server-side OpenAI client + model (app.state.ai_runtime)
+    schemas.py            #   HTTP request/response models (ParseRequest/ParseResponse)
+    logging_config.py     #   JSON log formatter + per-request logging
     main.py               #   ASGI entrypoint (uvicorn torenone_service.main:app)
   tests/                  # service tests (run on Python 3.11)
 ```

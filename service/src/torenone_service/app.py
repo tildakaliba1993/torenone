@@ -16,7 +16,13 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import Depends, FastAPI, Request
 from starlette.responses import Response
+from torenone_ai import parse_description
 
+from torenone_service.ai_runtime import (
+    AIRuntime,
+    get_ai_runtime,
+    optional_ai_runtime_from_env,
+)
 from torenone_service.auth import (
     AuthConfig,
     AuthenticatedUser,
@@ -24,6 +30,7 @@ from torenone_service.auth import (
     require_user,
 )
 from torenone_service.logging_config import configure_logging, get_logger
+from torenone_service.schemas import ParseRequest, ParseResponse
 
 SERVICE_NAME = "torenone-engineering-service"
 SERVICE_VERSION = "0.1.0"
@@ -45,7 +52,11 @@ def _optional_auth_config_from_env() -> AuthConfig | None:
         return None
 
 
-def create_app(*, auth_config: AuthConfig | None = None) -> FastAPI:
+def create_app(
+    *,
+    auth_config: AuthConfig | None = None,
+    ai_runtime: AIRuntime | None = None,
+) -> FastAPI:
     """Build and return the FastAPI application.
 
     Parameters
@@ -53,6 +64,9 @@ def create_app(*, auth_config: AuthConfig | None = None) -> FastAPI:
     auth_config:
         Injected JWT verification config (tests). If omitted, it is loaded from the
         environment (``SUPABASE_JWT_SECRET``); if that is absent, protected routes 503.
+    ai_runtime:
+        Injected OpenAI client + model (tests). If omitted, it is built from the
+        environment (``OPENAI_API_KEY``); if that is absent, AI routes 503.
     """
     configure_logging()
     logger = get_logger()
@@ -64,6 +78,9 @@ def create_app(*, auth_config: AuthConfig | None = None) -> FastAPI:
     )
     app.state.auth_config = (
         auth_config if auth_config is not None else _optional_auth_config_from_env()
+    )
+    app.state.ai_runtime = (
+        ai_runtime if ai_runtime is not None else optional_ai_runtime_from_env()
     )
 
     @app.middleware("http")
@@ -98,6 +115,25 @@ def create_app(*, auth_config: AuthConfig | None = None) -> FastAPI:
     async def me(user: AuthenticatedUser = Depends(require_user)) -> AuthenticatedUser:
         """Return the authenticated caller — protected (requires a valid Supabase JWT)."""
         return user
+
+    @app.post("/parse")
+    def parse(
+        body: ParseRequest,
+        user: AuthenticatedUser = Depends(require_user),
+        ai: AIRuntime = Depends(get_ai_runtime),
+    ) -> ParseResponse:
+        """Parse a free-text description into a FrameSpec (or questions / refusal).
+
+        Protected. Runs as a sync route so the blocking OpenAI call is off the event
+        loop. No engineering numbers are produced by the model (see torenone_ai).
+        """
+        result = parse_description(body.description, client=ai.client, model=ai.model)
+        response = ParseResponse.from_result(result)
+        logger.info(
+            "parse",
+            extra={"user_id": user.user_id, "status": response.status},
+        )
+        return response
 
     logger.info(
         "service_startup",
