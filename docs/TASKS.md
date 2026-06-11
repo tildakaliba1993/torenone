@@ -2,7 +2,7 @@
 
 > The single source of truth for **what we are building and how far along we are.** Update in real time: when a task is done and its tests pass, mark it `[x]`. Governed by the [PRD](./PRD.md) and [Design & Architecture](./DESIGN-ARCHITECTURE.md).
 >
-> **Status:** v1.1 · **Last updated:** 2026-06-11 (advisor improvements folded in: kernel last-mile 1.15–1.18, report 2.8, frontend 6.5/6.6; 4.4 done — POST /design)
+> **Status:** v1.1 · **Last updated:** 2026-06-11 (4.5 done — error handling; advisor improvements folded in: kernel last-mile 1.15–1.18, report 2.8, frontend 6.5/6.6)
 
 ---
 
@@ -172,7 +172,7 @@
 - [x] **4.4 `POST /design`** — confirmed `FrameSpec` → run kernel → build PDF → store → return result. Protected route: `DesignRequest{spec, mode, sections?, cost_rate?, project_id?}` → `run_design()` (kernel `design()`/`check()`) → build PDF (`ReportBuilder`) → persist (`ReportStore`) → `DesignResponse{result, report}`. Report building + storage are **injectable interfaces** — default `WeasyPrintReportBuilder` (kernel report engine, lazy import) + `InMemoryReportStore`; **Supabase-backed store wired in Phase 5**. Input-driven kernel failures (`NoSectionFoundError`/`FrameUnstableError`/bad sections) → 422 with safe message; a *failed check* (passed=False) is a normal 200. `DesignRequest` strips computed geometry fields so a spec round-tripped from `/parse` re-validates under `extra="forbid"`. `service/src/torenone_service/{design_service,reports}.py`.
   - [x] Support **Check mode** (`mode=check` with supplied sections) → runs `check()` instead of `design()` (PRD FR-24).
   - **13 tests** (`service/tests/test_design_route.py`): design happy path (result+report, matches kernel, builder/store called, custom cost rate), check mode (valid sections, missing→422, unknown designation→422), guards (auth 401, invalid/missing spec→422, bad mode→422), plus a WeasyPrint-gated end-to-end test producing a real `%PDF` (skips in CI). Kernel runs for real (CI-safe); PDF/store are injected fakes. All passing (Python 3.11; ruff + mypy clean). Full suite: **606 passed** (CI: 597 + 9 skipped).
-- [ ] **4.5 Error handling** — typed errors, safe messages, no secret leakage. **Test.**
+- [x] **4.5 Error handling** — typed errors, safe messages, no secret leakage. `service/src/torenone_service/errors.py`: a catch-all `Exception` handler logs full detail server-side (structured, with traceback) but returns a generic `{"detail":"internal server error"}` 500 — never a stack trace or internal text. Routes map known failures to typed statuses: upstream `OpenAIError` in `/parse` → **502** (safe message), report build/store failure in `/design` → **502**, `DesignError` → **422**, auth → 401/503. **8 tests** (`service/tests/test_errors.py`): OpenAIError→502, unexpected→generic 500, report failure→502, `DesignError`→422, and **no-secret-leak** assertions across 401/500/502 paths (JWT secret + API key never appear in any error body). All passing (Python 3.11; ruff + mypy clean). Full suite: **614 passed**.
 - [ ] **4.6 Containerise & deploy** — Dockerfile; deploy to Fly.io/Render/Railway; env wired.
 - [x] **Check mode shipped** *(advisor improvement #5)* — already live as `POST /design` with `mode=check` (Task 4.4); kernel `check()` from Task 1.14. *Optional polish: add a `POST /check` alias for clarity/marketing — non-blocking.* The `/design` response already carries the new last-mile fields once 1.18 lands (additive — no route change).
 

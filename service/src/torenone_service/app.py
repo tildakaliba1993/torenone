@@ -15,6 +15,7 @@ import time
 from collections.abc import Awaitable, Callable
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
+from openai import OpenAIError
 from starlette.responses import Response
 from torenone_ai import parse_description
 
@@ -30,6 +31,7 @@ from torenone_service.auth import (
     require_user,
 )
 from torenone_service.design_service import DesignError, run_design
+from torenone_service.errors import install_exception_handlers
 from torenone_service.logging_config import configure_logging, get_logger
 from torenone_service.reports import (
     InMemoryReportStore,
@@ -107,6 +109,7 @@ def create_app(
     app.state.report_store = (
         report_store if report_store is not None else InMemoryReportStore()
     )
+    install_exception_handlers(app)
 
     @app.middleware("http")
     async def log_requests(
@@ -152,7 +155,17 @@ def create_app(
         Protected. Runs as a sync route so the blocking OpenAI call is off the event
         loop. No engineering numbers are produced by the model (see torenone_ai).
         """
-        result = parse_description(body.description, client=ai.client, model=ai.model)
+        try:
+            result = parse_description(body.description, client=ai.client, model=ai.model)
+        except OpenAIError as exc:
+            logger.warning(
+                "ai_upstream_error",
+                extra={"user_id": user.user_id, "error_type": type(exc).__name__},
+            )
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="the AI parsing service is temporarily unavailable",
+            ) from exc
         response = ParseResponse.from_result(result)
         logger.info(
             "parse",
@@ -177,16 +190,27 @@ def create_app(
             result = run_design(body)
         except DesignError as exc:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.message
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message
             ) from exc
 
-        pdf_bytes = builder.build_pdf(result)
-        stored = store.save_report(
-            user_id=user.user_id,
-            project_id=body.project_id,
-            result=result,
-            pdf_bytes=pdf_bytes,
-        )
+        try:
+            pdf_bytes = builder.build_pdf(result)
+            stored = store.save_report(
+                user_id=user.user_id,
+                project_id=body.project_id,
+                result=result,
+                pdf_bytes=pdf_bytes,
+            )
+        except Exception as exc:
+            logger.error(
+                "report_failed",
+                extra={"user_id": user.user_id, "mode": body.mode},
+                exc_info=exc,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="failed to generate or store the report",
+            ) from exc
         logger.info(
             "design",
             extra={
