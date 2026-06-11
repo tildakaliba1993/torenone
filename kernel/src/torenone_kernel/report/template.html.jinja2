@@ -420,9 +420,205 @@
 </table>
 
 <!-- ================================================================ -->
-<!-- 8. AUDIT METADATA (PRD FR-20)                                    -->
+<!-- 8. SHOW YOUR WORKING — Line-by-line audit (PRD FR-26)            -->
 <!-- ================================================================ -->
-<h2>8. Audit Metadata</h2>
+<h2>8. Show Your Working — Line-by-Line Audit</h2>
+<div class="box" style="font-size:8.5pt; margin-bottom:8pt;">
+  <strong>FR-26 provenance:</strong> Every number in this section is
+  <strong>computed by the TorenOne deterministic kernel</strong> — not by an AI language model.
+  Values are traceable to the SANS clauses cited. No arithmetic is performed by AI.
+</div>
+
+<!-- 8.1 Characteristic Loads -->
+<h3>8.1 Characteristic Loads (Dead + Imposed)</h3>
+<table>
+  <tr><th style="width:35%">Load component</th><th>Working</th><th class="num">Value</th><th class="num">Unit</th></tr>
+
+  <tr><th colspan="4" style="background:var(--color-brand-light); font-size:8.5pt;">
+    Dead Loads — Permanent (G)
+  </th></tr>
+  <tr>
+    <td>Roof area load (dead)</td>
+    <td>{{ dead.roof_kpa }} + {{ dead.services_kpa }} kPa</td>
+    <td class="num">{{ "%.3f"|format(dead_rafter_area_load_kpa) }}</td>
+    <td>kPa</td>
+  </tr>
+  <tr>
+    <td>Rafter area UDL</td>
+    <td>{{ "%.3f"|format(dead_rafter_area_load_kpa) }} kPa &times; {{ "%.1f"|format(dead_trib_width_m) }} m</td>
+    <td class="num">{{ "%.3f"|format(dead_rafter_area_load_kpa * dead_trib_width_m) }}</td>
+    <td>kN/m</td>
+  </tr>
+  <tr>
+    <td>Rafter self-weight</td>
+    <td>Section mass/m &times; g</td>
+    <td class="num">{{ "%.3f"|format(dead_rafter_sw_kn_m) }}</td>
+    <td>kN/m</td>
+  </tr>
+  <tr style="font-weight:bold; background:#EFF6FF;">
+    <td>Total rafter dead UDL</td>
+    <td>area UDL + self-weight</td>
+    <td class="num">{{ "%.3f"|format(dead_rafter_udl_kn_m) }}</td>
+    <td>kN/m</td>
+  </tr>
+  <tr>
+    <td>Column self-weight</td>
+    <td>Section mass/m &times; g</td>
+    <td class="num">{{ "%.3f"|format(dead_col_sw_kn_m) }}</td>
+    <td>kN/m</td>
+  </tr>
+
+  <tr><th colspan="4" style="background:var(--color-brand-light); font-size:8.5pt;">
+    Imposed Loads — Variable (Q) &mdash; {{ imposed_category }}
+  </th></tr>
+  <tr>
+    <td>Characteristic area load</td>
+    <td>{{ imposed_clause }}</td>
+    <td class="num">{{ "%.1f"|format(imposed_area_kpa) }}</td>
+    <td>kPa</td>
+  </tr>
+  <tr>
+    <td>Tributary width</td>
+    <td>Bay spacing</td>
+    <td class="num">{{ "%.1f"|format(dead_trib_width_m) }}</td>
+    <td>m</td>
+  </tr>
+  <tr style="font-weight:bold; background:#EFF6FF;">
+    <td>Total imposed UDL</td>
+    <td>{{ "%.1f"|format(imposed_area_kpa) }} kPa &times; {{ "%.1f"|format(dead_trib_width_m) }} m</td>
+    <td class="num">{{ "%.3f"|format(imposed_udl_kn_m) }}</td>
+    <td>kN/m</td>
+  </tr>
+</table>
+
+<!-- 8.2 Factored ULS-1 Loads -->
+<h3>8.2 Factored Loads — {{ uls1_name }} ({{ combo_clause }})</h3>
+<table>
+  <tr><th style="width:30%">Component</th><th>Characteristic (kN/m)</th>
+      <th>&gamma; factor</th><th class="num">Factored (kN/m)</th></tr>
+  <tr>
+    <td>Rafter dead</td>
+    <td class="num">{{ "%.3f"|format(dead_rafter_udl_kn_m) }}</td>
+    <td class="num">&gamma;<sub>G</sub> = {{ gamma_G }}</td>
+    <td class="num">{{ "%.3f"|format(gamma_G * dead_rafter_udl_kn_m) }}</td>
+  </tr>
+  <tr>
+    <td>Rafter imposed</td>
+    <td class="num">{{ "%.3f"|format(imposed_udl_kn_m) }}</td>
+    <td class="num">&gamma;<sub>Q</sub> = {{ gamma_Q }}</td>
+    <td class="num">{{ "%.3f"|format(gamma_Q * imposed_udl_kn_m) }}</td>
+  </tr>
+  <tr style="font-weight:bold; background:#EFF6FF;">
+    <td>Total rafter factored UDL</td>
+    <td colspan="2">&gamma;<sub>G</sub>&middot;G + &gamma;<sub>Q</sub>&middot;Q</td>
+    <td class="num">{{ "%.3f"|format(uls_rafter_udl_kn_m) }}</td>
+  </tr>
+  <tr>
+    <td>Column axial UDL</td>
+    <td class="num">{{ "%.3f"|format(dead_col_sw_kn_m + dead_wall_kn_m) }}</td>
+    <td class="num">&gamma;<sub>G</sub> = {{ gamma_G }}</td>
+    <td class="num">{{ "%.3f"|format(uls_col_udl_kn_m) }}</td>
+  </tr>
+</table>
+
+<!-- 8.3 Governing Analysis Forces -->
+<h3>8.3 Governing Analysis Forces — {{ uls1_name }}</h3>
+<p style="font-size:8.5pt; color:var(--color-muted); margin-bottom:4pt;">
+  First-order elastic plane-frame analysis (PyNiteFEA). Forces at key structural locations.
+</p>
+<table>
+  <tr><th>Location</th><th class="num">M (kN&middot;m)</th>
+      <th class="num">V (kN)</th><th class="num">N (kN)</th></tr>
+  <tr>
+    <td>Eaves / knee joint (EL)</td>
+    <td class="num">{{ "%.2f"|format(eaves_moment_knm) }}</td>
+    <td class="num">{{ "%.2f"|format(eaves_shear_kn) }}</td>
+    <td class="num">{{ "%.2f"|format(eaves_axial_kn) }}</td>
+  </tr>
+  <tr>
+    <td>Apex (AP)</td>
+    <td class="num">{{ "%.2f"|format(apex_moment_knm) }}</td>
+    <td class="num">{{ "%.2f"|format(apex_shear_kn) }}</td>
+    <td class="num">{{ "%.2f"|format(apex_axial_kn) }}</td>
+  </tr>
+  <tr>
+    <td>Column base (BL) — pinned</td>
+    <td class="num">0.00</td>
+    <td class="num">{{ "%.2f"|format(base_shear_kn) }}</td>
+    <td class="num">{{ "%.2f"|format(base_axial_kn) }}</td>
+  </tr>
+</table>
+
+<!-- 8.4 Member Capacity Working -->
+{% for mw in member_workings %}
+<h3>8.{{ loop.index + 3 }} {{ mw.member | capitalize }} Capacity — {{ mw.designation }}</h3>
+
+<h4 style="font-size:9pt; color:var(--color-brand-light); margin: 6pt 0 3pt;">Section Properties</h4>
+<table>
+  <tr>
+    <th style="width:40%">Property</th><th class="num">Value</th><th>Unit</th>
+  </tr>
+  <tr><td>Area A</td>
+      <td class="num">{{ "{:,.0f}".format(mw.area_mm2) }}</td><td>mm&sup2;</td></tr>
+  <tr><td>Second moment I<sub>x</sub> (major)</td>
+      <td class="num">{{ "{:,.0f}".format(mw.ix_mm4) }}</td><td>mm&sup4;</td></tr>
+  <tr><td>Second moment I<sub>y</sub> (minor)</td>
+      <td class="num">{{ "{:,.0f}".format(mw.iy_mm4) }}</td><td>mm&sup4;</td></tr>
+  <tr><td>Plastic modulus Z<sub>pl</sub></td>
+      <td class="num">{{ "{:,.0f}".format(mw.zpl_mm3) }}</td><td>mm&sup3;</td></tr>
+  <tr><td>Minor-axis radius of gyration r<sub>y</sub></td>
+      <td class="num">{{ "%.1f"|format(mw.ry_mm) }}</td><td>mm</td></tr>
+  <tr><td>Section class (SANS 10162-1 cl. 11.2)</td>
+      <td class="num">{{ mw.section_class }}</td><td>—</td></tr>
+  <tr><td>Design yield stress f<sub>y</sub></td>
+      <td class="num">{{ "%.0f"|format(mw.fy_mpa) }}</td><td>MPa</td></tr>
+</table>
+
+<h4 style="font-size:9pt; color:var(--color-brand-light); margin: 6pt 0 3pt;">Capacity Checks</h4>
+<table>
+  <tr>
+    <th style="width:22%">Check</th>
+    <th style="width:28%">Key inputs</th>
+    <th class="num" style="width:20%">Capacity</th>
+    <th style="width:10%">Clause</th>
+  </tr>
+  <tr>
+    <td>Slenderness KL/r</td>
+    <td>KL = {{ "%.0f"|format(mw.KL_mm) }} mm, r<sub>y</sub> = {{ "%.1f"|format(mw.ry_mm) }} mm</td>
+    <td class="num">{{ "%.1f"|format(mw.kl_over_r) }} &le; 200</td>
+    <td style="font-family: var(--font-mono); font-size:7.5pt;">cl. 10.4.2.1</td>
+  </tr>
+  <tr>
+    <td>Axial C<sub>r</sub></td>
+    <td>&phi; = 0.90, A = {{ "{:,.0f}".format(mw.area_mm2) }} mm&sup2;, f<sub>y</sub> = {{ "%.0f"|format(mw.fy_mpa) }} MPa</td>
+    <td class="num">{{ "%.2f"|format(mw.cr_kn) }} kN</td>
+    <td style="font-family: var(--font-mono); font-size:7.5pt;">cl. 13.3.1</td>
+  </tr>
+  <tr>
+    <td>Shear V<sub>r</sub></td>
+    <td>h<sub>w</sub> = {{ "%.1f"|format(mw.hw_mm) }} mm, &phi; = 0.90, f<sub>y</sub> = {{ "%.0f"|format(mw.fy_mpa) }} MPa</td>
+    <td class="num">{{ "%.2f"|format(mw.vr_kn) }} kN</td>
+    <td style="font-family: var(--font-mono); font-size:7.5pt;">cl. 13.4.1.1</td>
+  </tr>
+  <tr>
+    <td>Elastic M<sub>cr</sub></td>
+    <td>L<sub>u</sub> = {{ "%.0f"|format(mw.LTB_mm) }} mm, &omega;<sub>2</sub> = 1.00</td>
+    <td class="num">{{ "%.2f"|format(mw.mcr_knm) }} kN&middot;m</td>
+    <td style="font-family: var(--font-mono); font-size:7.5pt;">cl. 13.6</td>
+  </tr>
+  <tr style="font-weight:bold; background:#EFF6FF;">
+    <td>Moment M<sub>r</sub> (LTB)</td>
+    <td>Class {{ mw.section_class }}, Z<sub>pl</sub> = {{ "{:,.0f}".format(mw.zpl_mm3) }} mm&sup3;</td>
+    <td class="num">{{ "%.2f"|format(mw.mr_knm) }} kN&middot;m</td>
+    <td style="font-family: var(--font-mono); font-size:7.5pt;">cl. 13.5/13.6</td>
+  </tr>
+</table>
+{% endfor %}
+
+<!-- ================================================================ -->
+<!-- 9. AUDIT METADATA (PRD FR-20)                                    -->
+<!-- ================================================================ -->
+<h2>9. Audit Metadata</h2>
 <p style="font-size:8.5pt; color:var(--color-muted); margin-bottom:6pt;">
   FR-20: Reports record the code-rule version, complete input spec, and a timestamp
   so that results can be reproduced exactly from the same inputs.

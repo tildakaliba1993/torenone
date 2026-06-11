@@ -29,6 +29,15 @@ from typing import Any
 
 import jinja2
 
+from torenone_kernel.analysis.plane_frame import PortalAnalysis
+from torenone_kernel.checks.axial import cr_flexural
+from torenone_kernel.checks.bending import mcr_elastic, mr_ltb
+from torenone_kernel.checks.classification import classify_section
+from torenone_kernel.checks.material import fy_mpa as _fy_mpa
+from torenone_kernel.checks.shear import vr_web
+from torenone_kernel.loads.combinations import load_combinations
+from torenone_kernel.loads.dead import dead_loads
+from torenone_kernel.loads.imposed import imposed_roof_loads
 from torenone_kernel.models.results import DesignResult
 from torenone_kernel.report.diagrams import bmd_sfd_png, frame_geometry_png
 from torenone_kernel.sections.library import SectionLibrary
@@ -147,6 +156,141 @@ def _member_check_summary(result: DesignResult) -> tuple[dict[str, float], dict[
     return member_util, member_pass
 
 
+@dataclasses.dataclass
+class _MemberWorking:
+    """Intermediate capacity values for one member — for show-your-working."""
+    member: str
+    designation: str
+    section_class: int
+    area_mm2: float
+    ix_mm4: float
+    iy_mm4: float
+    zpl_mm3: float
+    ry_mm: float
+    fy_mpa: float
+    KL_mm: float
+    kl_over_r: float
+    cr_kn: float
+    hw_mm: float
+    vr_kn: float
+    LTB_mm: float
+    mcr_knm: float
+    mr_knm: float
+
+
+def _compute_working(result: DesignResult) -> dict[str, Any]:
+    """Compute all intermediate values for the show-your-working section (FR-26).
+
+    Re-runs relevant kernel functions from DesignResult.frame_spec + chosen sections.
+    All values are kernel-computed; this function does NO arithmetic.
+    Returns a dict suitable for passing directly into the Jinja2 template context.
+    """
+    spec = result.frame_spec
+    geom = spec.geometry
+    lib = SectionLibrary.load_default()
+    sec_map = {s.member: lib.get(s.designation) for s in result.sections}
+    col_sec = sec_map["column"]
+    raf_sec = sec_map["rafter"]
+
+    # ---- Characteristic loads ----
+    dead = dead_loads(spec, rafter=raf_sec, column=col_sec)
+    imp  = imposed_roof_loads(spec)
+
+    # ---- Load combinations ----
+    combos_list = load_combinations(spec)
+    uls1 = next(c for c in combos_list if c.name.startswith("ULS-1"))
+    gamma_G = uls1.factors["dead"]
+    gamma_Q = uls1.factors.get("imposed", 0.0)
+
+    uls_raf_udl = gamma_G * dead.rafter_udl_kn_per_m + gamma_Q * imp.roof_udl_kn_per_m
+    uls_col_udl = gamma_G * (dead.column_self_weight_kn_per_m + dead.wall_cladding_udl_kn_per_m)
+
+    # ---- Analysis forces ----
+    analysis = PortalAnalysis(spec, col_sec, raf_sec).run(
+        uls1.name, uls_raf_udl, uls_col_udl
+    )
+    forces = {f.location: f for f in analysis.forces}
+
+    # ---- Member lengths ----
+    half_mm = geom.span_m / 2.0 * 1_000.0
+    rise_mm = (geom.apex_height_m - geom.eaves_height_m) * 1_000.0
+    raf_len_mm = math.hypot(half_mm, rise_mm)
+    col_len_mm = geom.eaves_height_m * 1_000.0
+
+    # ---- Section capacities (per member) ----
+    member_workings: list[_MemberWorking] = []
+    for member, sec, KL_mm, LTB_mm in [
+        ("rafter", raf_sec, raf_len_mm, raf_len_mm),
+        ("column", col_sec, col_len_mm, col_len_mm),
+    ]:
+        fy = _fy_mpa(spec.materials.steel_grade, sec.flange_thickness_mm)
+        cls = classify_section(sec, fy, 0.0)
+        cr = cr_flexural(sec.area_mm2, fy, KL_mm, sec.radius_gyration_ry_mm)
+        hw_mm = sec.depth_mm - 2.0 * sec.flange_thickness_mm
+        vr = vr_web(hw_mm, sec.web_thickness_mm, fy)
+        mcr = mcr_elastic(LTB_mm, sec.second_moment_iy_mm4,
+                          sec.torsion_constant_j_mm4, sec.warping_constant_cw_mm6, 1.0)
+        mr = mr_ltb(cls.overall_class, sec.plastic_modulus_zx_mm3,
+                    sec.elastic_modulus_sx_mm3, fy, mcr)
+        kl_r = KL_mm / sec.radius_gyration_ry_mm
+
+        member_workings.append(_MemberWorking(
+            member=member,
+            designation=sec.designation,
+            section_class=int(cls.overall_class),
+            area_mm2=sec.area_mm2,
+            ix_mm4=sec.second_moment_ix_mm4,
+            iy_mm4=sec.second_moment_iy_mm4,
+            zpl_mm3=sec.plastic_modulus_zx_mm3,
+            ry_mm=sec.radius_gyration_ry_mm,
+            fy_mpa=fy,
+            KL_mm=KL_mm,
+            kl_over_r=kl_r,
+            cr_kn=cr,
+            hw_mm=hw_mm,
+            vr_kn=vr,
+            LTB_mm=LTB_mm,
+            mcr_knm=mcr,
+            mr_knm=mr,
+        ))
+
+    return {
+        # Dead loads
+        "w_dead": dead,
+        "dead_rafter_area_load_kpa": dead.roof_area_load_kpa,
+        "dead_trib_width_m": dead.tributary_width_m,
+        "dead_rafter_sw_kn_m": dead.rafter_self_weight_kn_per_m,
+        "dead_rafter_udl_kn_m": dead.rafter_udl_kn_per_m,
+        "dead_col_sw_kn_m": dead.column_self_weight_kn_per_m,
+        "dead_wall_kn_m": dead.wall_cladding_udl_kn_per_m,
+        # Imposed loads
+        "w_imposed": imp,
+        "imposed_area_kpa": imp.roof_imposed_kpa,
+        "imposed_udl_kn_m": imp.roof_udl_kn_per_m,
+        "imposed_clause": imp.clause,
+        "imposed_category": imp.category,
+        # ULS-1 combination
+        "uls1_name": uls1.name,
+        "gamma_G": gamma_G,
+        "gamma_Q": gamma_Q,
+        "uls_rafter_udl_kn_m": uls_raf_udl,
+        "uls_col_udl_kn_m": uls_col_udl,
+        "combo_clause": "SANS 10160-1:2009 (DRAFT) Table 3",
+        # Analysis forces
+        "forces": forces,
+        "eaves_moment_knm": abs(forces["eaves_L"].moment_knm),
+        "eaves_shear_kn": abs(forces["eaves_L"].shear_kn),
+        "eaves_axial_kn": abs(forces["eaves_L"].axial_kn),
+        "apex_moment_knm": abs(forces["apex"].moment_knm),
+        "apex_shear_kn": abs(forces["apex"].shear_kn),
+        "apex_axial_kn": abs(forces["apex"].axial_kn),
+        "base_shear_kn": abs(forces["col_base_L"].shear_kn),
+        "base_axial_kn": abs(forces["col_base_L"].axial_kn),
+        # Member capacities
+        "member_workings": member_workings,
+    }
+
+
 def render_html(result: DesignResult) -> str:
     """Render *result* to a standalone HTML string.
 
@@ -182,6 +326,9 @@ def render_html(result: DesignResult) -> str:
     geom_png_b64  = base64.b64encode(frame_geometry_png(result.frame_spec)).decode("ascii")
     bmd_sfd_b64   = base64.b64encode(bmd_sfd_png(result)).decode("ascii")
 
+    # Show-your-working data (FR-26)
+    working = _compute_working(result)
+
     # Audit metadata (PRD FR-20)
     generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     fingerprint  = report_fingerprint(result)
@@ -214,6 +361,8 @@ def render_html(result: DesignResult) -> str:
         # Restraints (None if unrestrained)
         "restraints_rafter_m":  result.frame_spec.restraints.rafter_restraint_spacing_m,
         "restraints_column_m":  result.frame_spec.restraints.column_restraint_spacing_m,
+        # Show-your-working (FR-26)
+        **working,
     }
 
     return template.render(**ctx)

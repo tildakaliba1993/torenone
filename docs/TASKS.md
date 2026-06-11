@@ -2,7 +2,7 @@
 
 > The single source of truth for **what we are building and how far along we are.** Update in real time: when a task is done and its tests pass, mark it `[x]`. Governed by the [PRD](./PRD.md) and [Design & Architecture](./DESIGN-ARCHITECTURE.md).
 >
-> **Status:** v1.0 · **Last updated:** 2026-06-11 (1.14 done)
+> **Status:** v1.0 · **Last updated:** 2026-06-11 (2.7 done — Phase 2 complete)
 
 ---
 
@@ -26,7 +26,7 @@
 |---|---|---|
 | 0 | Foundations & project setup | `[x]` |
 | 1 | Core engineering kernel (TDD) | `[~]` |
-| 2 | Report engine | `[ ]` |
+| 2 | Report engine | `[x]` |
 | 3 | AI orchestration layer | `[ ]` |
 | 4 | Engineering service (FastAPI) + auth | `[ ]` |
 | 5 | Supabase backend (data + RLS) | `[ ]` |
@@ -127,11 +127,11 @@
 - [x] **2.4 Status rendering** — pass/fail/near-limit via icon + label + colour (never colour alone). **Test.**
 - [x] **2.5 Audit metadata** — rules version, input spec, timestamp embedded (PRD FR-20). **Test.**
 - [x] **2.6 Golden-file test** — render a fixture `DesignResult`; assert key values + clause refs present in output.
-- [ ] **2.7 Competitive-advantage report features** *(PRD FR-25/26/27)*
-  - [ ] Line-by-line **audit / "show-your-working"** layout (assumptions → loads → combinations → checks → section).
-  - [ ] **Provenance label** — every number marked "computed by deterministic kernel, not AI".
-  - [ ] **Assumptions & limitations** block (assumed / out-of-scope / engineer-must-verify).
-  - [ ] **Steel mass + indicative cost** readout. **Test:** golden-file asserts each block is present.
+- [x] **2.7 Competitive-advantage report features** *(PRD FR-25/26/27)*
+  - [x] Line-by-line **audit / "show-your-working"** layout (assumptions → loads → combinations → checks → section). Section 8 in report with characteristic loads, ULS-1 factored UDLs, analysis forces (M/V/N at eaves/apex/base), per-member capacity tables (Cr, Vr, Mcr, Mr). **41 tests.**
+  - [x] **Provenance label** — every number marked "computed by deterministic kernel, not AI".
+  - [x] **Assumptions & limitations** block (assumed / out-of-scope / engineer-must-verify).
+  - [x] **Steel mass + indicative cost** readout. **Test:** golden-file asserts each block is present.
 
 **Acceptance:** a `DesignResult` produces a correct, branded PDF with every number traceable to a clause.
 
