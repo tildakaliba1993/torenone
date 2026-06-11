@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TorenOne — Structural Calculation Report</title>
+  <style>
+    /* ------------------------------------------------------------------ */
+    /* Design tokens — steel-blue brand                                    */
+    /* ------------------------------------------------------------------ */
+    :root {
+      --color-brand:       #1B3A57;
+      --color-brand-light: #2D5F8A;
+      --color-pass:        #166534;
+      --color-pass-bg:     #DCFCE7;
+      --color-fail:        #991B1B;
+      --color-fail-bg:     #FEE2E2;
+      --color-warn:        #92400E;
+      --color-warn-bg:     #FEF3C7;
+      --color-border:      #D1D5DB;
+      --color-text:        #111827;
+      --color-muted:       #6B7280;
+      --font-mono:         "Courier New", Courier, monospace;
+      --font-sans:         Arial, Helvetica, sans-serif;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Base                                                                */
+    /* ------------------------------------------------------------------ */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      font-size: 10pt;
+      color: var(--color-text);
+      background: #fff;
+      padding: 20mm 18mm;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Cover / header                                                      */
+    /* ------------------------------------------------------------------ */
+    .cover {
+      background: var(--color-brand);
+      color: #fff;
+      padding: 18pt 20pt;
+      margin-bottom: 16pt;
+      border-radius: 3pt;
+    }
+    .cover h1 { font-size: 18pt; font-weight: bold; margin-bottom: 4pt; }
+    .cover .subtitle { font-size: 10pt; opacity: 0.85; }
+    .cover .meta { font-size: 9pt; margin-top: 8pt; opacity: 0.75; font-family: var(--font-mono); }
+
+    /* ------------------------------------------------------------------ */
+    /* Section headings                                                    */
+    /* ------------------------------------------------------------------ */
+    h2 {
+      font-size: 12pt;
+      font-weight: bold;
+      color: var(--color-brand);
+      border-bottom: 1.5pt solid var(--color-brand);
+      padding-bottom: 3pt;
+      margin: 16pt 0 8pt;
+    }
+    h3 {
+      font-size: 10pt;
+      font-weight: bold;
+      color: var(--color-brand-light);
+      margin: 10pt 0 4pt;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Tables                                                              */
+    /* ------------------------------------------------------------------ */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10pt;
+      font-size: 9.5pt;
+    }
+    th {
+      background: var(--color-brand);
+      color: #fff;
+      text-align: left;
+      padding: 4pt 6pt;
+      font-weight: bold;
+    }
+    td {
+      padding: 3pt 6pt;
+      border-bottom: 0.5pt solid var(--color-border);
+    }
+    tr:nth-child(even) td { background: #F9FAFB; }
+
+    /* Monospaced numeric columns */
+    .num { font-family: var(--font-mono); text-align: right; }
+
+    /* ------------------------------------------------------------------ */
+    /* Pass / fail badges  (PRD FR-19: icon + label + colour, never alone) */
+    /* ------------------------------------------------------------------ */
+    .badge {
+      display: inline-block;
+      padding: 1pt 5pt;
+      border-radius: 2pt;
+      font-weight: bold;
+      font-size: 8.5pt;
+      font-family: var(--font-mono);
+    }
+    .badge-pass { background: var(--color-pass-bg); color: var(--color-pass); }
+    .badge-fail { background: var(--color-fail-bg); color: var(--color-fail); }
+
+    /* ------------------------------------------------------------------ */
+    /* Utilisation bar                                                     */
+    /* ------------------------------------------------------------------ */
+    .util-bar-wrap { width: 60pt; height: 7pt; background: #E5E7EB; display: inline-block;
+                     border-radius: 1pt; vertical-align: middle; }
+    .util-bar      { height: 100%; border-radius: 1pt; }
+    .util-low      { background: var(--color-pass); }
+    .util-mid      { background: #D97706; }
+    .util-high     { background: var(--color-fail); }
+
+    /* ------------------------------------------------------------------ */
+    /* Info / warning boxes                                                */
+    /* ------------------------------------------------------------------ */
+    .box {
+      border-left: 3pt solid var(--color-brand);
+      background: #F0F4F8;
+      padding: 7pt 10pt;
+      margin: 8pt 0;
+      font-size: 9pt;
+    }
+    .box-warn {
+      border-left-color: #D97706;
+      background: var(--color-warn-bg);
+      color: var(--color-warn);
+    }
+    .box-prov {
+      border-left-color: #D97706;
+      background: var(--color-warn-bg);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Provenance label                                                    */
+    /* ------------------------------------------------------------------ */
+    .provenance {
+      font-size: 8pt;
+      color: var(--color-muted);
+      font-style: italic;
+      margin-top: 12pt;
+      border-top: 0.5pt solid var(--color-border);
+      padding-top: 6pt;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Page break hints (WeasyPrint honours these)                        */
+    /* ------------------------------------------------------------------ */
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+
+<!-- ================================================================ -->
+<!-- COVER                                                             -->
+<!-- ================================================================ -->
+<div class="cover">
+  <h1>Structural Calculation Report</h1>
+  <div class="subtitle">Single-span portal frame — SANS 10162-1:2011 / SANS 10160 series</div>
+  <div class="meta">
+    Generated: {{ generated_date }}<br>
+    Frame: {{ geom.span_m }} m span &times; {{ geom.eaves_height_m }} m eaves &times; {{ geom.roof_pitch_deg }}&deg; pitch &times; {{ geom.bay_spacing_m }} m bay
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- PROVENANCE STATEMENT (PRD FR-26)                                  -->
+<!-- ================================================================ -->
+<div class="box">
+  <strong>Provenance:</strong> All engineering values in this report are computed by the
+  <strong>TorenOne deterministic kernel</strong> — not by an AI language model. Numbers are
+  traceable to verified SANS clauses cited alongside each check. No arithmetic is performed by AI.
+</div>
+
+{% if provisional_warnings %}
+<div class="box box-prov">
+  <strong>&#9888; PROVISIONAL values — engineer sign-off required before use in construction:</strong>
+  <ul style="margin-top:4pt; padding-left:14pt;">
+    {% for w in provisional_warnings %}
+    <li>{{ w }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<!-- ================================================================ -->
+<!-- 1. ASSUMPTIONS AND LIMITATIONS (Design §B.7)                     -->
+<!-- ================================================================ -->
+<h2>1. Assumptions and Limitations</h2>
+<div class="box">
+  <strong>Assumed:</strong>
+  <ul style="margin-top:4pt; padding-left:14pt;">
+    <li>Single-span symmetric portal frame with pinned column bases.</li>
+    <li>Elastic first-order plane-frame analysis (PyNiteFEA 1.6.2); sway amplified by U2 factor (SANS 10162-1 cl. 8.7).</li>
+    <li>Steel grade S355JR: fy = {{ fy_mpa }} MPa (t &le; 16 mm); E = 200 000 MPa; G = 77 000 MPa (SANS 10162-1 cl. 3.2).</li>
+    <li>Section library: 64 SAISC sections (IPE-AA/IPE 100–200, UBs, UCs); lightest-first auto-sizing.</li>
+    <li>Vertical deflection limit: L/240 (SANS 10162-1 Annex D, informative).</li>
+    <li>Lateral sway limit: H/400 (SANS 10162-1 Annex D, informative).</li>
+    <li>Load combination factors from SANS 10160-1 (DRAFT — PROVISIONAL).</li>
+    <li>Indicative cost rate: R{{ cost_rate_zar_per_kg }}/kg (PROVISIONAL — confirm with fabricator).</li>
+  </ul>
+</div>
+<div class="box box-warn">
+  <strong>Out of scope / engineer must verify:</strong>
+  <ul style="margin-top:4pt; padding-left:14pt;">
+    <li>Connection design (eaves knee, apex, column base plate).</li>
+    <li>Foundation design and ground conditions.</li>
+    <li>Purlins, girts, and secondary steelwork.</li>
+    <li>Seismic loading (SANS 10160-4).</li>
+    <li>Fatigue and dynamic effects.</li>
+    <li>Fire resistance and special exposure classes.</li>
+    <li>All PROVISIONAL values (fy, load factors, SAISC section data) must be confirmed by a registered engineer before use in construction documents.</li>
+  </ul>
+</div>
+
+<!-- ================================================================ -->
+<!-- 2. FRAME GEOMETRY AND INPUT PARAMETERS                           -->
+<!-- ================================================================ -->
+<h2>2. Frame Geometry and Input Parameters</h2>
+<table>
+  <tr><th style="width:50%">Parameter</th><th>Value</th></tr>
+  <tr><td>Span</td>              <td class="num">{{ geom.span_m }} m</td></tr>
+  <tr><td>Eaves height</td>      <td class="num">{{ geom.eaves_height_m }} m</td></tr>
+  <tr><td>Roof pitch</td>        <td class="num">{{ geom.roof_pitch_deg }}&deg;</td></tr>
+  <tr><td>Bay spacing</td>       <td class="num">{{ geom.bay_spacing_m }} m</td></tr>
+  <tr><td>Number of bays</td>    <td class="num">{{ geom.number_of_bays }}</td></tr>
+  <tr><td>Apex height</td>       <td class="num">{{ "%.3f"|format(geom.apex_height_m) }} m</td></tr>
+  <tr><td>Base fixity</td>       <td>{{ base_fixity }}</td></tr>
+  <tr><td>Steel grade</td>       <td>{{ steel_grade }}</td></tr>
+  <tr><td>Dead load (roof)</td>  <td class="num">{{ dead.roof_kpa }} kPa</td></tr>
+  <tr><td>Dead load (services)</td><td class="num">{{ dead.services_kpa }} kPa</td></tr>
+  <tr><td>Basic wind speed</td>  <td class="num">{{ wind.basic_wind_speed_ms }} m/s</td></tr>
+  <tr><td>Terrain category</td>  <td>{{ wind.terrain_category.value }}</td></tr>
+</table>
+
+<!-- ================================================================ -->
+<!-- 3. DESIGN RESULTS SUMMARY                                        -->
+<!-- ================================================================ -->
+<h2>3. Design Results Summary</h2>
+
+<table>
+  <tr><th>Member</th><th>Section</th><th class="num">Governing util.</th><th>Status</th></tr>
+  {% for s in sections %}
+  <tr>
+    <td>{{ s.member | capitalize }}</td>
+    <td style="font-family: var(--font-mono)">{{ s.designation }}</td>
+    <td class="num">{{ "%.3f"|format(member_util[s.member]) }}</td>
+    <td>
+      {% if member_pass[s.member] %}
+      <span class="badge badge-pass">&#10003; PASS</span>
+      {% else %}
+      <span class="badge badge-fail">&#10007; FAIL</span>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+<table>
+  <tr>
+    <th style="width:50%">Overall result</th>
+    <td>
+      {% if result_passed %}
+      <span class="badge badge-pass" style="font-size:11pt;">&#10003; ALL CHECKS PASS</span>
+      {% else %}
+      <span class="badge badge-fail" style="font-size:11pt;">&#10007; ONE OR MORE CHECKS FAIL</span>
+      {% endif %}
+    </td>
+  </tr>
+  <tr>
+    <td>Governing utilisation</td>
+    <td class="num">{{ "%.4f"|format(governing_utilisation) }}</td>
+  </tr>
+</table>
+
+<!-- ================================================================ -->
+<!-- 4. CODE CHECKS (SANS 10162-1:2011)                               -->
+<!-- ================================================================ -->
+<h2>4. Code Checks — SANS 10162-1:2011</h2>
+<p style="font-size:8.5pt; color:var(--color-muted); margin-bottom:6pt;">
+  Utilisation = demand / capacity. Values &le; 1.00 indicate compliance.
+  All clauses refer to SANS 10162-1:2011 unless otherwise stated.
+</p>
+
+<table>
+  <tr>
+    <th style="width:36%">Check</th>
+    <th style="width:28%">Clause</th>
+    <th style="width:16%" class="num">Utilisation</th>
+    <th style="width:20%">Status</th>
+  </tr>
+  {% for c in checks %}
+  <tr>
+    <td>{{ c.name }}</td>
+    <td style="font-family: var(--font-mono); font-size:8.5pt;">{{ c.clause }}</td>
+    <td class="num">
+      {{ "%.4f"|format(c.utilisation) }}
+      {% set u = c.utilisation %}
+      {% if u <= 0.8 %}
+        {% set bar_class = "util-low" %}
+      {% elif u <= 1.0 %}
+        {% set bar_class = "util-mid" %}
+      {% else %}
+        {% set bar_class = "util-high" %}
+      {% endif %}
+      {% set bar_width = [u * 60, 60] | min %}
+      <br>
+      <span class="util-bar-wrap">
+        <span class="util-bar {{ bar_class }}" style="width:{{ bar_width }}pt;"></span>
+      </span>
+    </td>
+    <td>
+      {% if c.passed %}
+      <span class="badge badge-pass">&#10003; PASS</span>
+      {% else %}
+      <span class="badge badge-fail">&#10007; FAIL</span>
+      {% endif %}
+      {% if c.detail %}
+      <br><span style="font-size:7.5pt; color:var(--color-muted);">{{ c.detail }}</span>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+<!-- ================================================================ -->
+<!-- 5. STEEL SCHEDULE                                                 -->
+<!-- ================================================================ -->
+<h2>5. Steel Schedule</h2>
+<table>
+  <tr>
+    <th>Member</th>
+    <th>Section</th>
+    <th class="num">Mass/m (kg/m)</th>
+    <th class="num">Length (m)</th>
+    <th class="num">Mass (kg)</th>
+  </tr>
+  {% for row in schedule %}
+  <tr>
+    <td>{{ row.member | capitalize }}</td>
+    <td style="font-family: var(--font-mono)">{{ row.designation }}</td>
+    <td class="num">{{ "%.1f"|format(row.mass_per_m) }}</td>
+    <td class="num">{{ "%.2f"|format(row.length_m) }}</td>
+    <td class="num">{{ "%.1f"|format(row.mass_kg) }}</td>
+  </tr>
+  {% endfor %}
+  <tr style="font-weight:bold; background:#EFF6FF;">
+    <td colspan="4" style="text-align:right; padding-right:6pt;">Total per frame</td>
+    <td class="num">{{ "%.1f"|format(total_mass_kg) }} kg</td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th style="width:60%">Indicative fabricated steel cost (PROVISIONAL — R{{ cost_rate_zar_per_kg }}/kg)</th>
+    <td class="num" style="font-weight:bold; font-size:11pt;">
+      R {{ "{:,.0f}".format(indicative_cost_zar) }} ZAR
+    </td>
+  </tr>
+</table>
+
+<div class="box box-prov" style="font-size:8.5pt;">
+  Cost rate R{{ cost_rate_zar_per_kg }}/kg is PROVISIONAL. Market range: R18 000–R25 000/tonne (2025).
+  Confirm with local fabricator before using in project cost estimates.
+</div>
+
+<!-- ================================================================ -->
+<!-- 6. STANDARDS AND RULES VERSION (PRD FR-20)                       -->
+<!-- ================================================================ -->
+<h2>6. Standards and Rules Version</h2>
+<table>
+  <tr><th style="width:40%">Standard</th><th>Version / edition used</th></tr>
+  {% for key, val in rules_version.items() %}
+  <tr>
+    <td>{{ key }}</td>
+    <td style="font-family: var(--font-mono)">{{ val }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<!-- ================================================================ -->
+<!-- PROVENANCE FOOTER                                                 -->
+<!-- ================================================================ -->
+<div class="provenance">
+  All engineering values computed by <strong>TorenOne deterministic kernel</strong>
+  — not by an AI language model. This report is machine-generated; a registered
+  structural engineer must review and accept responsibility for all design decisions
+  before these calculations are used in construction.
+  Generated: {{ generated_date }}.
+</div>
+
+</body>
+</html>

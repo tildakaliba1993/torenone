@@ -121,8 +121,8 @@
 ## Phase 2 — Report engine
 *Goal: a clause-referenced, engineer-grade calc-package PDF from a `DesignResult`.*
 
-- [ ] **2.1 Template** — Jinja2 HTML/CSS report matching Design §B.7 (cover, assumptions, loads, combinations, results, checks, schedule, diagrams, limitations).
-- [ ] **2.2 PDF rendering** — WeasyPrint HTML→PDF; brand styling, monospaced numbers.
+- [x] **2.1 Template** — Jinja2 HTML/CSS report matching Design §B.7 (cover, assumptions, loads, combinations, results, checks, schedule, diagrams, limitations).
+- [x] **2.2 PDF rendering** — WeasyPrint HTML→PDF; brand styling, monospaced numbers.
 - [ ] **2.3 Diagrams** — Matplotlib geometry + BMD/SFD.
 - [ ] **2.4 Status rendering** — pass/fail/near-limit via icon + label + colour (never colour alone). **Test.**
 - [ ] **2.5 Audit metadata** — rules version, input spec, timestamp embedded (PRD FR-20). **Test.**
