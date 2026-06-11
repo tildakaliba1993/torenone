@@ -97,6 +97,27 @@ class WindContext(BaseModel):
     )
 
 
+class FoundationInputs(BaseModel):
+    """Inputs for the column baseplate + pad-footing design (Task 1.18)."""
+
+    model_config = _STRICT
+    allowable_bearing_kpa: float | None = Field(
+        default=None,
+        gt=0,
+        description=(
+            "Site allowable bearing pressure (kPa) — an engineer/geotechnical input. "
+            "NEVER assumed: if omitted, the pad footing is not designed (members, "
+            "connections and baseplate still are)."
+        ),
+    )
+    concrete_fcu_mpa: float = Field(
+        default=25.0,
+        gt=0,
+        description="Concrete cube strength fcu (MPa) for baseplate bearing + footing. "
+        "Default 25 MPa (typical SA value).",
+    )
+
+
 class FrameSpec(BaseModel):
     """The complete, validated input for one portal-frame design run (MVP scope)."""
 
@@ -109,3 +130,4 @@ class FrameSpec(BaseModel):
     dead: DeadLoadInputs
     imposed: ImposedLoadInputs = Field(default_factory=ImposedLoadInputs)
     wind: WindContext
+    foundation: FoundationInputs = Field(default_factory=FoundationInputs)

@@ -269,6 +269,13 @@ class DesignResult(BaseModel):
             "Rate is PROVISIONAL — market prices vary; confirm with fabricator."
         ),
     )
+    # ---- The "last mile" (Task 1.18) — connections, baseplate, footing ----
+    # Each detail's individual checks are ALSO appended to `checks` above, so `passed`
+    # and `governing_utilisation` already span the whole design. These structured
+    # fields let the report render dedicated connection/baseplate/footing sections.
+    connections: tuple[ConnectionDesignResult, ...] = ()
+    baseplate: BaseplateDesignResult | None = None
+    footing: PadFootingDesignResult | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -280,3 +287,11 @@ class DesignResult(BaseModel):
     @property
     def governing_utilisation(self) -> float:
         return max((c.utilisation for c in self.checks), default=0.0)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def total_steel_tonnes(self) -> float | None:
+        """Per-frame steel mass in tonnes (= total_steel_mass_kg / 1000)."""
+        if self.total_steel_mass_kg is None:
+            return None
+        return self.total_steel_mass_kg / 1_000.0

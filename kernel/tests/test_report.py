@@ -101,10 +101,9 @@ class TestHTMLChecksSection:
             assert c.clause in html, f"Clause ref missing: {c.clause!r}"
 
     def test_utilisation_values_present(self, html, result):
-        """At least the governing utilisation should appear formatted."""
+        """The governing utilisation should appear, formatted as the report does (4 dp)."""
         util = result.governing_utilisation
-        # Formatted to 3 dp: e.g. "0.923" or "0.92"
-        assert f"{util:.2f}" in html or f"{util:.3f}" in html
+        assert f"{util:.4f}" in html
 
     def test_pass_label_present(self, html, result):
         """PRD FR-19: pass/fail must be labelled (text, not colour alone)."""

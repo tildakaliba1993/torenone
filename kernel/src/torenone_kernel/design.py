@@ -39,6 +39,9 @@ from torenone_kernel.checks.autosize import (
 )
 from torenone_kernel.checks.deflection import vertical_deflection_check
 from torenone_kernel.checks.material import fy_mpa as _fy_mpa
+from torenone_kernel.connections.moment_endplate import design_moment_connection
+from torenone_kernel.foundations.baseplate import design_baseplate
+from torenone_kernel.foundations.pad_footing import design_pad_footing
 from torenone_kernel.loads.combinations import (
     GAMMA_G_SLS_UNFAVOURABLE,
     GAMMA_Q_SLS,
@@ -48,9 +51,12 @@ from torenone_kernel.loads.dead import dead_loads
 from torenone_kernel.loads.imposed import imposed_roof_loads
 from torenone_kernel.models.frame_spec import FrameSpec
 from torenone_kernel.models.results import (
+    BaseplateDesignResult,
     CheckResult,
+    ConnectionDesignResult,
     DesignResult,
     LoadCombination,
+    PadFootingDesignResult,
     SectionChoice,
 )
 from torenone_kernel.rules_version import as_dict as _rules_version
@@ -284,12 +290,18 @@ def design(spec: FrameSpec, cost_rate_zar_per_kg: float = DEFAULT_COST_RATE_ZAR_
     )
 
     # ------------------------------------------------------------------ #
+    # The "last mile" — connections, baseplate, footing (final sections)  #
+    # ------------------------------------------------------------------ #
+    connections, baseplate, footing = _design_last_mile(spec, raf_sec, col_sec)
+
+    # ------------------------------------------------------------------ #
     # Assemble result                                                      #
     # ------------------------------------------------------------------ #
     all_checks: list[CheckResult] = (
         list(raf_result.checks)
         + list(col_result.checks)
         + [sway_check_result, vertical_deflection]
+        + _last_mile_checks(connections, baseplate, footing)
     )
 
     sections = [
@@ -314,6 +326,13 @@ def design(spec: FrameSpec, cost_rate_zar_per_kg: float = DEFAULT_COST_RATE_ZAR_
             "amplified. Consider increasing section stiffness or bracing the frame."
         )
 
+    if footing is None and spec.foundation.allowable_bearing_kpa is None:
+        warnings.append(
+            "Pad footing NOT designed — no allowable bearing pressure supplied "
+            "(spec.foundation.allowable_bearing_kpa). Provide the site value to "
+            "complete the foundation design."
+        )
+
     mass_kg = _steel_mass_kg(spec, raf_sec, col_sec)
     return DesignResult(
         frame_spec=spec,
@@ -323,6 +342,9 @@ def design(spec: FrameSpec, cost_rate_zar_per_kg: float = DEFAULT_COST_RATE_ZAR_
         warnings=tuple(warnings),
         total_steel_mass_kg=mass_kg,
         indicative_cost_zar=mass_kg * cost_rate_zar_per_kg,
+        connections=connections,
+        baseplate=baseplate,
+        footing=footing,
     )
 
 
@@ -473,8 +495,14 @@ def check(
         limit_fraction=240,
     )
 
+    # ---- The "last mile" (connections, baseplate, footing) on supplied sections ----
+    connections, baseplate, footing = _design_last_mile(spec, raf_sec, col_sec)
+
     # ---- Assemble ----
-    all_checks: list[CheckResult] = raf_checks + col_checks + [sway_check, deflection_check]
+    all_checks: list[CheckResult] = (
+        raf_checks + col_checks + [sway_check, deflection_check]
+        + _last_mile_checks(connections, baseplate, footing)
+    )
 
     section_choices = [
         SectionChoice(member="rafter", designation=raf_sec.designation),
@@ -490,6 +518,11 @@ def check(
         warnings.append(
             "Frame is sway-sensitive (U2 > 1.4). Second-order effects apply."
         )
+    if footing is None and spec.foundation.allowable_bearing_kpa is None:
+        warnings.append(
+            "Pad footing NOT designed — no allowable bearing pressure supplied "
+            "(spec.foundation.allowable_bearing_kpa)."
+        )
 
     mass_kg = _steel_mass_kg(spec, raf_sec, col_sec)
     return DesignResult(
@@ -500,7 +533,121 @@ def check(
         warnings=tuple(warnings),
         total_steel_mass_kg=mass_kg,
         indicative_cost_zar=mass_kg * cost_rate_zar_per_kg,
+        connections=connections,
+        baseplate=baseplate,
+        footing=footing,
     )
+
+
+# ---------------------------------------------------------------------------
+# The "last mile" — connections, baseplate, footing (Task 1.18)
+# ---------------------------------------------------------------------------
+
+def _design_last_mile(
+    spec: FrameSpec,
+    raf_sec: SectionProperties,
+    col_sec: SectionProperties,
+) -> tuple[
+    tuple[ConnectionDesignResult, ...],
+    BaseplateDesignResult,
+    PadFootingDesignResult | None,
+]:
+    """Design the eaves + apex connections, the column baseplate and (if an allowable
+    bearing pressure is supplied) the pad footing, for the FINAL chosen sections.
+
+    Re-runs the ULS-1 analysis (for joint + base forces) and an SLS-1 analysis (for the
+    service base axial used in the geotechnical bearing check). All forces come from the
+    deterministic kernel (PyNite). Connections/baseplate are always designed; the footing
+    is designed only when ``spec.foundation.allowable_bearing_kpa`` is provided (never
+    assumed — PRD FR-2/FR-30).
+    """
+    combos = {c.name.split()[0]: c for c in load_combinations(spec)}
+    uls1 = _combo_starting_with(combos, "ULS-1")
+    sls1 = _combo_starting_with(combos, "SLS-1")
+    imposed = imposed_roof_loads(spec)
+    grade = spec.materials.steel_grade
+
+    gamma_G = uls1.factors["dead"]
+    gamma_Q = uls1.factors.get("imposed", 0.0)
+    dead = dead_loads(spec, rafter=raf_sec, column=col_sec)
+
+    uls_rafter_udl = gamma_G * dead.rafter_udl_kn_per_m + gamma_Q * imposed.roof_udl_kn_per_m
+    uls_col_udl = gamma_G * (dead.column_self_weight_kn_per_m + dead.wall_cladding_udl_kn_per_m)
+    uls_forces = {
+        f.location: f
+        for f in PortalAnalysis(spec, col_sec, raf_sec).run(uls1.name, uls_rafter_udl, uls_col_udl).forces
+    }
+
+    sls_rafter_udl = GAMMA_G_SLS_UNFAVOURABLE * dead.rafter_udl_kn_per_m + GAMMA_Q_SLS * imposed.roof_udl_kn_per_m
+    sls_col_udl = GAMMA_G_SLS_UNFAVOURABLE * (
+        dead.column_self_weight_kn_per_m + dead.wall_cladding_udl_kn_per_m
+    )
+    sls_forces = {
+        f.location: f
+        for f in PortalAnalysis(spec, col_sec, raf_sec).run(sls1.name, sls_rafter_udl, sls_col_udl).forces
+    }
+
+    # --- connections (eaves + apex) — axial passed negative (compression: no bolt tension) ---
+    eaves = design_moment_connection(
+        location="eaves",
+        moment_knm=abs(uls_forces["eaves_L"].moment_knm),
+        shear_kn=abs(uls_forces["eaves_L"].shear_kn),
+        axial_kn=-abs(uls_forces["eaves_L"].axial_kn),
+        member_depth_mm=raf_sec.depth_mm,
+        member_flange_width_mm=raf_sec.width_mm,
+        member_flange_thickness_mm=raf_sec.flange_thickness_mm,
+        steel_grade=grade,
+    )
+    apex = design_moment_connection(
+        location="apex",
+        moment_knm=abs(uls_forces["apex"].moment_knm),
+        shear_kn=abs(uls_forces["apex"].shear_kn),
+        axial_kn=-abs(uls_forces["apex"].axial_kn),
+        member_depth_mm=raf_sec.depth_mm,
+        member_flange_width_mm=raf_sec.width_mm,
+        member_flange_thickness_mm=raf_sec.flange_thickness_mm,
+        steel_grade=grade,
+    )
+
+    # --- baseplate (compression axial positive) ---
+    baseplate = design_baseplate(
+        base_fixity=spec.base_fixity.value,
+        axial_kn=abs(uls_forces["col_base_L"].axial_kn),
+        shear_kn=abs(uls_forces["col_base_L"].shear_kn),
+        moment_knm=abs(uls_forces["col_base_L"].moment_knm),
+        column_depth_mm=col_sec.depth_mm,
+        column_flange_width_mm=col_sec.width_mm,
+        steel_grade=grade,
+        fc_mpa=spec.foundation.concrete_fcu_mpa,
+    )
+
+    # --- pad footing (only if allowable bearing pressure supplied) ---
+    footing: PadFootingDesignResult | None = None
+    if spec.foundation.allowable_bearing_kpa is not None:
+        footing = design_pad_footing(
+            service_axial_kn=abs(sls_forces["col_base_L"].axial_kn),
+            factored_axial_kn=abs(uls_forces["col_base_L"].axial_kn),
+            allowable_bearing_kpa=spec.foundation.allowable_bearing_kpa,
+            column_size_mm=max(col_sec.depth_mm, col_sec.width_mm),
+            fcu_mpa=spec.foundation.concrete_fcu_mpa,
+        )
+
+    return (eaves, apex), baseplate, footing
+
+
+def _last_mile_checks(
+    connections: tuple[ConnectionDesignResult, ...],
+    baseplate: BaseplateDesignResult,
+    footing: PadFootingDesignResult | None,
+) -> list[CheckResult]:
+    """Flatten the connection/baseplate/footing checks for the aggregated `checks` list."""
+    checks: list[CheckResult] = []
+    for conn in connections:
+        checks.extend(conn.checks)
+    checks.extend(baseplate.checks)
+    if footing is not None:
+        checks.extend(footing.checks)
+    return checks
 
 
 # ---------------------------------------------------------------------------
