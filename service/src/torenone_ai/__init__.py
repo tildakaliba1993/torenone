@@ -12,6 +12,15 @@ from torenone_ai.config import (
     AIConfig,
     MissingAPIKeyError,
 )
+from torenone_ai.parsing import (
+    Assumption,
+    FrameSpecExtraction,
+    MissingField,
+    ParseResult,
+    build_frame_spec,
+    parse_description,
+    parse_description_from_env,
+)
 
 __all__ = [
     "AIConfig",
@@ -20,4 +29,12 @@ __all__ = [
     "DEFAULT_FALLBACK_MODEL",
     "build_client",
     "build_client_from_env",
+    # Spec parsing (Task 3.2)
+    "FrameSpecExtraction",
+    "ParseResult",
+    "MissingField",
+    "Assumption",
+    "build_frame_spec",
+    "parse_description",
+    "parse_description_from_env",
 ]

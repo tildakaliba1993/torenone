@@ -2,7 +2,7 @@
 
 > The single source of truth for **what we are building and how far along we are.** Update in real time: when a task is done and its tests pass, mark it `[x]`. Governed by the [PRD](./PRD.md) and [Design & Architecture](./DESIGN-ARCHITECTURE.md).
 >
-> **Status:** v1.0 · **Last updated:** 2026-06-11 (3.1 done — OpenAI client; AI provider switched to OpenAI; CI restored to green: ruff/mypy pinned + lint/type debt cleared, standardised on Python 3.11)
+> **Status:** v1.0 · **Last updated:** 2026-06-11 (3.2 done — text→FrameSpec parsing via OpenAI Structured Outputs; service added to mypy gate)
 
 ---
 
@@ -141,7 +141,7 @@
 *Goal: text → typed `FrameSpec`, clarifying questions, and report narrative — with the LLM unable to compute numbers.*
 
 - [x] **3.1 OpenAI client** — server-side `gpt-5.5` (`gpt-5.4-mini` fallback) via the `openai` SDK; key + model read from env (`OPENAI_API_KEY` / `OPENAI_MODEL` / `OPENAI_FALLBACK_MODEL`). `AIConfig.from_env()` validates presence; key is redacted in `repr`/`str`/`safe_dict()` and never serialised. Lazy SDK import so config is testable without the package. **23 tests** (`service/tests/test_ai_config.py`): key read from env, missing/blank-key raises, repr/str/safe_dict redact the key (no raw key anywhere), model defaults + overrides, base_url handling, frozen/immutable, server-side-only env-name guard (no `NEXT_PUBLIC_`), client factory wires key/base_url. All passing on Python 3.11 (ruff + mypy clean). Full suite: **447 passed**.
-- [ ] **3.2 Spec parsing** — OpenAI Structured Outputs (`responses.parse(..., text_format=FrameSpec)`); apply documented defaults; **never silently guess** (PRD FR-2). **Test:** sample descriptions → expected specs; missing-field cases flagged.
+- [x] **3.2 Spec parsing** — OpenAI Structured Outputs (`responses.parse(..., text_format=FrameSpecExtraction)`); apply documented defaults; **never silently guess** (PRD FR-2). `service/src/torenone_ai/parsing.py`: the LLM fills an **all-nullable** `FrameSpecExtraction` (null = not stated); a deterministic `build_frame_spec()` then (a) **flags every missing required field** (span, eaves, pitch, bay spacing, #bays, roof dead load, wind speed, terrain) — never assumed; (b) applies documented defaults for optional fields, each recorded as an explicit `Assumption`; (c) validates into the real `FrameSpec` (range checks → `errors`). `ParseResult` carries `spec` / `missing` / `assumptions` / `errors` with `is_complete` + `needs_clarification`. OpenAI client injected → fully testable without network/key. System prompt hard-forbids guessing/calculation. **31 tests** (`service/tests/test_parsing.py`): complete→spec, all-missing flagged, single-missing, terrain-not-guessed, defaults-as-assumptions, stated-optional-not-assumed, validation errors (pitch>45, negative span, zero bays), fake-client wiring (model/text_format/text forwarded), null-output never fabricates, deterministic mapping. All passing (Python 3.11; ruff + mypy clean — service now in the mypy gate). Full suite: **478 passed**.
 - [ ] **3.3 Clarifying questions** — when input is ambiguous, return a question, not a guess. **Test.**
 - [ ] **3.4 Narrative generation** — prose only; **numbers injected from kernel**, not generated. **Test:** assert no engineering numbers originate from the model output path (architectural guard).
 - [ ] **3.5 Guardrail test** — adversarial inputs (nonsense, out-of-scope, contradictory) handled gracefully (PRD FR-3, §9).

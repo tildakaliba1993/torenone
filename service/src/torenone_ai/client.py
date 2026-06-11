@@ -47,6 +47,6 @@ def build_client(config: AIConfig) -> Any:
     return OpenAI(**kwargs)
 
 
-def build_client_from_env(env: dict | None = None) -> Any:
+def build_client_from_env(env: dict[str, str] | None = None) -> Any:
     """Convenience: read :class:`AIConfig` from the environment and build a client."""
     return build_client(AIConfig.from_env(env))

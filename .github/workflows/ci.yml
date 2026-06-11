@@ -20,8 +20,8 @@ jobs:
           pip install -e ".[dev,service]"
       - name: Lint
         run: ruff check .
-      - name: Type-check (kernel)
-        run: mypy kernel/src tools
+      - name: Type-check (kernel + service)
+        run: mypy kernel/src tools service/src
       - name: Tests + coverage gate
         # Kernel coverage gate ramps to 95% as Phase 1 lands (PRD NFR-7).
         run: pytest --cov=torenone_kernel --cov-report=term-missing --cov-fail-under=0

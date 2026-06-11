@@ -75,6 +75,7 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 | Task 1.11 auto-sizer | No new code values introduced — re-uses cl. 11.2 (classification), 13.3.1 (Cr), 13.4.1.1 (Vr), 13.5/13.6 (Mr/LTB), 13.8.2 (interaction) sourced in 1.10 | — | VERIFIED (all constituent values verified above) |
 | Pydantic / pytest / vitest / Playwright | kernel + web testing | PyPI / npm | VERIFIED |
 | OpenAI model | `gpt-5.5` primary / `gpt-5.4-mini` fallback (AI orchestration layer; Structured Outputs + function calling) | OpenAI API docs (developers.openai.com, verified 2026-06-11) | VERIFIED |
+| Task 3.2 spec parsing | No new engineering values introduced — the LLM only transcribes/classifies user-stated inputs; all applied defaults (services 0.0 kPa, wall 0.0 kPa, roof inaccessible, altitude 0 m, no dominant opening, S355JR, pinned base, unrestrained) are the already-sourced `FrameSpec` model defaults | `models/frame_spec.py` (defaults documented in Phase 1) | VERIFIED (no new values) |
 | WCAG 2.1 contrast (AA) | design-token accessibility gate | W3C WCAG 2.1 | VERIFIED |
 
 ## 6. Resources to source (hand-off checklist for the co-founder)
