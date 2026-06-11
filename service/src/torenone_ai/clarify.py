@@ -91,7 +91,12 @@ def clarifying_questions(result: ParseResult) -> list[ClarifyingQuestion]:
 
     Empty when the result is already complete. One question per missing required
     field (in the canonical order) followed by one per validation error.
+
+    An out-of-scope request is refused, not clarified, so no questions are returned.
     """
+    if result.out_of_scope:
+        return []
+
     questions: list[ClarifyingQuestion] = []
 
     # Missing required inputs — ask, never assume.

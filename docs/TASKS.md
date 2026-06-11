@@ -2,7 +2,7 @@
 
 > The single source of truth for **what we are building and how far along we are.** Update in real time: when a task is done and its tests pass, mark it `[x]`. Governed by the [PRD](./PRD.md) and [Design & Architecture](./DESIGN-ARCHITECTURE.md).
 >
-> **Status:** v1.0 · **Last updated:** 2026-06-11 (3.4 done — report narrative via slot substitution; no number originates from the model, architecturally guarded)
+> **Status:** v1.0 · **Last updated:** 2026-06-11 (Phase 3 complete — AI orchestration: OpenAI client, parsing, clarifying questions, guarded narrative, adversarial guardrails)
 
 ---
 
@@ -27,7 +27,7 @@
 | 0 | Foundations & project setup | `[x]` |
 | 1 | Core engineering kernel (TDD) | `[~]` |
 | 2 | Report engine | `[x]` |
-| 3 | AI orchestration layer | `[~]` |
+| 3 | AI orchestration layer | `[x]` |
 | 4 | Engineering service (FastAPI) + auth | `[ ]` |
 | 5 | Supabase backend (data + RLS) | `[ ]` |
 | 6 | Frontend (design system + screens) | `[ ]` |
@@ -144,9 +144,9 @@
 - [x] **3.2 Spec parsing** — OpenAI Structured Outputs (`responses.parse(..., text_format=FrameSpecExtraction)`); apply documented defaults; **never silently guess** (PRD FR-2). `service/src/torenone_ai/parsing.py`: the LLM fills an **all-nullable** `FrameSpecExtraction` (null = not stated); a deterministic `build_frame_spec()` then (a) **flags every missing required field** (span, eaves, pitch, bay spacing, #bays, roof dead load, wind speed, terrain) — never assumed; (b) applies documented defaults for optional fields, each recorded as an explicit `Assumption`; (c) validates into the real `FrameSpec` (range checks → `errors`). `ParseResult` carries `spec` / `missing` / `assumptions` / `errors` with `is_complete` + `needs_clarification`. OpenAI client injected → fully testable without network/key. System prompt hard-forbids guessing/calculation. **31 tests** (`service/tests/test_parsing.py`): complete→spec, all-missing flagged, single-missing, terrain-not-guessed, defaults-as-assumptions, stated-optional-not-assumed, validation errors (pitch>45, negative span, zero bays), fake-client wiring (model/text_format/text forwarded), null-output never fabricates, deterministic mapping. All passing (Python 3.11; ruff + mypy clean — service now in the mypy gate). Full suite: **478 passed**.
 - [x] **3.3 Clarifying questions** — when input is ambiguous, return a question, not a guess. `service/src/torenone_ai/clarify.py`: `clarifying_questions(result)` turns a `ParseResult`'s `missing`/`errors` into typed `ClarifyingQuestion`s (field, question, kind `missing`/`invalid`, unit, enum options) — **deterministically, no LLM** (guarantees we ask about exactly the missing fields with correct units/options; terrain offers A/B/C/D, never guessed). `clarification_prompt(result)` renders a numbered user-facing message (or `None` if complete). **19 tests** (`service/tests/test_clarify.py`): complete→no questions, all-missing→one Q per required field in canonical order, single-missing, units (m/kPa/m·s⁻¹), terrain enum options, invalid-value correction questions, ask-never-guess (no spec but questions), prompt formatting, determinism. All passing (Python 3.11; ruff + mypy clean). Full suite: **497 passed**.
 - [x] **3.4 Narrative generation** — prose only; **numbers injected from kernel**, not generated. `service/src/torenone_ai/narrative.py` uses **slot substitution**: `build_narrative_facts(result)` is the sole number source (all kernel-derived); the model writes prose with `{slot}` placeholders and **no digits**; `assert_prose_has_no_literal_numbers()` rejects any model output containing a digit (architectural guard); `render_narrative()` substitutes kernel facts and rejects invented slots. `deterministic_narrative()` builds the whole narrative from facts with no LLM (safe fallback + proof). **24 tests** (`service/tests/test_narrative.py`) incl. the headline guard: after removing every kernel fact value from the final text, **zero digits remain** (no number came from the model); a model-authored number (`"0.95"`) raises `NarrativeGuardError`; invented slots raise `NarrativeError`. All passing (Python 3.11; ruff + mypy clean). Full suite: **521 passed**.
-- [ ] **3.5 Guardrail test** — adversarial inputs (nonsense, out-of-scope, contradictory) handled gracefully (PRD FR-3, §9).
+- [x] **3.5 Guardrail test** — adversarial inputs (nonsense, out-of-scope, contradictory) handled gracefully (PRD FR-3, §9). Added an **out-of-scope guard**: `FrameSpecExtraction.in_scope`/`out_of_scope_reason` let the model flag non-portal-frame requests (multi-storey, concrete, bridge, truss, crane, multi-bay); `build_frame_spec()` then returns an `out_of_scope` `ParseResult` (refuse with reason) instead of asking portal questions. System prompt also nulls contradictory values and defines scope. **22 tests** (`service/tests/test_guardrails.py`): nonsense→ask (no crash), unparseable→graceful, out-of-scope→refuse-with-reason (no questions, even with stated dimensions), contradictory→nulled→asked, invalid/out-of-range→reported-not-clamped (parametrised), scope-guard doesn't block valid frames, and a robustness sweep asserting every adversarial category yields a graceful `ParseResult` (never an exception, never a fabricated spec). All passing (ruff + mypy clean). Full suite: **543 passed**.
 
-**Acceptance:** parsing reliable on a sample set; LLM provably cannot emit engineering numbers; out-of-scope handled.
+**Acceptance:** parsing reliable on a sample set; LLM provably cannot emit engineering numbers (3.4 guard); out-of-scope handled (3.5). **Phase 3 complete.**
 
 ---
 

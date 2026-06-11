@@ -131,6 +131,20 @@ class FrameSpecExtraction(BaseModel):
         "Null if not stated.",
     )
 
+    # --- Scope guard (Task 3.5) ---
+    in_scope: bool | None = Field(
+        None,
+        description="False ONLY if the description is clearly NOT a single-bay symmetric "
+        "steel portal frame — e.g. multi-storey, concrete/timber, a bridge, a truss, a "
+        "crane gantry, a multi-bay/multi-span building, or another structure type. "
+        "True or null if it appears to be (or could be) a single-bay steel portal frame.",
+    )
+    out_of_scope_reason: str | None = Field(
+        None,
+        description="If in_scope is false, a short plain-English note of what was actually "
+        "requested (e.g. 'reinforced-concrete multi-storey building'). Null otherwise.",
+    )
+
 
 # ---------------------------------------------------------------------------
 # Result types
@@ -160,6 +174,7 @@ class ParseResult:
     """Outcome of parsing a description.
 
     Exactly one of these holds:
+      * ``out_of_scope`` is True (the request is not a single-bay steel portal frame); or
       * ``spec`` is a valid FrameSpec and ``is_complete`` is True; or
       * ``missing`` is non-empty (needs clarification — FR-2/3.3); or
       * ``errors`` is non-empty (the stated values failed validation).
@@ -169,14 +184,22 @@ class ParseResult:
     missing: list[MissingField]
     assumptions: list[Assumption]
     errors: list[str]
+    out_of_scope: bool = False
+    scope_note: str | None = None
 
     @property
     def is_complete(self) -> bool:
-        return self.spec is not None and not self.missing and not self.errors
+        return (
+            self.spec is not None
+            and not self.missing
+            and not self.errors
+            and not self.out_of_scope
+        )
 
     @property
     def needs_clarification(self) -> bool:
-        return bool(self.missing)
+        # An out-of-scope request is refused, not clarified.
+        return bool(self.missing) and not self.out_of_scope
 
 
 # ---------------------------------------------------------------------------
@@ -211,6 +234,18 @@ def build_frame_spec(extraction: FrameSpecExtraction) -> ParseResult:
     No engineering computation happens here — only required-field checks, documented
     defaults, and pydantic validation.
     """
+    # 0. Scope guard — refuse (don't try to parse) anything that is not a single-bay
+    #    steel portal frame, rather than asking portal-frame questions about a bridge.
+    if extraction.in_scope is False:
+        note = (
+            extraction.out_of_scope_reason
+            or "The description does not appear to be a single-bay steel portal frame."
+        )
+        return ParseResult(
+            spec=None, missing=[], assumptions=[], errors=[],
+            out_of_scope=True, scope_note=note,
+        )
+
     # 1. Required fields are NEVER assumed — flag any that are null.
     missing = [
         MissingField(field=path, label=label, why="required input; not stated and not assumable")
@@ -333,7 +368,13 @@ SYSTEM_PROMPT = (
     "4. Set terrain_category only if the surroundings are clearly described; otherwise "
     "null.\n"
     "5. If you are unsure about any field, it MUST be null. A clarifying question is "
-    "always better than a guess."
+    "always better than a guess.\n"
+    "6. If the same quantity is stated more than once with conflicting/contradictory "
+    "values, set that field to null (do not pick one).\n"
+    "7. SCOPE: this tool only designs single-bay symmetric steel portal frames. If the "
+    "description is clearly a different structure (multi-storey, concrete/timber, a "
+    "bridge, a truss, a crane gantry, a multi-bay/multi-span building, etc.), set "
+    "in_scope=false and give a short out_of_scope_reason. Otherwise leave in_scope null."
 )
 
 
