@@ -108,6 +108,31 @@ class ConnectionDesignResult(BaseModel):
         return max((c.utilisation for c in self.checks), default=0.0)
 
 
+class BaseplateDesignResult(BaseModel):
+    """A designed column baseplate (pinned or fixed) — Task 1.16.
+
+    PROVISIONAL — see torenone_kernel.foundations.baseplate (pending engineer sign-off).
+    """
+
+    model_config = _STRICT
+    base_fixity: str = Field(min_length=1)       # "pinned" | "fixed"
+    description: str = Field(min_length=1)
+    design_axial_kn: float = 0.0
+    design_shear_kn: float = Field(default=0.0, ge=0.0)
+    design_moment_knm: float = Field(default=0.0, ge=0.0)
+    checks: list[CheckResult] = Field(min_length=1)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def passed(self) -> bool:
+        return bool(self.checks) and all(c.passed for c in self.checks)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def max_utilisation(self) -> float:
+        return max((c.utilisation for c in self.checks), default=0.0)
+
+
 class DeadLoadResult(BaseModel):
     """Characteristic permanent (dead) loads as line loads on the frame members.
 
