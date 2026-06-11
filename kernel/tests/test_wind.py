@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
-
 from torenone_kernel.loads.wind import (
     SA_BASIC_WIND_SPEED_ZONES_MS,
     TERRAIN_PARAMETERS,
@@ -35,7 +34,7 @@ _TABLE3 = {
 @pytest.mark.parametrize("cat", ["A", "B", "C", "D"])
 def test_roughness_factor_reproduces_sans_table_3(cat: str) -> None:
     category = TerrainCategory[cat]
-    for z, ref in zip(_TABLE3_ELEVATIONS_M, _TABLE3[cat]):
+    for z, ref in zip(_TABLE3_ELEVATIONS_M, _TABLE3[cat], strict=True):
         cr = roughness_factor(float(z), category)
         # Table 3 is rounded to 2 d.p.; our value must match within that rounding.
         assert cr == pytest.approx(ref, abs=0.011), f"{cat} @ {z} m: {cr:.3f} vs table {ref}"

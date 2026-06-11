@@ -20,8 +20,8 @@ from __future__ import annotations
 import json
 
 import pytest
-
 from torenone_kernel.design import design
+from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.models.frame_spec import (
     DeadLoadInputs,
     FrameGeometry,
@@ -29,9 +29,7 @@ from torenone_kernel.models.frame_spec import (
     Restraints,
     WindContext,
 )
-from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.rules_version import as_dict as rules_version_dict
-
 
 # ---------------------------------------------------------------------------
 # Shared fixtures — span the realistic South African industrial portal range

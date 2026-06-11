@@ -27,17 +27,15 @@ Run:
 from __future__ import annotations
 
 import pytest
-
 from torenone_kernel.design import design
+from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.models.frame_spec import (
     DeadLoadInputs,
     FrameGeometry,
     FrameSpec,
     WindContext,
 )
-from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.report.renderer import render_html
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -172,9 +170,9 @@ class TestCombinationWorking:
 
     def test_factored_rafter_udl_present(self, html, result):
         """Factored rafter UDL (γG × G + γQ × Q) must appear."""
+        from torenone_kernel.loads.combinations import load_combinations
         from torenone_kernel.loads.dead import dead_loads
         from torenone_kernel.loads.imposed import imposed_roof_loads
-        from torenone_kernel.loads.combinations import load_combinations
         from torenone_kernel.sections.library import SectionLibrary
         lib = SectionLibrary.load_default()
         sec_map = {s.member: lib.get(s.designation) for s in result.sections}
@@ -203,13 +201,14 @@ class TestAnalysisForces:
     def test_eaves_moment_present(self, html, result):
         """Eaves moment (knee joint — governing for rafter and column) must appear."""
         from torenone_kernel.analysis.plane_frame import PortalAnalysis
+        from torenone_kernel.loads.combinations import load_combinations
         from torenone_kernel.loads.dead import dead_loads
         from torenone_kernel.loads.imposed import imposed_roof_loads
-        from torenone_kernel.loads.combinations import load_combinations
         from torenone_kernel.sections.library import SectionLibrary
         lib = SectionLibrary.load_default()
         sec_map = {s.member: lib.get(s.designation) for s in result.sections}
-        col_sec = sec_map["column"]; raf_sec = sec_map["rafter"]
+        col_sec = sec_map["column"]
+        raf_sec = sec_map["rafter"]
         dead = dead_loads(result.frame_spec, rafter=raf_sec, column=col_sec)
         imp  = imposed_roof_loads(result.frame_spec)
         combos = load_combinations(result.frame_spec)
@@ -228,13 +227,14 @@ class TestAnalysisForces:
     def test_apex_moment_present(self, html, result):
         """Apex moment must appear in the working section."""
         from torenone_kernel.analysis.plane_frame import PortalAnalysis
+        from torenone_kernel.loads.combinations import load_combinations
         from torenone_kernel.loads.dead import dead_loads
         from torenone_kernel.loads.imposed import imposed_roof_loads
-        from torenone_kernel.loads.combinations import load_combinations
         from torenone_kernel.sections.library import SectionLibrary
         lib = SectionLibrary.load_default()
         sec_map = {s.member: lib.get(s.designation) for s in result.sections}
-        col_sec = sec_map["column"]; raf_sec = sec_map["rafter"]
+        col_sec = sec_map["column"]
+        raf_sec = sec_map["rafter"]
         dead = dead_loads(result.frame_spec, rafter=raf_sec, column=col_sec)
         imp  = imposed_roof_loads(result.frame_spec)
         combos = load_combinations(result.frame_spec)
@@ -272,13 +272,14 @@ class TestSectionCapacityWorking:
     """Capacity values Cr, Vr, Mr (with inputs) must appear for each member."""
 
     def _get_capacities(self, result):
+        import math
+
         from torenone_kernel.checks.axial import cr_flexural
-        from torenone_kernel.checks.bending import mr_ltb, mcr_elastic, mr_laterally_supported
-        from torenone_kernel.checks.shear import vr_web
+        from torenone_kernel.checks.bending import mcr_elastic, mr_ltb
         from torenone_kernel.checks.classification import classify_section
         from torenone_kernel.checks.material import fy_mpa
+        from torenone_kernel.checks.shear import vr_web
         from torenone_kernel.sections.library import SectionLibrary
-        import math
         lib = SectionLibrary.load_default()
         sec_map = {s.member: lib.get(s.designation) for s in result.sections}
         caps = {}

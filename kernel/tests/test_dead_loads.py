@@ -7,7 +7,6 @@ every expected value here is an explicit hand calculation. Self-weight uses g = 
 from __future__ import annotations
 
 import pytest
-
 from torenone_kernel.loads import GRAVITY_M_S2, dead_loads
 from torenone_kernel.models import (
     DeadLoadInputs,

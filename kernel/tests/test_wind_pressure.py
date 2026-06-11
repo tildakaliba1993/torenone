@@ -7,10 +7,9 @@ the interpolation and the lack-of-correlation factor (cl. 8.3.2.4).
 from __future__ import annotations
 
 import pytest
-
 from torenone_kernel.loads.wind_pressure import (
-    duopitch_roof_pressure_coefficients,
     dominant_opening_internal_pressure,
+    duopitch_roof_pressure_coefficients,
     enclosed_internal_pressure,
     wall_pressure_coefficients,
 )

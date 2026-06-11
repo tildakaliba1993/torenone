@@ -8,7 +8,6 @@ assert that out-of-scope accessible roofs fail loudly rather than guessing.
 from __future__ import annotations
 
 import pytest
-
 from torenone_kernel.loads import INACCESSIBLE_ROOF_QK_KPA, imposed_roof_loads
 from torenone_kernel.models import (
     DeadLoadInputs,

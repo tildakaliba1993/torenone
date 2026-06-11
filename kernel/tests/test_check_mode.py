@@ -12,19 +12,18 @@ Part B: total_steel_mass_kg + indicative_cost_zar on DesignResult
 from __future__ import annotations
 
 import math
-import pytest
 
+import pytest
 from torenone_kernel.design import check, design
+from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.models.frame_spec import (
     DeadLoadInputs,
     FrameGeometry,
     FrameSpec,
     WindContext,
 )
-from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.models.results import CheckResult, DesignResult, SectionChoice
 from torenone_kernel.sections.library import SectionLibrary
-
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -101,7 +100,7 @@ class TestCheckCorrectness:
         r = check(_spec(), _passing_sections())
         failing = [c for c in r.checks if not c.passed]
         assert r.passed, (
-            f"check() failed for design()-chosen sections:\n"
+            "check() failed for design()-chosen sections:\n"
             + "\n".join(f"  {c.name}: util={c.utilisation:.3f}" for c in failing)
         )
 
@@ -164,7 +163,7 @@ class TestCheckVsDesign:
         r_check = check(spec, list(r_design.sections))
         failing = [c for c in r_check.checks if not c.passed]
         assert r_check.passed, (
-            f"check() failed for design()-chosen sections:\n"
+            "check() failed for design()-chosen sections:\n"
             + "\n".join(f"  {c.name}: util={c.utilisation:.3f}" for c in failing)
         )
 

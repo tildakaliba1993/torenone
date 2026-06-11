@@ -25,21 +25,20 @@ Unit convention: N/mm internally in the solver; kN at all public interfaces.
 
 from __future__ import annotations
 
-import sys
 import site
+import sys
 
 for _sp in site.getsitepackages() + [site.getusersitepackages()]:
     if _sp not in sys.path:
         sys.path.insert(0, _sp)
 
-from Pynite import FEModel3D  # type: ignore[import]
 
 from torenone_kernel.analysis.plane_frame import (
-    _new_model,
-    _add_section,
-    _pin_support,
-    _fix_out_of_plane,
     _COMBO,
+    _add_section,
+    _fix_out_of_plane,
+    _new_model,
+    _pin_support,
 )
 from torenone_kernel.models.frame_spec import FrameSpec
 from torenone_kernel.models.results import SwaySensitivityResult
@@ -119,7 +118,6 @@ def compute_sway_check(
     total_factored_gravity_kn : ΣCu = total factored vertical load on frame (kN).
     combination_name        : label for the result.
     """
-    import math
 
     geom = spec.geometry
     span_mm      = geom.span_m          * 1_000.0

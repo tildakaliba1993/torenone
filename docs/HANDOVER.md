@@ -28,11 +28,13 @@
 
 - **Repo:** `/Users/cash/TorenOne/` (main); worktree at
   `/Users/cash/TorenOne/.claude/worktrees/serene-bhabha-853ff0/`
-- **Python 3.9** — system default; used for kernel tests
-  (`PYTHONPATH="kernel/src:tools" python3 -m pytest -q`)
-- **Python 3.11** — `/opt/homebrew/opt/python@3.11/bin/python3.11` (has WeasyPrint 69.0 + pydantic + jinja2)
-  - WeasyPrint requires Python 3.11 + Homebrew pango/cairo on this machine (3.9 doesn't work)
-  - Report tests: `PYTHONPATH="kernel/src:tools" /opt/homebrew/opt/python@3.11/bin/python3.11 -m pytest kernel/tests/test_report.py -q`
+- **Python 3.11 — the project target** (`requires-python>=3.11`; CI runs 3.11).
+  `/opt/homebrew/opt/python@3.11/bin/python3.11` (has WeasyPrint 69.0 + openai + pydantic + jinja2).
+  - Full suite: `PYTHONPATH="kernel/src:tools:service/src" /opt/homebrew/opt/python@3.11/bin/python3.11 -m pytest -q`
+  - ⚠️ **Python 3.9 is no longer supported for the kernel.** The models use `X | None` /
+    `list[X]` syntax (PEP 604/585) which Pydantic evaluates at runtime — that requires 3.10+.
+    The earlier 3.9 local workflow is retired; use 3.11 for everything.
+  - WeasyPrint requires Python 3.11 + Homebrew pango/cairo on this machine.
 - **Push command:** `git push origin HEAD:main`
 - **Commit footer:** `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>`
 
@@ -118,6 +120,9 @@ docs/
 
 ```bash
 cd /Users/cash/TorenOne/.claude/worktrees/serene-bhabha-853ff0
-PYTHONPATH="kernel/src:tools" python3 -m pytest -q
-# Expected: 263 passed
+PYTHONPATH="kernel/src:tools:service/src" /opt/homebrew/opt/python@3.11/bin/python3.11 -m pytest -q
+# Expected: 447 passed
+# Lint + types (must be clean — CI gates on these):
+/opt/homebrew/opt/python@3.11/bin/python3.11 -m ruff check .
+PYTHONPATH="kernel/src:tools" /opt/homebrew/opt/python@3.11/bin/python3.11 -m mypy kernel/src tools
 ```

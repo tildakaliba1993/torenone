@@ -28,30 +28,31 @@ SOURCES.md.
 from __future__ import annotations
 
 import math
-from typing import Optional
 
 from torenone_kernel.analysis.plane_frame import PortalAnalysis
-from torenone_kernel.analysis.sway_check import compute_sway_check
+from torenone_kernel.analysis.sway_check import FrameUnstableError, compute_sway_check
 from torenone_kernel.checks.autosize import (
-    autosize_member,
-    run_member_checks,
     NoSectionFoundError,
     SectionIneligibleError,
+    autosize_member,
+    run_member_checks,
 )
-from torenone_kernel.checks.classification import Class4Error
-from torenone_kernel.checks.axial import SlendernessError
-from torenone_kernel.analysis.sway_check import FrameUnstableError
 from torenone_kernel.checks.deflection import vertical_deflection_check
 from torenone_kernel.checks.material import fy_mpa as _fy_mpa
 from torenone_kernel.loads.combinations import (
-    load_combinations,
     GAMMA_G_SLS_UNFAVOURABLE,
     GAMMA_Q_SLS,
+    load_combinations,
 )
 from torenone_kernel.loads.dead import dead_loads
 from torenone_kernel.loads.imposed import imposed_roof_loads
 from torenone_kernel.models.frame_spec import FrameSpec
-from torenone_kernel.models.results import CheckResult, DesignResult, SectionChoice
+from torenone_kernel.models.results import (
+    CheckResult,
+    DesignResult,
+    LoadCombination,
+    SectionChoice,
+)
 from torenone_kernel.rules_version import as_dict as _rules_version
 from torenone_kernel.sections.library import SectionLibrary
 from torenone_kernel.sections.properties import SectionProperties
@@ -218,9 +219,8 @@ def design(spec: FrameSpec, cost_rate_zar_per_kg: float = DEFAULT_COST_RATE_ZAR_
     # ------------------------------------------------------------------ #
     # SLS vertical deflection (elastic FEA — Annex D L/240)             #
     # ------------------------------------------------------------------ #
-    # Recompute dead loads with the FINAL strength-sized sections.
-    dead_final = dead_loads(spec, rafter=raf_sec, column=col_sec)
-
+    # Dead loads are recomputed per-candidate inside _compute_sls_rafter_udl
+    # (the rafter section can change in the deflection-upgrade loop below).
     def _compute_sls_rafter_udl(raf: SectionProperties) -> tuple[float, float]:
         """Return (sls_rafter_udl, sls_col_axial_udl) for the given rafter."""
         d = dead_loads(spec, rafter=raf, column=col_sec)
@@ -508,8 +508,8 @@ def check(
 # ---------------------------------------------------------------------------
 
 def _combo_starting_with(
-    combos: dict[str, object], prefix: str
-) -> object:  # type: ignore[return]
+    combos: dict[str, LoadCombination], prefix: str
+) -> LoadCombination:
     """Return the first LoadCombination whose name starts with *prefix*."""
     for name, combo in combos.items():
         if name.startswith(prefix):

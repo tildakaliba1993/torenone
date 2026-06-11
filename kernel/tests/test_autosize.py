@@ -18,18 +18,15 @@ Apply Mu=100 kN·m, Cu=50 kN, KL=5 000 mm → TINY fails (Mr<<Mu), MEDIUM passes
 
 from __future__ import annotations
 
-import math
 import pytest
-
 from torenone_kernel.checks.autosize import (
-    autosize_member,
     AutosizeResult,
     NoSectionFoundError,
+    autosize_member,
 )
+from torenone_kernel.models.results import CheckResult
 from torenone_kernel.sections.library import SectionLibrary
 from torenone_kernel.sections.properties import SectionProperties
-from torenone_kernel.models.results import CheckResult
-
 
 # ---------------------------------------------------------------------------
 # Helpers — synthetic mini-library
@@ -53,7 +50,6 @@ def _make_section(
     Cw_mm6: float = 1e10,
 ) -> SectionProperties:
     """Build a SectionProperties with explicit key values for testing."""
-    hw = depth - 2 * tf_mm
     return SectionProperties(
         designation=tag,
         mass_per_metre_kg_m=mass,

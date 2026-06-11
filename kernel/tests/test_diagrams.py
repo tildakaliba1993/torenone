@@ -16,15 +16,14 @@ from __future__ import annotations
 import struct
 
 import pytest
-
 from torenone_kernel.design import design
+from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.models.frame_spec import (
     DeadLoadInputs,
     FrameGeometry,
     FrameSpec,
     WindContext,
 )
-from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.report.diagrams import bmd_sfd_png, frame_geometry_png
 
 _PNG_SIG = b"\x89PNG\r\n\x1a\n"  # RFC 2083 PNG signature

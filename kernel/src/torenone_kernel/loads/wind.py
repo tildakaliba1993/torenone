@@ -59,7 +59,7 @@ def air_density(site_altitude_m: float) -> float:
         return pts[0][1]
     if site_altitude_m >= pts[-1][0]:
         return pts[-1][1]
-    for (a0, r0), (a1, r1) in zip(pts, pts[1:]):
+    for (a0, r0), (a1, r1) in zip(pts, pts[1:], strict=False):
         if a0 <= site_altitude_m <= a1:
             return r0 + (r1 - r0) * (site_altitude_m - a0) / (a1 - a0)
     return pts[-1][1]  # unreachable
@@ -69,7 +69,7 @@ def roughness_factor(z_m: float, category: TerrainCategory) -> float:
     """cr(z) per eq. (5) + Table 1; held constant at cr(zc) below the cut-off height zc."""
     p = TERRAIN_PARAMETERS[category]
     z_eff = max(z_m, p.zc_m)
-    return 1.36 * ((z_eff - p.zo_m) / (p.zg_m - p.zo_m)) ** p.alpha
+    return float(1.36 * ((z_eff - p.zo_m) / (p.zg_m - p.zo_m)) ** p.alpha)
 
 
 def peak_wind_speed(

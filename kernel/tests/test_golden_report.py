@@ -38,20 +38,17 @@ Run with Python 3.11 (to include PDF tests):
 from __future__ import annotations
 
 import hashlib
-import json
 import re
-import sys
 
 import pytest
-
 from torenone_kernel.design import design
+from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.models.frame_spec import (
     DeadLoadInputs,
     FrameGeometry,
     FrameSpec,
     WindContext,
 )
-from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.report.renderer import render_html, report_fingerprint
 
 # ---------------------------------------------------------------------------
@@ -179,7 +176,7 @@ class TestClauseRefsInHTML:
             if c.clause not in golden_html:
                 missing.append(f"{c.name!r}: clause {c.clause!r}")
         assert not missing, (
-            f"The following clause refs are missing from the rendered HTML:\n"
+            "The following clause refs are missing from the rendered HTML:\n"
             + "\n".join(f"  {m}" for m in missing)
         )
 

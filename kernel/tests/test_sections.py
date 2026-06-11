@@ -12,7 +12,6 @@ from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
-
 from torenone_kernel.sections import SectionLibrary, SectionProperties
 
 

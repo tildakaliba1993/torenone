@@ -23,7 +23,7 @@ import dataclasses
 import hashlib
 import json
 import math
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -330,7 +330,7 @@ def render_html(result: DesignResult) -> str:
     working = _compute_working(result)
 
     # Audit metadata (PRD FR-20)
-    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    generated_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     fingerprint  = report_fingerprint(result)
 
     ctx: dict[str, Any] = {
@@ -379,7 +379,7 @@ def render_pdf(result: DesignResult) -> bytes:
     bytes — PDF file content (starts with b'%PDF-').
     """
     try:
-        import weasyprint  # type: ignore[import]
+        import weasyprint
     except ImportError as exc:  # pragma: no cover
         raise ImportError(
             "WeasyPrint is required for PDF rendering. "

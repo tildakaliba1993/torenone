@@ -12,6 +12,7 @@ import json
 from collections.abc import Iterable
 from importlib.resources import files
 from pathlib import Path
+from typing import Any
 
 from torenone_kernel.sections.properties import SectionProperties
 
@@ -28,7 +29,7 @@ class SectionLibrary:
         self._by_name = by_name
 
     @classmethod
-    def from_records(cls, records: Iterable[dict[str, object]]) -> SectionLibrary:
+    def from_records(cls, records: Iterable[dict[str, Any]]) -> SectionLibrary:
         return cls(SectionProperties(**record) for record in records)
 
     @classmethod

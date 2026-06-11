@@ -15,23 +15,22 @@ verified PyNite numbers), so rel tolerances of ≤ 1% are appropriate.
 from __future__ import annotations
 
 import math
-import pytest
 
+import pytest
 from torenone_kernel.analysis.sway_check import (
-    u2_factor,
-    compute_sway_check,
     FrameUnstableError,
-)
-from torenone_kernel.models.frame_spec import (
-    FrameSpec,
-    FrameGeometry,
-    DeadLoadInputs,
-    WindContext,
+    compute_sway_check,
+    u2_factor,
 )
 from torenone_kernel.models.enums import TerrainCategory
+from torenone_kernel.models.frame_spec import (
+    DeadLoadInputs,
+    FrameGeometry,
+    FrameSpec,
+    WindContext,
+)
 from torenone_kernel.models.results import SwaySensitivityResult
 from torenone_kernel.sections.properties import SectionProperties
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -135,7 +134,7 @@ class TestU2ExactCantileverDerivation:
     This checks that the formula in u2_factor() matches the derivation exactly.
     """
     E = 200_000.0   # MPa
-    I = 20e6        # mm⁴
+    I = 20e6        # mm⁴  # noqa: E741 — I is the standard symbol for second moment of area
     h = 5_000.0     # mm
     P_kn = 100.0    # kN  (factored gravity)
     H_kn = 0.5      # kN  (notional = 0.005 × P)
@@ -145,9 +144,7 @@ class TestU2ExactCantileverDerivation:
         H_N = self.H_kn * 1_000
         # exact drift from cantilever formula (mm)
         delta = H_N * self.h**3 / (3 * self.E * self.I)
-        # exact θ
-        theta = self.P_kn * self.h**2 / (3 * self.E * self.I / 1_000)  # kN·mm / (kN/mm·mm⁴/mm)
-        # cleaner: use N/mm units throughout
+        # exact θ (N/mm units throughout)
         theta_direct = P_N * self.h**2 / (3 * self.E * self.I)
         u2_expected = 1.0 / (1.0 - theta_direct)
 

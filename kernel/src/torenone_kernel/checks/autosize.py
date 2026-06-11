@@ -23,22 +23,17 @@ All numeric inputs use the unit convention established in 1.10:
 
 from __future__ import annotations
 
-import math
-from typing import Optional
-
-from torenone_kernel.checks.axial import cr_flexural, SlendernessError
+from torenone_kernel.checks.axial import SlendernessError, cr_flexural
 from torenone_kernel.checks.bending import (
-    mr_laterally_supported,
     mcr_elastic,
+    mr_laterally_supported,
     mr_ltb,
-    omega2_factor,
 )
 from torenone_kernel.checks.classification import (
-    SectionClass,
-    classify_section,
     Class4Error,
+    classify_section,
 )
-from torenone_kernel.checks.interaction import beam_column_check, u1_factor
+from torenone_kernel.checks.interaction import beam_column_check
 from torenone_kernel.checks.shear import vr_web
 from torenone_kernel.models.results import AutosizeResult, CheckResult
 from torenone_kernel.sections.library import SectionLibrary
@@ -185,7 +180,7 @@ def _check_one_section(
     U1: float,
     n: float,
     member: str,
-) -> Optional[AutosizeResult]:
+) -> AutosizeResult | None:
     """Thin wrapper: run checks and return AutosizeResult if all pass, else None.
 
     Raises Class4Error, SlendernessError, or NotImplementedError (as

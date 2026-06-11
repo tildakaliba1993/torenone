@@ -31,12 +31,12 @@ import datetime as dt
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "kernel" / "src"))
 
 from pypdf import PdfReader  # noqa: E402
-
 from torenone_kernel.sections import SectionLibrary, SectionProperties  # noqa: E402
 
 OUT = REPO / "kernel" / "src" / "torenone_kernel" / "sections" / "data" / "saisc_sections.json"
@@ -117,7 +117,9 @@ def main() -> int:
     records = parse(pdf_path)
 
     # Validate every record through the schema, and prove the library builds.
-    clean = [{k: v for k, v in r.items() if not k.startswith("_")} for r in records]
+    clean: list[dict[str, Any]] = [
+        {k: v for k, v in r.items() if not k.startswith("_")} for r in records
+    ]
     for r in clean:
         SectionProperties(**r)  # raises on any invalid value
     lib = SectionLibrary.from_records(clean)
@@ -127,7 +129,7 @@ def main() -> int:
         "_meta": {
             "source": "SAISC — Database of Structural Steel Sections (free publication)",
             "source_file": pdf_path.name,
-            "generated_utc": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+            "generated_utc": dt.datetime.now(dt.UTC).isoformat(timespec="seconds"),
             "count": len(clean),
             "families": "I-sections parallel flange (IPE/IPE-AA/UB), H-sections parallel flange (UC)",
             "units": "base mm: mm, mm^2, mm^3, mm^4, mm^6",

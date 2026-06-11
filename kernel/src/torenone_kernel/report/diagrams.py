@@ -23,26 +23,24 @@ from __future__ import annotations
 
 import io
 import math
-from typing import TYPE_CHECKING
+from typing import Any
 
 import matplotlib
-matplotlib.use("Agg")   # non-interactive backend — must be set before pyplot import
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import numpy as np
 
-from torenone_kernel.analysis.plane_frame import PortalAnalysis
-from torenone_kernel.checks.material import fy_mpa as _fy_mpa
-from torenone_kernel.loads.combinations import (
-    load_combinations,
-    GAMMA_G_SLS_UNFAVOURABLE,
-    GAMMA_Q_SLS,
-)
-from torenone_kernel.loads.dead import dead_loads
-from torenone_kernel.loads.imposed import imposed_roof_loads
-from torenone_kernel.models.frame_spec import FrameSpec
-from torenone_kernel.models.results import DesignResult
-from torenone_kernel.sections.library import SectionLibrary
+matplotlib.use("Agg")   # non-interactive backend — must be set before pyplot import
+import matplotlib.patches as mpatches  # noqa: E402
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+from matplotlib.axes import Axes  # noqa: E402
+from matplotlib.figure import Figure  # noqa: E402
+
+from torenone_kernel.loads.combinations import load_combinations  # noqa: E402
+from torenone_kernel.loads.dead import dead_loads  # noqa: E402
+from torenone_kernel.loads.imposed import imposed_roof_loads  # noqa: E402
+from torenone_kernel.models.frame_spec import FrameSpec  # noqa: E402
+from torenone_kernel.models.results import DesignResult, LoadCombination  # noqa: E402
+from torenone_kernel.sections.library import SectionLibrary  # noqa: E402
+from torenone_kernel.sections.properties import SectionProperties  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Brand colours (matching template.html.jinja2)
@@ -64,14 +62,14 @@ _N_SAMPLES = 50   # sample points per member for BMD/SFD curves
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _combo_starting_with(combos: dict, prefix: str):
+def _combo_starting_with(combos: dict[str, LoadCombination], prefix: str) -> LoadCombination:
     for name, combo in combos.items():
         if name.startswith(prefix):
             return combo
     raise KeyError(f"No load combination starting with {prefix!r}")
 
 
-def _frame_nodes(spec: FrameSpec):
+def _frame_nodes(spec: FrameSpec) -> dict[str, tuple[float, float]]:
     """Return global (X, Y) coordinates for the 5 portal frame nodes (m)."""
     g = spec.geometry
     half = g.span_m / 2.0
@@ -84,14 +82,16 @@ def _frame_nodes(spec: FrameSpec):
     }
 
 
-def _member_coords(nodes: dict, member: tuple[str, str]) -> tuple:
+def _member_coords(
+    nodes: dict[str, tuple[float, float]], member: tuple[str, str]
+) -> tuple[float, float, float, float]:
     """Return (x_i, y_i, x_j, y_j) for a member defined by (node_i_name, node_j_name)."""
     xi, yi = nodes[member[0]]
     xj, yj = nodes[member[1]]
     return xi, yi, xj, yj
 
 
-def _png_bytes(fig: plt.Figure) -> bytes:
+def _png_bytes(fig: Figure) -> bytes:
     """Render a Matplotlib figure to PNG bytes and close it."""
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=_DPI, bbox_inches="tight")
@@ -170,7 +170,7 @@ def frame_geometry_png(spec: FrameSpec) -> bytes:
     return _png_bytes(fig)
 
 
-def _draw_pin(ax, x, y, size=0.2):
+def _draw_pin(ax: Axes, x: float, y: float, size: float = 0.2) -> None:
     """Draw a pin support symbol (downward triangle) at (x, y)."""
     tri = mpatches.FancyArrow(
         x, y, 0, 0,
@@ -183,7 +183,16 @@ def _draw_pin(ax, x, y, size=0.2):
             color=_BRAND, linewidth=1.2)
 
 
-def _dim_arrow(ax, x1, y1, x2, y2, label, color=_BRAND_LIGHT, vertical=False):
+def _dim_arrow(
+    ax: Axes,
+    x1: float,
+    y1: float,
+    x2: float,
+    y2: float,
+    label: str,
+    color: str = _BRAND_LIGHT,
+    vertical: bool = False,
+) -> None:
     """Draw a dimension line between (x1,y1) and (x2,y2) with a centred label."""
     ax.annotate(
         "", xy=(x2, y2), xytext=(x1, y1),
@@ -228,9 +237,7 @@ def bmd_sfd_png(result: DesignResult) -> bytes:
     uls_rafter_udl  = gamma_G * dead.rafter_udl_kn_per_m + gamma_Q * imposed.roof_udl_kn_per_m
     uls_col_axial   = gamma_G * (dead.column_self_weight_kn_per_m + dead.wall_cladding_udl_kn_per_m)
 
-    # Run analysis and get the raw PyNite model via PortalAnalysis
-    portal = PortalAnalysis(spec, col_sec, raf_sec)
-    # We need the PyNite model internals to sample M/V — re-implement the model build
+    # We need the PyNite model internals to sample M/V — build the model directly.
     pynite_model, _COMBO = _build_pynite_model(spec, col_sec, raf_sec,
                                                 uls_rafter_udl, uls_col_axial,
                                                 uls1.name)
@@ -260,7 +267,7 @@ def bmd_sfd_png(result: DesignResult) -> bytes:
     }
 
     # Collect member curve data
-    member_curves = []
+    member_curves: list[dict[str, Any]] = []
     for mem_name, length_mm, ni, nj, label in members_def:
         xs_local = np.linspace(0.0, length_mm, _N_SAMPLES)
         moments = np.array([
@@ -346,9 +353,15 @@ def bmd_sfd_png(result: DesignResult) -> bytes:
 
 
 def _draw_bmd_sfd(
-    ax, member_curves, nodes_global, value_key: str,
-    scale: float, title: str, fill_color: str, g,
-):
+    ax: Axes,
+    member_curves: list[dict[str, Any]],
+    nodes_global: dict[str, Any],
+    value_key: str,
+    scale: float,
+    title: str,
+    fill_color: str,
+    g: Any,
+) -> None:
     """Draw frame outline + filled force diagram (BMD or SFD) on *ax*.
 
     The force values are offset perpendicular to each member axis, plotted on the
@@ -408,12 +421,12 @@ def _draw_bmd_sfd(
 
 def _build_pynite_model(
     spec: FrameSpec,
-    col_sec,
-    raf_sec,
+    col_sec: SectionProperties,
+    raf_sec: SectionProperties,
     uls_rafter_udl: float,
     uls_col_axial: float,
     combo_name: str,
-):
+) -> tuple[Any, str]:
     """Build and solve the PyNite model; return (model, combo_name_internal).
 
     Duplicates the model-build logic from PortalAnalysis.run() so we can
@@ -426,7 +439,7 @@ def _build_pynite_model(
         if _sp not in _sys.path:
             _sys.path.insert(0, _sp)
 
-    from Pynite import FEModel3D  # type: ignore[import]
+    from Pynite import FEModel3D
 
     _E = 200_000.0
     _G =  77_000.0
@@ -443,7 +456,7 @@ def _build_pynite_model(
     m = FEModel3D()
     m.add_material("steel", _E, _G, _NU, _RHO)
 
-    def _add_sec(name, sec):
+    def _add_sec(name: str, sec: SectionProperties) -> None:
         m.add_section(name, A=sec.area_mm2, Iy=sec.second_moment_iy_mm4,
                       Iz=sec.second_moment_ix_mm4, J=sec.torsion_constant_j_mm4)
 
@@ -456,14 +469,17 @@ def _build_pynite_model(
     m.add_node("ER",      span_mm, eaves_h_mm, 0)
     m.add_node("BR",      span_mm,          0, 0)
 
-    def _pin(node):
+    def _pin(node: str) -> None:
         m.def_support(node, True, True, True, True, True, False)
 
-    def _oop(node):
+    def _oop(node: str) -> None:
         m.def_support(node, False, False, True, True, True, False)
 
-    _pin("BL"); _pin("BR")
-    _oop("EL"); _oop("AP"); _oop("ER")
+    _pin("BL")
+    _pin("BR")
+    _oop("EL")
+    _oop("AP")
+    _oop("ER")
 
     m.add_member("COL_L", "BL", "EL", "steel", "col_sec")
     m.add_member("RAF_L", "EL", "AP", "steel", "raf_sec")

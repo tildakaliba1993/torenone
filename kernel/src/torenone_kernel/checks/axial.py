@@ -53,4 +53,4 @@ def cr_flexural(
 
     lam = slenderness * math.sqrt(fy_mpa / (math.pi**2 * _E))
     cr_n = _PHI * area_mm2 * fy_mpa * (1.0 + lam ** (2 * n)) ** (-1.0 / n)
-    return cr_n / 1_000.0   # N → kN
+    return float(cr_n / 1_000.0)   # N → kN

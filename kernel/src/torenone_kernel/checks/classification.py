@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import math
 from enum import IntEnum
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 

@@ -20,20 +20,17 @@ Run with:
 
 from __future__ import annotations
 
-import pytest
-
 from torenone_kernel.design import design
+from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.models.frame_spec import (
     DeadLoadInputs,
     FrameGeometry,
     FrameSpec,
     WindContext,
 )
-from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.models.results import CheckResult, DesignResult, SectionChoice
 from torenone_kernel.report.renderer import NEAR_LIMIT_THRESHOLD, render_html
 from torenone_kernel.rules_version import as_dict as _rules_version
-
 
 # ---------------------------------------------------------------------------
 # Helpers — build synthetic DesignResults with controlled utilisations

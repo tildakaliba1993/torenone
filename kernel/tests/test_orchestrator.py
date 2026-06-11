@@ -16,18 +16,16 @@ Fixture: a typical South African single-bay industrial portal frame.
 from __future__ import annotations
 
 import pytest
-
 from torenone_kernel.design import design
+from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.models.frame_spec import (
     DeadLoadInputs,
     FrameGeometry,
     FrameSpec,
     WindContext,
 )
-from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.models.results import CheckResult, DesignResult, SectionChoice
 from torenone_kernel.sections.library import SectionLibrary
-
 
 # ---------------------------------------------------------------------------
 # Standard test fixture
@@ -107,7 +105,7 @@ class TestDesignCorrectness:
         r = design(_standard_spec())
         failing = [c for c in r.checks if not c.passed]
         assert r.passed, (
-            f"DesignResult failed. Failing checks:\n"
+            "DesignResult failed. Failing checks:\n"
             + "\n".join(f"  {c.name}: util={c.utilisation:.3f}" for c in failing)
         )
 

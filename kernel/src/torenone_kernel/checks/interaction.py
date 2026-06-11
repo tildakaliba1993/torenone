@@ -20,8 +20,6 @@ reference (PRD FR-18).
 
 from __future__ import annotations
 
-import math
-
 from torenone_kernel.checks.classification import SectionClass
 from torenone_kernel.models.results import CheckResult
 

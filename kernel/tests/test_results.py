@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
-
 from torenone_kernel import rules_version
 from torenone_kernel.models import (
     AnalysisResult,

@@ -24,25 +24,24 @@ Tolerances: ±1 % relative for all resistance / capacity values (per REFERENCES 
 from __future__ import annotations
 
 import math
-import pytest
 
+import pytest
+from torenone_kernel.checks.axial import cr_flexural
+from torenone_kernel.checks.bending import mcr_elastic, mr_laterally_supported, mr_ltb
 from torenone_kernel.checks.classification import (
+    Class4Error,
     SectionClass,
     classify_section,
-    ClassificationResult,
-    Class4Error,
-)
-from torenone_kernel.checks.axial import cr_flexural
-from torenone_kernel.checks.shear import vr_web
-from torenone_kernel.checks.bending import mr_laterally_supported, mcr_elastic, mr_ltb
-from torenone_kernel.checks.interaction import (
-    u1_factor,
-    beam_column_check,
 )
 from torenone_kernel.checks.deflection import (
-    vertical_deflection_check,
     horizontal_sway_check,
+    vertical_deflection_check,
 )
+from torenone_kernel.checks.interaction import (
+    beam_column_check,
+    u1_factor,
+)
+from torenone_kernel.checks.shear import vr_web
 from torenone_kernel.models.results import CheckResult
 from torenone_kernel.sections.properties import SectionProperties
 

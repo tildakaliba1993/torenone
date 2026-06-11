@@ -11,13 +11,11 @@ import math
 
 import pytest
 from pydantic import ValidationError
-
 from torenone_kernel.models import (
     BaseFixity,
     DeadLoadInputs,
     FrameGeometry,
     FrameSpec,
-    Materials,
     SteelGrade,
     TerrainCategory,
     WindContext,

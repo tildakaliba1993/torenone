@@ -9,7 +9,6 @@ favourable-permanent uplift combination).
 from __future__ import annotations
 
 import pytest
-
 from torenone_kernel.loads.combinations import load_combinations
 from torenone_kernel.models import (
     DeadLoadInputs,

@@ -5,7 +5,6 @@ drops below threshold, CI fails — the dark theme stays accessible by construct
 """
 
 import pytest
-
 from torenone_tokens.contrast import contrast_ratio, evaluate
 from torenone_tokens.tokens import COLORS, CONTRAST_PAIRS
 

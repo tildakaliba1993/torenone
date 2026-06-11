@@ -10,7 +10,6 @@ Engineering numbers are NOT computed here — only pure geometry (apex height, b
 from __future__ import annotations
 
 import math
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
@@ -56,10 +55,10 @@ class Restraints(BaseModel):
     """Lateral restraint spacing for LTB checks. None => unrestrained (kernel treats conservatively)."""
 
     model_config = _STRICT
-    rafter_restraint_spacing_m: Optional[float] = Field(
+    rafter_restraint_spacing_m: float | None = Field(
         default=None, gt=0, description="Purlin spacing restraining the rafter (m)."
     )
-    column_restraint_spacing_m: Optional[float] = Field(
+    column_restraint_spacing_m: float | None = Field(
         default=None, gt=0, description="Girt spacing restraining the column (m)."
     )
 

@@ -9,7 +9,6 @@ from __future__ import annotations
 import math
 
 import pytest
-
 from torenone_kernel.loads.wind_loads import wind_loads
 from torenone_kernel.models import (
     DeadLoadInputs,

@@ -27,16 +27,16 @@ as a plane-frame solver.
 from __future__ import annotations
 
 import math
-import sys
-import os
 
 # PyNite is installed --user; ensure the user site-packages is on sys.path.
 import site
+import sys
+
 for _sp in site.getsitepackages() + [site.getusersitepackages()]:
     if _sp not in sys.path:
         sys.path.insert(0, _sp)
 
-from Pynite import FEModel3D  # type: ignore[import]
+from Pynite import FEModel3D
 
 from torenone_kernel.models.frame_spec import FrameSpec
 from torenone_kernel.models.results import AnalysisResult, MemberForces
@@ -89,11 +89,11 @@ def _add_load_combo(model: FEModel3D, case: str = "DL") -> None:
 
 def _member_end_moment_Nmm(model: FEModel3D, member_name: str, x_mm: float) -> float:
     """Return Mz at position x_mm along member (N·mm, sign = PyNite convention)."""
-    return model.members[member_name].moment("Mz", x_mm, _COMBO)
+    return float(model.members[member_name].moment("Mz", x_mm, _COMBO))
 
 
 def _member_shear_N(model: FEModel3D, member_name: str, x_mm: float) -> float:
-    return model.members[member_name].shear("Fy", x_mm, _COMBO)
+    return float(model.members[member_name].shear("Fy", x_mm, _COMBO))
 
 
 def _reaction(model: FEModel3D, node: str, dof: str) -> float:

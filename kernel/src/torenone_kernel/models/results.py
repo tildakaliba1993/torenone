@@ -8,7 +8,6 @@ examples. All models are frozen and reject unknown fields.
 from __future__ import annotations
 
 import types
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
@@ -22,7 +21,7 @@ class LoadCase(BaseModel):
     model_config = _STRICT
     name: str = Field(min_length=1)
     load_type: LoadType
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class LoadCombination(BaseModel):
@@ -74,7 +73,7 @@ class CheckResult(BaseModel):
     clause: str = Field(min_length=1, description="SANS clause reference for this check.")
     utilisation: float = Field(ge=0, description="Demand / capacity.")
     passed: bool
-    detail: Optional[str] = None
+    detail: str | None = None
 
 
 class SectionChoice(BaseModel):
@@ -176,7 +175,7 @@ class DesignResult(BaseModel):
     checks: list[CheckResult]
     rules_version: dict[str, str]
     warnings: tuple[str, ...] = ()
-    total_steel_mass_kg: Optional[float] = Field(
+    total_steel_mass_kg: float | None = Field(
         default=None,
         ge=0,
         description=(
@@ -184,7 +183,7 @@ class DesignResult(BaseModel):
             "Covers the two columns and two rafter halves of a single frame."
         ),
     )
-    indicative_cost_zar: Optional[float] = Field(
+    indicative_cost_zar: float | None = Field(
         default=None,
         ge=0,
         description=(

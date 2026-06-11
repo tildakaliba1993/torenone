@@ -22,9 +22,8 @@ Task 2.2: render_pdf(result: DesignResult) → bytes
 
 from __future__ import annotations
 
-import sys
-
 import pytest
+
 
 # WeasyPrint requires Homebrew pango/cairo, available only under Python 3.11 on this machine.
 # HTML tests (Task 2.1) run under any Python; PDF tests (Task 2.2) are skipped on Python < 3.10
@@ -40,15 +39,14 @@ def _weasyprint_available() -> bool:
 _weasyprint_ok = _weasyprint_available()
 
 from torenone_kernel.design import design
+from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.models.frame_spec import (
     DeadLoadInputs,
     FrameGeometry,
     FrameSpec,
     WindContext,
 )
-from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.report.renderer import render_html, render_pdf
-
 
 # ---------------------------------------------------------------------------
 # Fixture: a real DesignResult from the standard 15 m portal

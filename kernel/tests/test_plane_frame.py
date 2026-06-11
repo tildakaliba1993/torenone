@@ -14,25 +14,25 @@ Tolerances (per docs/REFERENCES-AND-VALIDATION.md §4): ±1% relative for forces
 from __future__ import annotations
 
 import math
+
 import pytest
 
 # The module under test — will be created in the implementation step
 from torenone_kernel.analysis.plane_frame import (
-    solve_simple_beam_udl,
+    PortalAnalysis,
     solve_cantilever_point_load,
     solve_portal_udl,
-    PortalAnalysis,
-)
-from torenone_kernel.models.frame_spec import (
-    FrameSpec,
-    FrameGeometry,
-    DeadLoadInputs,
-    WindContext,
+    solve_simple_beam_udl,
 )
 from torenone_kernel.models.enums import TerrainCategory
-from torenone_kernel.models.results import AnalysisResult, MemberForces
+from torenone_kernel.models.frame_spec import (
+    DeadLoadInputs,
+    FrameGeometry,
+    FrameSpec,
+    WindContext,
+)
+from torenone_kernel.models.results import AnalysisResult
 from torenone_kernel.sections.properties import SectionProperties
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -258,8 +258,6 @@ class TestPortalAnalysisContract:
         w_kn_m = 5.0
         result = pa.run("combo", rafter_udl_kn_per_m=w_kn_m, column_axial_kn_per_m=0.0)
         forces = {f.location: f for f in result.forces}
-        # Each rafter half: span/2 in m
-        half_span_m = spec.geometry.span_m / 2.0
         # Total vertical load = w × full span  (applied on both halves)
         total_load_kn = w_kn_m * spec.geometry.span_m
         # Vertical reaction at base = axial in column (column is vertical, so axial = vertical)

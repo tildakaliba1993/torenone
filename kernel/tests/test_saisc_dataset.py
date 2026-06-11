@@ -13,7 +13,6 @@ are not a substitute for that sign-off.
 from __future__ import annotations
 
 import pytest
-
 from torenone_kernel.sections import SectionLibrary
 
 REL = 0.01  # published values are exact to ~3 s.f.; 1% catches any parse/units error
