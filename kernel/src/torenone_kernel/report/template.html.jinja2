@@ -184,8 +184,9 @@
   <h1>Structural Calculation Report</h1>
   <div class="subtitle">Single-span portal frame — SANS 10162-1:2011 / SANS 10160 series</div>
   <div class="meta">
-    Generated: {{ generated_date }}<br>
-    Frame: {{ geom.span_m }} m span &times; {{ geom.eaves_height_m }} m eaves &times; {{ geom.roof_pitch_deg }}&deg; pitch &times; {{ geom.bay_spacing_m }} m bay
+    Generated: {{ generated_at }} (UTC)<br>
+    Frame: {{ geom.span_m }} m span &times; {{ geom.eaves_height_m }} m eaves &times; {{ geom.roof_pitch_deg }}&deg; pitch &times; {{ geom.bay_spacing_m }} m bay<br>
+    Report fingerprint: <span style="font-family: monospace; font-size:8pt;">{{ report_fingerprint[:16] }}&hellip;</span>
   </div>
 </div>
 
@@ -419,6 +420,65 @@
 </table>
 
 <!-- ================================================================ -->
+<!-- 8. AUDIT METADATA (PRD FR-20)                                    -->
+<!-- ================================================================ -->
+<h2>8. Audit Metadata</h2>
+<p style="font-size:8.5pt; color:var(--color-muted); margin-bottom:6pt;">
+  FR-20: Reports record the code-rule version, complete input spec, and a timestamp
+  so that results can be reproduced exactly from the same inputs.
+</p>
+
+<h3>Report Identity</h3>
+<table>
+  <tr><th style="width:40%">Field</th><th>Value</th></tr>
+  <tr>
+    <td>Generated at (UTC)</td>
+    <td style="font-family: var(--font-mono)">{{ generated_at }}</td>
+  </tr>
+  <tr>
+    <td>Report fingerprint (SHA-256)</td>
+    <td style="font-family: var(--font-mono); font-size:8pt; word-break:break-all;">{{ report_fingerprint }}</td>
+  </tr>
+</table>
+
+<div class="box" style="font-size:8.5pt;">
+  The fingerprint is SHA-256(canonical JSON of DesignResult). Reproduce this report by
+  supplying the identical input spec and kernel version — the fingerprint will match.
+</div>
+
+<h3>Complete Input Specification</h3>
+<table>
+  <tr><th colspan="2" style="background:var(--color-brand-light);">Geometry</th></tr>
+  <tr><td style="width:45%">Span</td>                <td class="num">{{ geom.span_m }} m</td></tr>
+  <tr><td>Eaves height</td>            <td class="num">{{ geom.eaves_height_m }} m</td></tr>
+  <tr><td>Roof pitch</td>              <td class="num">{{ geom.roof_pitch_deg }}&deg;</td></tr>
+  <tr><td>Bay spacing</td>             <td class="num">{{ geom.bay_spacing_m }} m</td></tr>
+  <tr><td>Number of bays</td>          <td class="num">{{ geom.number_of_bays }}</td></tr>
+  <tr><td>Apex height (computed)</td>  <td class="num">{{ "%.3f"|format(geom.apex_height_m) }} m</td></tr>
+
+  <tr><th colspan="2" style="background:var(--color-brand-light);">Dead Loads (characteristic)</th></tr>
+  <tr><td>Roof area load</td>          <td class="num">{{ dead.roof_kpa }} kPa</td></tr>
+  <tr><td>Services load</td>           <td class="num">{{ dead.services_kpa }} kPa</td></tr>
+  <tr><td>Wall cladding load</td>      <td class="num">{{ dead.wall_cladding_kpa }} kPa</td></tr>
+
+  <tr><th colspan="2" style="background:var(--color-brand-light);">Wind</th></tr>
+  <tr><td>Basic wind speed</td>        <td class="num">{{ wind.basic_wind_speed_ms }} m/s</td></tr>
+  <tr><td>Terrain category</td>        <td>{{ wind.terrain_category.value }}</td></tr>
+  <tr><td>Site altitude</td>           <td class="num">{{ wind.site_altitude_m }} m</td></tr>
+  <tr><td>Dominant opening</td>        <td>{{ "Yes" if wind.has_dominant_opening else "No" }}</td></tr>
+
+  <tr><th colspan="2" style="background:var(--color-brand-light);">Materials and Fixity</th></tr>
+  <tr><td>Steel grade</td>             <td>{{ steel_grade }}</td></tr>
+  <tr><td>Base fixity</td>             <td>{{ base_fixity }}</td></tr>
+
+  <tr><th colspan="2" style="background:var(--color-brand-light);">Restraints (LTB unbraced lengths)</th></tr>
+  <tr><td>Rafter restraint spacing</td>
+      <td class="num">{% if restraints_rafter_m %}{{ restraints_rafter_m }} m{% else %}Unrestrained (full rafter half-length){% endif %}</td></tr>
+  <tr><td>Column restraint spacing</td>
+      <td class="num">{% if restraints_column_m %}{{ restraints_column_m }} m{% else %}Unrestrained (full eaves height){% endif %}</td></tr>
+</table>
+
+<!-- ================================================================ -->
 <!-- PROVENANCE FOOTER                                                 -->
 <!-- ================================================================ -->
 <div class="provenance">
@@ -426,7 +486,7 @@
   — not by an AI language model. This report is machine-generated; a registered
   structural engineer must review and accept responsibility for all design decisions
   before these calculations are used in construction.
-  Generated: {{ generated_date }}.
+  Generated: {{ generated_at }} (UTC) &middot; Fingerprint: {{ report_fingerprint[:16] }}&hellip;
 </div>
 
 </body>

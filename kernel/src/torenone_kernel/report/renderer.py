@@ -20,8 +20,10 @@ from __future__ import annotations
 
 import base64
 import dataclasses
+import hashlib
+import json
 import math
-from datetime import date
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -54,6 +56,28 @@ _DEFAULT_COST_RATE: float = 20.0  # R/kg — kept local to avoid circular import
 # Threshold of 0.85 (within 15 % of capacity) is a widely-used engineering convention;
 # no SANS clause mandates a specific threshold so this is a display-layer choice.
 NEAR_LIMIT_THRESHOLD: float = 0.85
+
+
+# ---- Audit fingerprint (PRD FR-20) ---------------------------------------
+
+def report_fingerprint(result: DesignResult) -> str:
+    """Return a deterministic SHA-256 fingerprint of *result*.
+
+    The fingerprint is the hex digest of SHA-256(canonical JSON) where
+    canonical JSON = ``json.dumps(result.model_dump(mode="json"),
+    sort_keys=True, separators=(",", ":"))`` encoded as UTF-8.
+
+    Properties:
+    - Identical DesignResult → identical fingerprint (determinism guarantee).
+    - Any change to any field → different fingerprint.
+    - Embeddable in the report for reproducibility and audit traceability (FR-20).
+    """
+    canonical = json.dumps(
+        result.model_dump(mode="json"),
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 @dataclasses.dataclass
@@ -158,8 +182,14 @@ def render_html(result: DesignResult) -> str:
     geom_png_b64  = base64.b64encode(frame_geometry_png(result.frame_spec)).decode("ascii")
     bmd_sfd_b64   = base64.b64encode(bmd_sfd_png(result)).decode("ascii")
 
+    # Audit metadata (PRD FR-20)
+    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    fingerprint  = report_fingerprint(result)
+
     ctx: dict[str, Any] = {
-        "generated_date": date.today().isoformat(),
+        "generated_at": generated_at,   # full ISO-8601 UTC datetime
+        "generated_date": generated_at, # backward-compat alias used in footer
+        "report_fingerprint": fingerprint,
         "geom": geom,
         "dead": dead,
         "wind": wind,
@@ -181,6 +211,9 @@ def render_html(result: DesignResult) -> str:
         "geom_png_b64": geom_png_b64,
         "bmd_sfd_b64": bmd_sfd_b64,
         "near_limit_threshold": NEAR_LIMIT_THRESHOLD,
+        # Restraints (None if unrestrained)
+        "restraints_rafter_m":  result.frame_spec.restraints.rafter_restraint_spacing_m,
+        "restraints_column_m":  result.frame_spec.restraints.column_restraint_spacing_m,
     }
 
     return template.render(**ctx)

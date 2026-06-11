@@ -125,7 +125,7 @@
 - [x] **2.2 PDF rendering** — WeasyPrint HTML→PDF; brand styling, monospaced numbers.
 - [x] **2.3 Diagrams** — Matplotlib geometry + BMD/SFD.
 - [x] **2.4 Status rendering** — pass/fail/near-limit via icon + label + colour (never colour alone). **Test.**
-- [ ] **2.5 Audit metadata** — rules version, input spec, timestamp embedded (PRD FR-20). **Test.**
+- [x] **2.5 Audit metadata** — rules version, input spec, timestamp embedded (PRD FR-20). **Test.**
 - [ ] **2.6 Golden-file test** — render a fixture `DesignResult`; assert key values + clause refs present in output.
 - [ ] **2.7 Competitive-advantage report features** *(PRD FR-25/26/27)*
   - [ ] Line-by-line **audit / "show-your-working"** layout (assumptions → loads → combinations → checks → section).
