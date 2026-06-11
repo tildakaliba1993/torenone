@@ -43,15 +43,16 @@ Do **not** reuse anything from your existing projects.
 - [ ] Add TorenOne's `NEXT_PUBLIC_*` env vars to **this Vercel project only**.
 - [ ] Do **not** `vercel link` this folder to any existing Vercel project.
 
-### 4. Anthropic
-- [ ] Use a key scoped/labelled for TorenOne; it lives **only** in the engineering service env
-      (`service/`), never in `web/` or the browser.
+### 4. OpenAI
+- [ ] Use an API key scoped/labelled for TorenOne; it lives **only** in the engineering service env
+      (`service/`), never in `web/` or the browser. Set `OPENAI_API_KEY` (and optionally
+      `OPENAI_MODEL` / `OPENAI_FALLBACK_MODEL`) in the service env only.
 
 ## Isolation invariants (keep true forever)
 - One repo, one Supabase project, one Vercel project — all named for TorenOne, all dedicated.
 - No TorenOne secret is ever placed in another project's env, and no other project's secret is placed here.
 - The browser only ever receives the Supabase **anon** key and `NEXT_PUBLIC_*` values — never service-role
-  keys or the Anthropic key.
+  keys or the OpenAI key.
 
 ## Quick verification
 ```bash

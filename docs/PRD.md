@@ -121,7 +121,7 @@ Launch beachhead: structural firms in Cape Town we already have relationships wi
 - **NFR-3 Reproducibility:** Identical input + code-rule version → byte-identical numerical results. Code-rule modules are versioned (e.g. `SANS 10162-1:2011`).
 - **NFR-4 Reliability:** Kernel is deterministic and side-effect-free; no network calls inside computation.
 - **NFR-5 Performance:** A single design run (parse excluded) completes in < 60 s for the demo case.
-- **NFR-6 Security:** Anthropic API key and all secrets stay server-side; FastAPI verifies Supabase JWTs; RLS enforced.
+- **NFR-6 Security:** OpenAI API key and all secrets stay server-side; FastAPI verifies Supabase JWTs; RLS enforced.
 - **NFR-7 Test coverage:** Kernel ≥ 95% line coverage with meaningful assertions; every FR has at least one test; CI blocks merge on failing tests.
 - **NFR-8 Auditability:** Every numerical result in a report is traceable to a clause and a kernel function.
 

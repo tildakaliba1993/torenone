@@ -23,31 +23,31 @@
 ┌────────────────────┐   ┌───────────────────────────────────┐
 │  Supabase          │   │  Engineering service — FastAPI    │
 │  • Postgres (data) │◀──│  • verifies Supabase JWT          │
-│  • Auth (JWT)      │   │  • AI orchestration (Claude)      │
+│  • Auth (JWT)      │   │  • AI orchestration (OpenAI)      │
 │  • Storage (PDFs)  │   │  • CORE KERNEL (pure Python pkg)  │
 │  • Row-Level Sec.  │   │  • report engine (PDF)            │
 └────────────────────┘   └───────────────────────────────────┘
-                                     │ Anthropic API (server-side key)
+                                     │ OpenAI API (server-side key)
                                      ▼
-                              claude-opus-4-8
+                                  gpt-5.5
 ```
 
 ### A.3 Component responsibilities
 
 | Component | Owns | Must NOT do |
 |---|---|---|
-| **Frontend (Next.js)** | UI, design system, auth flows (Supabase), reading/writing project data, calling the engineering service | Hold the Anthropic key; perform any engineering logic |
+| **Frontend (Next.js)** | UI, design system, auth flows (Supabase), reading/writing project data, calling the engineering service | Hold the OpenAI key; perform any engineering logic |
 | **Supabase** | Postgres data, Auth/JWT, Storage for PDFs, RLS isolation | Run the kernel (no heavy Python compute) |
 | **Engineering service (FastAPI)** | JWT verification, AI orchestration, running the kernel, generating PDFs, persisting results | Let the LLM compute or invent numbers |
 | **Core kernel (Python package)** | All engineering math, deterministic, versioned, tested | Network calls; non-determinism; any UI/IO concern |
-| **AI layer (Claude)** | text → typed spec, clarifying questions, report prose | Produce or alter any engineering number |
+| **AI layer (OpenAI)** | text → typed spec, clarifying questions, report prose | Produce or alter any engineering number |
 
 ### A.4 Data flow — one design run
 1. Frontend sends the user's text + project id to **FastAPI** (with Supabase JWT).
-2. FastAPI verifies the JWT, calls **Claude** with structured outputs → typed `FrameSpec`.
+2. FastAPI verifies the JWT, calls **OpenAI** with Structured Outputs → typed `FrameSpec`.
 3. Frontend renders the **confirm screen**; user edits/confirms; confirmed `FrameSpec` returns to FastAPI.
 4. FastAPI invokes the **kernel**: loads → combinations → analysis (+2nd-order) → SANS checks → auto-size. *(LLM not involved.)*
-5. FastAPI builds the **PDF** (numbers from kernel; narrative from Claude), uploads it to **Supabase Storage**, writes a `run` + `report` row to **Postgres**.
+5. FastAPI builds the **PDF** (numbers from kernel; narrative from OpenAI), uploads it to **Supabase Storage**, writes a `run` + `report` row to **Postgres**.
 6. Frontend reads the run/report from Supabase and shows results + download.
 
 ### A.5 The kernel architecture (the moat)
@@ -67,11 +67,11 @@ kernel/
 Principles: deterministic, side-effect-free, every rule module version-pinned, validated against worked examples + the benchmark project.
 
 ### A.6 AI integration
-- Model: **`claude-opus-4-8`** via the `anthropic` Python SDK (server-side only).
-- **Parsing:** structured outputs (`messages.parse()` against the Pydantic `FrameSpec`) → guaranteed-valid spec.
-- **Orchestration:** the model may call the kernel as **tools**; it never computes itself.
+- Model: **`gpt-5.5`** via the `openai` Python SDK (server-side only). Model id is read from `OPENAI_MODEL` so it can be re-pinned without code changes.
+- **Parsing:** OpenAI **Structured Outputs** (`responses.parse(..., text_format=FrameSpec)` against the Pydantic `FrameSpec`) → guaranteed schema-valid spec.
+- **Orchestration:** the model may call the kernel as **tools** (function calling); it never computes itself.
 - **Narrative:** the model drafts report prose; all numbers are injected from kernel results.
-- Cost note: model is a minor cost line; do not prematurely downgrade. `claude-sonnet-4-6` is the fallback if parsing volume grows.
+- Cost note: model is a minor cost line; do not prematurely downgrade. **`gpt-5.4-mini`** (`OPENAI_FALLBACK_MODEL`) is the fallback if parsing volume grows.
 
 ### A.7 Data model (Supabase / Postgres) — high level
 | Table | Key fields | Notes |
@@ -85,7 +85,7 @@ Principles: deterministic, side-effect-free, every rule module version-pinned, v
 **RLS:** every table filtered by `firm_id` via the user's `profiles.firm_id`. A user can only read/write rows for their firm. Verified by test.
 
 ### A.8 Security
-- Anthropic key + service secrets live only in the FastAPI service env.
+- OpenAI key + service secrets live only in the FastAPI service env.
 - FastAPI verifies the Supabase JWT on every request; rejects otherwise.
 - RLS enforced at the database layer (defence in depth, not just app logic).
 - No engineering secret sauce or keys ever reach the browser.
@@ -98,7 +98,7 @@ Principles: deterministic, side-effect-free, every rule module version-pinned, v
 | Engineering service | Python + FastAPI |
 | Kernel | Pure Python: Pydantic, NumPy, **PyNite** (2D now, 3D-ready) |
 | Report engine | Jinja2 + WeasyPrint (HTML/CSS→PDF) + Matplotlib (diagrams) |
-| AI | Anthropic API, `claude-opus-4-8`, structured outputs + tool use |
+| AI | OpenAI API, `gpt-5.5`, Structured Outputs + tool/function calling |
 | Hosting (service) | Fly.io / Render / Railway (container) |
 | CI | GitHub Actions (tests gate every merge) |
 
