@@ -29,10 +29,21 @@ $$;
 -- contract the migrations rely on (auth.uid() -> the signed-in user's uuid).
 create schema if not exists auth;
 
+-- Columns mirror the subset of Supabase's real auth.users that seed.sql populates,
+-- so the same seed applies here in tests (the real table has many more columns; all
+-- the extras we omit are nullable / defaulted in Supabase).
 create table if not exists auth.users (
     id                  uuid primary key default gen_random_uuid(),
+    instance_id         uuid,
+    aud                 text,
+    role                text,
     email               text,
-    raw_user_meta_data  jsonb not null default '{}'::jsonb
+    encrypted_password  text,
+    email_confirmed_at  timestamptz,
+    raw_app_meta_data   jsonb not null default '{}'::jsonb,
+    raw_user_meta_data  jsonb not null default '{}'::jsonb,
+    created_at          timestamptz not null default now(),
+    updated_at          timestamptz not null default now()
 );
 
 create or replace function auth.uid()
