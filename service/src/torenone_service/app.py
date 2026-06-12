@@ -34,10 +34,10 @@ from torenone_service.design_service import DesignError, run_design
 from torenone_service.errors import install_exception_handlers
 from torenone_service.logging_config import configure_logging, get_logger
 from torenone_service.reports import (
-    InMemoryReportStore,
     ReportBuilder,
     ReportStore,
     WeasyPrintReportBuilder,
+    default_report_store,
     get_report_builder,
     get_report_store,
 )
@@ -107,7 +107,7 @@ def create_app(
         report_builder if report_builder is not None else WeasyPrintReportBuilder()
     )
     app.state.report_store = (
-        report_store if report_store is not None else InMemoryReportStore()
+        report_store if report_store is not None else default_report_store()
     )
     install_exception_handlers(app)
 
@@ -200,6 +200,7 @@ def create_app(
                 project_id=body.project_id,
                 result=result,
                 pdf_bytes=pdf_bytes,
+                mode=body.mode,
             )
         except Exception as exc:
             logger.error(

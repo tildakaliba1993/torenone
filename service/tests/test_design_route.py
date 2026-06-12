@@ -82,10 +82,10 @@ class _RecordingStore:
 
     def save_report(
         self, *, user_id: str, project_id: str | None,
-        result: DesignResult, pdf_bytes: bytes,
+        result: DesignResult, pdf_bytes: bytes, mode: str = "design",
     ) -> StoredReport:
         self.saved.append(
-            {"user_id": user_id, "project_id": project_id, "pdf_bytes": pdf_bytes}
+            {"user_id": user_id, "project_id": project_id, "pdf_bytes": pdf_bytes, "mode": mode}
         )
         return StoredReport(
             run_id="run-123", report_id="rep-123",
