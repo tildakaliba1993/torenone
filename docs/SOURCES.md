@@ -88,6 +88,7 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 | Supabase schema (Task 5.1) | Tables `firms`/`profiles`/`projects`/`runs`/`reports` per Design §A.7; `firm_id` denormalised onto runs+reports for RLS; `profiles.id` = `auth.users.id`. No engineering values — app data model only | docs/DESIGN-ARCHITECTURE.md §A.7 | VERIFIED (app schema) |
 | sqlglot | `>=27,<28` (27.29.0) — pure-Python Postgres parser; contract-tests the SQL migrations with no live DB | PyPI | VERIFIED |
 | Supabase auth trigger (Task 5.2) | `handle_new_user()` AFTER INSERT trigger on `auth.users` bootstraps `profiles` (id = auth uid) + firm; `SECURITY DEFINER` + `set search_path = ''` is the documented Supabase pattern for sign-up profile creation | Supabase docs "Managing User Data" / Postgres SECURITY DEFINER best practice; no engineering values | VERIFIED (app auth) |
+| Supabase Storage RLS (Task 5.3) | Private `reports` bucket + `storage.objects` policies scoping access by `(storage.foldername(name))[1] = current_firm_id()`; `current_firm_id()` SECURITY DEFINER helper reused by table RLS (5.4) | Supabase docs "Storage Access Control" / `storage.foldername`; no engineering values | VERIFIED (app storage) |
 
 ## 6. Resources to source (hand-off checklist for the co-founder)
 > ✅ **All standards OBTAINED 2026-06-10**, stored locally in **`standards/`** (git-ignored — copyright +
