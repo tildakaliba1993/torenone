@@ -84,6 +84,9 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 | Docker base image | `python:3.11-slim` (Debian) — matches the only supported interpreter | Docker Hub official image | VERIFIED |
 | WeasyPrint native libs (Task 4.6 container) | `libpango-1.0-0`, `libpangoft2-1.0-0` (Pango text), `fonts-dejavu-core`, `shared-mime-info`; Pillow (Python dep) handles raster — gdk-pixbuf/cairo not required at WeasyPrint ≥53 | WeasyPrint install docs (doc.courtbouillon.org/weasyprint) | VERIFIED |
 | Fly.io deploy (Task 4.6) | `fly.toml`: internal_port 8000, `/health` HTTP check, region `jnb` (Johannesburg, closest to Cape Town), 1 GB RAM | Fly.io docs (fly.io/docs); no engineering values | VERIFIED (infra config) |
+| Supabase CLI | v2.75.0 (`supabase init` scaffold; migrations in `supabase/migrations/`) | supabase.com/docs/guides/cli | VERIFIED |
+| Supabase schema (Task 5.1) | Tables `firms`/`profiles`/`projects`/`runs`/`reports` per Design §A.7; `firm_id` denormalised onto runs+reports for RLS; `profiles.id` = `auth.users.id`. No engineering values — app data model only | docs/DESIGN-ARCHITECTURE.md §A.7 | VERIFIED (app schema) |
+| sqlglot | `>=27,<28` (27.29.0) — pure-Python Postgres parser; contract-tests the SQL migrations with no live DB | PyPI | VERIFIED |
 
 ## 6. Resources to source (hand-off checklist for the co-founder)
 > ✅ **All standards OBTAINED 2026-06-10**, stored locally in **`standards/`** (git-ignored — copyright +

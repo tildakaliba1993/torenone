@@ -29,7 +29,7 @@
 | 2 | Report engine | `[x]` |
 | 3 | AI orchestration layer | `[x]` |
 | 4 | Engineering service (FastAPI) + auth | `[x]` |
-| 5 | Supabase backend (data + RLS) | `[ ]` |
+| 5 | Supabase backend (data + RLS) | `[~]` |
 | 6 | Frontend (design system + screens) | `[ ]` |
 | 7 | Integration & end-to-end | `[ ]` |
 | 8 | Validation gate & hardening | `[ ]` |
@@ -187,7 +187,7 @@
 ## Phase 5 — Supabase backend (data + RLS)
 *Goal: multi-tenant data model with strict isolation.*
 
-- [ ] **5.1 Project & schema** — create Supabase project; tables `firms`, `profiles`, `projects`, `runs`, `reports` (Design §A.7) via migrations.
+- [x] **5.1 Project & schema** — Supabase project scaffolded (`supabase/config.toml`, `project_id = "torenone"`) + first migration `supabase/migrations/20260612120000_initial_schema.sql` creating the five Design §A.7 tables: **`firms`** (tenant root), **`profiles`** (`id` = `auth.users.id`, FK→`firms`), **`projects`** (FK→`firms`/`profiles`), **`runs`** (`frame_spec` jsonb, `mode`, `status`, `rules_version` jsonb, `passed`, `governing_utilisation`, FK→`projects`/`firms`/`profiles`), **`reports`** (`storage_path`, FK→`runs`/`firms`). **Design choice:** `firm_id` is denormalised onto `runs`+`reports` so the Task 5.4 RLS policies are simple index-backed equality checks (no recursive joins); every FK column is indexed. RLS-enable (5.4), the signup profile/firm trigger (5.2), the Storage bucket (5.3) and seed data (5.5) are their own migrations. **Test-first (no live DB in this env — no Docker/psql):** `supabase/tests/test_schema.py` (**19 tests**) parses every migration with `sqlglot` (Postgres dialect) and asserts the contract — valid Postgres, exactly the 5 tables, required columns per §A.7, uuid `id` PKs, the multi-tenant backbone (`firm_id` NOT NULL on every non-root table), and the FK tenant graph incl. `profiles.id`→`auth.users`. `sqlglot` pinned in `[dev]`; `supabase/tests` added to pytest `testpaths`. All passing (ruff + mypy clean). Full suite: **719 passed**. *(Creating the actual hosted Supabase project + `supabase link`/`db push` is a one-time credentials step for the co-founder — the migration + contract test are the code deliverable.)*
 - [ ] **5.2 Auth** — email auth; `profiles` row created on sign-up, linked to a `firm`.
 - [ ] **5.3 Storage** — bucket for report PDFs, access scoped per firm.
 - [ ] **5.4 Row-Level Security** — policies filtering every table by the user's `firm_id`.
