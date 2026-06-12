@@ -28,7 +28,7 @@
 | 1 | Core engineering kernel (TDD) | `[~]` |
 | 2 | Report engine | `[x]` |
 | 3 | AI orchestration layer | `[x]` |
-| 4 | Engineering service (FastAPI) + auth | `[~]` |
+| 4 | Engineering service (FastAPI) + auth | `[x]` |
 | 5 | Supabase backend (data + RLS) | `[ ]` |
 | 6 | Frontend (design system + screens) | `[ ]` |
 | 7 | Integration & end-to-end | `[ ]` |
@@ -177,10 +177,10 @@
   - [x] Support **Check mode** (`mode=check` with supplied sections) → runs `check()` instead of `design()` (PRD FR-24).
   - **13 tests** (`service/tests/test_design_route.py`): design happy path (result+report, matches kernel, builder/store called, custom cost rate), check mode (valid sections, missing→422, unknown designation→422), guards (auth 401, invalid/missing spec→422, bad mode→422), plus a WeasyPrint-gated end-to-end test producing a real `%PDF` (skips in CI). Kernel runs for real (CI-safe); PDF/store are injected fakes. All passing (Python 3.11; ruff + mypy clean). Full suite: **606 passed** (CI: 597 + 9 skipped).
 - [x] **4.5 Error handling** — typed errors, safe messages, no secret leakage. `service/src/torenone_service/errors.py`: a catch-all `Exception` handler logs full detail server-side (structured, with traceback) but returns a generic `{"detail":"internal server error"}` 500 — never a stack trace or internal text. Routes map known failures to typed statuses: upstream `OpenAIError` in `/parse` → **502** (safe message), report build/store failure in `/design` → **502**, `DesignError` → **422**, auth → 401/503. **8 tests** (`service/tests/test_errors.py`): OpenAIError→502, unexpected→generic 500, report failure→502, `DesignError`→422, and **no-secret-leak** assertions across 401/500/502 paths (JWT secret + API key never appear in any error body). All passing (Python 3.11; ruff + mypy clean). Full suite: **614 passed**.
-- [ ] **4.6 Containerise & deploy** — Dockerfile; deploy to Fly.io/Render/Railway; env wired.
+- [x] **4.6 Containerise & deploy** — two-stage `Dockerfile` (repo root): **builder** installs `.[service,pdf]` into a venv (gets `torenone_kernel` + all runtime deps **including WeasyPrint**); **runtime** = `python:3.11-slim` + WeasyPrint native libs (`libpango-1.0-0`, `libpangoft2-1.0-0`, `fonts-dejavu-core`, `shared-mime-info`), copies the venv + `service/` and runs `uvicorn torenone_service.main:app` on :8000 as non-root `appuser` with a `/health` `HEALTHCHECK`. `torenone_service`/`torenone_ai` aren't pip-packaged, so they're exposed via `PYTHONPATH=/app/service/src`. `.dockerignore` keeps the build context small + secret-free; `fly.toml` (Fly.io, region `jnb`, internal_port 8000, `/health` check, 1 GB RAM); `docs/DEPLOY.md` documents build/run/Fly-deploy + env wiring (app boots for `/health` without secrets; protected routes 503 until set). **Verification:** new CI `docker` job builds the image, runs the container, and asserts `GET /health` → 200 with the expected JSON; `service/tests/test_deploy.py` (**9 tests**) locks the deploy contract (py3.11 base, `[service,pdf]` extra, Pango native lib, `service/src` on PYTHONPATH, uvicorn ASGI entrypoint binding 0.0.0.0, non-root USER, `/health` HEALTHCHECK, `.dockerignore` excludes `.git`/`web`/`standards`/`.env`, `fly.toml` internal_port 8000 + `/health`). All passing (ruff + mypy clean). Full suite: **700 passed**. *(Deploy to a live Fly app needs the co-founder's Fly account + secrets — infra/credentials step, not code.)*
 - [x] **Check mode shipped** *(advisor improvement #5)* — already live as `POST /design` with `mode=check` (Task 4.4); kernel `check()` from Task 1.14. *Optional polish: add a `POST /check` alias for clarity/marketing — non-blocking.* The `/design` response already carries the new last-mile fields once 1.18 lands (additive — no route change).
 
-**Acceptance:** authenticated end-to-end request runs parse + design and stores a report; unauthenticated rejected.
+**Acceptance:** authenticated end-to-end request runs parse + design and stores a report; unauthenticated rejected. **Phase 4 complete (4.1–4.6).** *(Live Fly deploy is a one-time credentials/infra step for the co-founder — the image + config + CI build-smoke are all in place.)*
 
 ---
 

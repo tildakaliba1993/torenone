@@ -1,0 +1,32 @@
+# Fly.io deployment for the TorenOne engineering service (FastAPI).
+#
+# Secrets are NEVER committed. Set them once with `fly secrets set ...`
+# (OPENAI_API_KEY, SUPABASE_JWT_SECRET, SUPABASE_URL, ...) — see docs/DEPLOY.md.
+# The app boots for /health without any secrets; protected routes return 503
+# until the relevant secret is provided.
+
+app = "torenone-engineering-service"
+primary_region = "jnb"   # Johannesburg — closest Fly region to our Cape Town users.
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "get"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  # PDF rendering (WeasyPrint + matplotlib + numpy/PyNite) is memory-hungry; 1 GB
+  # leaves headroom for a design run (NFR-5: < 60 s on the demo case).
+  memory = "1gb"

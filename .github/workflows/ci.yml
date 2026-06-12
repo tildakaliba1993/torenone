@@ -26,6 +26,33 @@ jobs:
         # Kernel coverage gate ramps to 95% as Phase 1 lands (PRD NFR-7).
         run: pytest --cov=torenone_kernel --cov-report=term-missing --cov-fail-under=0
 
+  docker:
+    name: Docker image (build + health smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t torenone-service:ci .
+      - name: Run container
+        run: docker run -d --name torenone -p 8000:8000 torenone-service:ci
+      - name: Wait for /health and assert response
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/health -o /tmp/health.json; then
+              break
+            fi
+            sleep 2
+          done
+          echo "health body:"; cat /tmp/health.json; echo
+          grep -q '"status":"ok"' /tmp/health.json
+          grep -q 'torenone-engineering-service' /tmp/health.json
+      - name: Container logs
+        if: always()
+        run: docker logs torenone || true
+      - name: Cleanup
+        if: always()
+        run: docker rm -f torenone || true
+
   web:
     name: Web (lint, types, unit tests, build)
     runs-on: ubuntu-latest

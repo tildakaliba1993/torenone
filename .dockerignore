@@ -1,0 +1,42 @@
+# Keep the build context small and secret-free.
+# Only pyproject + kernel/ + service/ are needed by the Dockerfile.
+
+.git
+.github
+.gitignore
+
+# Frontend — not part of the service image.
+web
+
+# Copyrighted SANS PDFs — never ship in an image (also git-ignored).
+standards
+
+# Docs / app collateral
+docs
+*.md
+TorenOne-YC-Application.md
+
+# Python caches & build artifacts
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+dist
+build
+*.egg-info
+.venv
+venv
+
+# Secrets & local env (real secrets are set at deploy time, never baked in)
+.env
+.env.local
+.env.*.local
+
+# Agent worktrees / editor / OS noise
+.claude
+.idea
+.vscode
+.DS_Store
