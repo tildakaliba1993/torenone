@@ -34,6 +34,7 @@ dev = [
     "mypy==2.1.0",
     "httpx>=0.27",   # FastAPI TestClient transport
     "sqlglot>=27,<28",   # parse + contract-test the Supabase SQL migrations (no DB needed)
+    "psycopg[binary]>=3.1",   # behavioural RLS isolation test against a real Postgres (DB-gated)
 ]
 
 [tool.setuptools.packages.find]

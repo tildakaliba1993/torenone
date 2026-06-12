@@ -89,6 +89,7 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 | sqlglot | `>=27,<28` (27.29.0) — pure-Python Postgres parser; contract-tests the SQL migrations with no live DB | PyPI | VERIFIED |
 | Supabase auth trigger (Task 5.2) | `handle_new_user()` AFTER INSERT trigger on `auth.users` bootstraps `profiles` (id = auth uid) + firm; `SECURITY DEFINER` + `set search_path = ''` is the documented Supabase pattern for sign-up profile creation | Supabase docs "Managing User Data" / Postgres SECURITY DEFINER best practice; no engineering values | VERIFIED (app auth) |
 | Supabase Storage RLS (Task 5.3) | Private `reports` bucket + `storage.objects` policies scoping access by `(storage.foldername(name))[1] = current_firm_id()`; `current_firm_id()` SECURITY DEFINER helper reused by table RLS (5.4) | Supabase docs "Storage Access Control" / `storage.foldername`; no engineering values | VERIFIED (app storage) |
+| Supabase RLS isolation (Task 5.4) | RLS enabled on all 5 tables + per-`firm_id` policies; proven behaviourally against Postgres 16 via a stub harness (auth/storage schemas, `auth.uid()`, roles). `psycopg[binary]>=3.1` test driver; CI `postgres:16` service. No engineering values | Postgres RLS docs / Supabase RLS docs; PyPI (psycopg) | VERIFIED (app RLS, behaviourally tested) |
 
 ## 6. Resources to source (hand-off checklist for the co-founder)
 > ✅ **All standards OBTAINED 2026-06-10**, stored locally in **`standards/`** (git-ignored — copyright +

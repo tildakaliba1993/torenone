@@ -9,6 +9,20 @@ jobs:
   python:
     name: Kernel + service (lint, types, tests)
     runs-on: ubuntu-latest
+    # Postgres service so the behavioural RLS isolation test (Task 5.4) runs for real,
+    # not just skipped. The test connects via DATABASE_URL and is a no-op without it.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
@@ -24,6 +38,8 @@ jobs:
         run: mypy kernel/src tools service/src
       - name: Tests + coverage gate
         # Kernel coverage gate ramps to 95% as Phase 1 lands (PRD NFR-7).
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
         run: pytest --cov=torenone_kernel --cov-report=term-missing --cov-fail-under=0
 
   docker:
