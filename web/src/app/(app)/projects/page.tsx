@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { CreateProjectDialog } from "@/components/projects/create-project-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -48,7 +50,14 @@ export default async function ProjectsPage() {
             <TableBody>
               {rows.map((project) => (
                 <TableRow key={project.id}>
-                  <TableCell className="font-medium">{project.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link
+                      href={`/projects/${project.id}/design/new`}
+                      className="hover:text-accent hover:underline"
+                    >
+                      {project.name}
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-muted">
                     {new Date(project.created_at).toLocaleDateString()}
                   </TableCell>
