@@ -19,7 +19,9 @@ service = [
     "openai>=2.0",
     "fastapi>=0.115",
     "uvicorn>=0.30",
-    "pyjwt>=2.8",
+    # [crypto] pulls `cryptography` for ES256/RS256 — Supabase signs user JWTs with
+    # asymmetric keys (verified via the project JWKS), not the legacy HS256 secret.
+    "pyjwt[crypto]>=2.8",
     # Supabase-backed ReportStore (Task 5.6): Postgres writes + Storage REST upload.
     "psycopg[binary]>=3.1",
     "httpx>=0.27",
