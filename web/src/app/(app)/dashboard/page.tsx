@@ -1,7 +1,5 @@
 import { redirect } from "next/navigation";
 
-import { signOut } from "@/app/auth/actions";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -30,10 +28,9 @@ export default async function DashboardPage() {
   const role = (profile?.role as string | undefined) ?? "—";
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-16">
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-10">
       <header className="flex flex-col gap-2">
-        <span className="font-mono text-xs tracking-widest text-accent uppercase">TorenOne</span>
-        <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
         <p className="text-sm text-muted">Signed in as {user.email}</p>
       </header>
 
@@ -53,12 +50,6 @@ export default async function DashboardPage() {
           </div>
         </CardContent>
       </Card>
-
-      <form action={signOut}>
-        <Button type="submit" variant="secondary">
-          Sign out
-        </Button>
-      </form>
     </main>
   );
 }

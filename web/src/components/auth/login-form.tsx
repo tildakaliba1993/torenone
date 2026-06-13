@@ -46,7 +46,7 @@ export function LoginForm() {
       setFormError(error.message);
       return;
     }
-    const next = searchParams.get("next") ?? "/dashboard";
+    const next = searchParams.get("next") ?? "/projects";
     router.push(next);
     router.refresh();
   }

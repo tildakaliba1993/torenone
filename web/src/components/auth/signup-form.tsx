@@ -58,7 +58,7 @@ export function SignupForm() {
       setEmailSent(true);
       return;
     }
-    router.push("/dashboard");
+    router.push("/projects");
     router.refresh();
   }
 

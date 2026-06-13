@@ -41,7 +41,7 @@ describe("LoginForm", () => {
     expect(signInWithPassword).not.toHaveBeenCalled();
   });
 
-  it("signs in and navigates to /dashboard on success", async () => {
+  it("signs in and navigates to /projects on success", async () => {
     signInWithPassword.mockResolvedValue({ error: null });
     render(<LoginForm />);
     await userEvent.type(screen.getByLabelText("Email"), "eng@firm.co.za");
@@ -53,7 +53,7 @@ describe("LoginForm", () => {
         password: "secret123",
       }),
     );
-    expect(push).toHaveBeenCalledWith("/dashboard");
+    expect(push).toHaveBeenCalledWith("/projects");
   });
 
   it("honours the ?next redirect target", async () => {

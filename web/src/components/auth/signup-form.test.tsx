@@ -46,7 +46,7 @@ describe("SignupForm", () => {
     const arg = signUp.mock.calls[0][0];
     expect(arg.email).toBe("owner@acme.co.za");
     expect(arg.options.data).toEqual({ firm_name: "Acme Structural" });
-    expect(push).toHaveBeenCalledWith("/dashboard");
+    expect(push).toHaveBeenCalledWith("/projects");
   });
 
   it("shows a confirm-your-email message when no session is returned", async () => {
