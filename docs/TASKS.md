@@ -30,7 +30,7 @@
 | 3 | AI orchestration layer | `[x]` |
 | 4 | Engineering service (FastAPI) + auth | `[x]` |
 | 5 | Supabase backend (data + RLS) | `[x]` |
-| 6 | Frontend (design system + screens) | `[ ]` |
+| 6 | Frontend (design system + screens) | `[~]` |
 | 7 | Integration & end-to-end | `[ ]` |
 | 8 | Validation gate & hardening | `[ ]` |
 | 9 | Pilot & YC readiness | `[ ]` |
@@ -203,7 +203,7 @@
 ## Phase 6 — Frontend (design system + screens)
 *Goal: the user-facing app implementing the Supabase-style steel-blue design system and the six MVP screens.*
 
-- [ ] **6.1 Design-system shell** — themed shadcn/ui primitives (Button, Input, Card, Table, Dialog, Tabs, Toast, Form) using Phase 0 tokens. **Test:** component/visual checks; contrast assertions.
+- [~] **6.1 Design-system shell** — themed shadcn/ui primitives (Button, Input, Card, Table, Dialog, Tabs, Toast, Form) using Phase 0 tokens. **Test:** component/visual checks; contrast assertions.
 - [ ] **6.2 Auth screens** — Supabase UI Library sign-in/sign-up, themed. **Test:** auth flow E2E (Phase 7).
 - [ ] **6.3 Projects** — list + create, per firm. **Test.**
 - [ ] **6.4 Describe screen** — text input + examples; calls `/parse`. **Test.**
