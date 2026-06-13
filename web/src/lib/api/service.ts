@@ -135,16 +135,78 @@ export interface StoredReport {
   size_bytes: number;
 }
 
-/** Minimal shape used by Task 6.5; the full result is rendered in Task 6.6. */
-export interface DesignResult {
+export interface CheckResult {
+  name: string;
+  clause: string;
+  utilisation: number;
   passed: boolean;
-  governing_utilisation?: number;
-  [key: string]: unknown;
+  detail?: string | null;
+}
+
+export interface ConnectionDesignResult {
+  location: string;
+  description: string;
+  design_moment_knm: number;
+  design_shear_kn: number;
+  design_axial_kn: number;
+  checks: CheckResult[];
+}
+
+export interface BaseplateDesignResult {
+  base_fixity: string;
+  description: string;
+  design_axial_kn: number;
+  design_shear_kn: number;
+  design_moment_knm: number;
+  checks: CheckResult[];
+}
+
+export interface PadFootingDesignResult {
+  description: string;
+  plan_size_mm: number;
+  thickness_mm: number;
+  allowable_bearing_kpa: number;
+  design_service_axial_kn: number;
+  design_factored_axial_kn: number;
+  checks: CheckResult[];
+}
+
+export interface DesignResult {
+  frame_spec: FrameSpec;
+  sections: SectionChoice[];
+  checks: CheckResult[];
+  rules_version: Record<string, string>;
+  warnings: string[];
+  total_steel_mass_kg: number | null;
+  indicative_cost_zar: number | null;
+  total_steel_tonnes: number | null;
+  connections: ConnectionDesignResult[];
+  baseplate: BaseplateDesignResult | null;
+  footing: PadFootingDesignResult | null;
+  passed: boolean;
+  governing_utilisation: number;
 }
 
 export interface DesignResponse {
   result: DesignResult;
   report: StoredReport;
+}
+
+/**
+ * Mint a short-lived signed URL for a stored calc-package PDF (Task 6.6). The
+ * report bucket is private; Storage RLS (Task 5.3) only lets the caller sign
+ * objects under their own firm's folder.
+ */
+export async function getReportSignedUrl(storagePath: string): Promise<string> {
+  const supabase = createClient();
+  const objectPath = storagePath.replace(/^reports\//, "");
+  const { data, error } = await supabase.storage
+    .from("reports")
+    .createSignedUrl(objectPath, 60);
+  if (error || !data?.signedUrl) {
+    throw new ServiceError(error?.message ?? "Could not generate a download link.");
+  }
+  return data.signedUrl;
 }
 
 export async function runDesign(request: DesignRequest): Promise<DesignResponse> {
