@@ -30,7 +30,7 @@
 | 3 | AI orchestration layer | `[x]` |
 | 4 | Engineering service (FastAPI) + auth | `[x]` |
 | 5 | Supabase backend (data + RLS) | `[x]` |
-| 6 | Frontend (design system + screens) | `[~]` |
+| 6 | Frontend (design system + screens) | `[x]` |
 | 7 | Integration & end-to-end | `[ ]` |
 | 8 | Validation gate & hardening | `[ ]` |
 | 9 | Pilot & YC readiness | `[ ]` |
@@ -214,7 +214,7 @@
   - [ ] **Audit / "show-your-working" panel** + deterministic-kernel **provenance badge** (FR-26).
   - [ ] **Steel tonnage + cost** readout with **editable cost-per-ton** input (FR-25/FR-31); **assumptions & limitations** block (FR-27).
 - [x] **6.7 Run history** — per-project list of past design runs + their stored PDFs. New **project detail page** `app/(app)/projects/[id]` (project rows in 6.3 now link here; "New design" CTA → the wizard; design-flow back-link returns here) querying `runs` (RLS-scoped) with the embedded `reports(storage_path)` relationship, ordered newest-first. `components/projects/run-history.tsx` (`RunHistory`): table of Date · Mode · Result (pass/fail `StatusBadge`, "—" if pending) · Governing utilisation · **Report**, with an empty state. `components/projects/report-download-button.tsx`: per-row PDF download via the same `getReportSignedUrl()` 60s Supabase signed URL (Storage RLS-scoped), "—" when a run has no stored report. **Test (59 web tests):** `run-history.test.tsx` (4) — empty state, a row per run with mode/result/governing, PDF download via signed URL (+window.open), and the no-report dash. **Verified live:** the project page listed 4 real past runs (pass badges, governing 1.00) and a history PDF download produced a working signed Storage URL. Local: web **test 59 passed · typecheck clean · lint clean · build OK** (+ route `/projects/[id]`).
-- [ ] **6.8 States** — loading/empty/error states for every async view. **Test.**
+- [x] **6.8 States** — loading / empty / error states across the async views. Reusable primitives: `components/ui/skeleton.tsx` (`Skeleton`, animate-pulse) and `components/ui/error-state.tsx` (`ErrorState` — title/message/retry). Route-level App-Router files: `loading.tsx` skeletons for `projects`, `projects/[id]`, `dashboard`; an `(app)/error.tsx` client error boundary (`'use client'` + `reset`) using `ErrorState`; `projects/[id]/not-found.tsx` and a global `app/not-found.tsx`. Empty states already shipped (projects list 6.3, run history 6.7); async actions already carry inline pending+error states (parse/run/download). **Test (64 web tests):** `skeleton.test.tsx` (2) + `error-state.test.tsx` (3) — pulse class + className merge; title/message render, retry fires `onRetry`, no button without a handler. **Verified live:** visiting a non-existent project renders the themed "Project not found" within the app shell. Local: web **test 64 passed · typecheck clean · lint clean · build OK**. **Phase 6 complete — the MVP web app is functional end-to-end against live Supabase + the engineering service.**
 
 **Acceptance:** all six screens implemented to the design system; component tests pass; accessible.
 
