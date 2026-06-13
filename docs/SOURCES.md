@@ -57,6 +57,7 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 | Tailwind CSS | v4 (`@theme`-based) | npm | VERIFIED |
 | shadcn/ui + Supabase UI Library | design-system foundation (Phase 6) | supabase.com/ui (blog), ui.shadcn.com | VERIFIED |
 | Frontend UI deps (Task 6.1) | clsx, tailwind-merge, class-variance-authority, @radix-ui/react-{dialog,tabs,label,slot}, sonner, react-hook-form, zod, @hookform/resolvers — themed shadcn primitives. No engineering values | npm; ui.shadcn.com component sources (MIT, copied in) | VERIFIED |
+| Auth deps (Task 6.2) | @supabase/ssr 0.12, @supabase/supabase-js 2.108 — cookie-based SSR auth. Next 16 renamed `middleware`→`proxy` (per node_modules/next/dist/docs) | npm; supabase.com/docs (Next.js App Router SSR) | VERIFIED |
 | Geist Sans / Mono | UI + monospace fonts | `next/font` | VERIFIED |
 | PyNite (PyNiteFEA 1.6.2) | first-order linear-elastic plane-frame solver (Tasks 1.8–1.9); E=200 000 N/mm² G=77 000 N/mm² (PROVISIONAL pending SANS 10162-1 cl. 5.2 confirm at 1.10) | PyPI (`pip install PyNiteFEA`) | VERIFIED |
 | SANS 10162-1:2011 cl. 8.7 | U2 sway amplification formula + notional load 0.005×gravity; sway-sensitive threshold U2>1.4 is CSA S16 basis (SANS text does not state explicit cutoff — PROVISIONAL) | standards/SANS 10162-1.pdf p.21 | PROVISIONAL |

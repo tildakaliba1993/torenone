@@ -1,4 +1,7 @@
+import Link from "next/link";
+
 import { StatusBadge } from "@/components/status-badge";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (
@@ -18,15 +21,12 @@ export default function Home() {
       </header>
 
       <div className="flex flex-wrap items-center gap-4">
-        <button
-          type="button"
-          className="bg-primary text-primary-foreground hover:bg-primary-hover focus-visible:ring-ring rounded px-4 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
-        >
-          Start a design
-        </button>
-        <a href="#" className="text-accent text-sm hover:underline">
-          View a sample calc package
-        </a>
+        <Button asChild size="lg">
+          <Link href="/signup">Start a design</Link>
+        </Button>
+        <Link href="/login" className="text-accent text-sm hover:underline">
+          Sign in
+        </Link>
       </div>
 
       <section className="border-border bg-surface-raised flex flex-col gap-3 rounded-lg border p-5">
