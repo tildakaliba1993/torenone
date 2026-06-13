@@ -11,10 +11,12 @@ Auth (4.2), /parse (4.3), /design (4.4) and error handling (4.5) build on this.
 
 from __future__ import annotations
 
+import os
 import time
 from collections.abc import Awaitable, Callable
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAIError
 from starlette.responses import Response
 from torenone_ai import parse_description
@@ -50,6 +52,18 @@ from torenone_service.schemas import (
 
 SERVICE_NAME = "torenone-engineering-service"
 SERVICE_VERSION = "0.1.0"
+
+# Browser origins allowed to call the service (the SPA is a different origin/port).
+# Override in deployment via CORS_ALLOW_ORIGINS (comma-separated). The token is sent
+# as an Authorization header (not cookies), so credentials are not allowed.
+_DEFAULT_CORS_ORIGINS = ("http://localhost:3000", "http://127.0.0.1:3000")
+
+
+def _cors_allow_origins() -> list[str]:
+    raw = os.environ.get("CORS_ALLOW_ORIGINS", "").strip()
+    if raw:
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
+    return list(_DEFAULT_CORS_ORIGINS)
 
 
 def _optional_auth_config_from_env() -> AuthConfig | None:
@@ -110,6 +124,14 @@ def create_app(
         report_store if report_store is not None else default_report_store()
     )
     install_exception_handlers(app)
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_allow_origins(),
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
 
     @app.middleware("http")
     async def log_requests(
