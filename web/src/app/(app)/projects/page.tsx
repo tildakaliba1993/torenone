@@ -52,7 +52,7 @@ export default async function ProjectsPage() {
                 <TableRow key={project.id}>
                   <TableCell className="font-medium">
                     <Link
-                      href={`/projects/${project.id}/design/new`}
+                      href={`/projects/${project.id}`}
                       className="hover:text-accent hover:underline"
                     >
                       {project.name}

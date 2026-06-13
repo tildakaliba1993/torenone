@@ -213,7 +213,7 @@
   - [ ] **Design / Check mode** toggle — Check mode lets the user enter their own sections (PRD FR-24).
   - [ ] **Audit / "show-your-working" panel** + deterministic-kernel **provenance badge** (FR-26).
   - [ ] **Steel tonnage + cost** readout with **editable cost-per-ton** input (FR-25/FR-31); **assumptions & limitations** block (FR-27).
-- [ ] **6.7 Run history** — past runs + stored PDFs per project. **Test.**
+- [x] **6.7 Run history** — per-project list of past design runs + their stored PDFs. New **project detail page** `app/(app)/projects/[id]` (project rows in 6.3 now link here; "New design" CTA → the wizard; design-flow back-link returns here) querying `runs` (RLS-scoped) with the embedded `reports(storage_path)` relationship, ordered newest-first. `components/projects/run-history.tsx` (`RunHistory`): table of Date · Mode · Result (pass/fail `StatusBadge`, "—" if pending) · Governing utilisation · **Report**, with an empty state. `components/projects/report-download-button.tsx`: per-row PDF download via the same `getReportSignedUrl()` 60s Supabase signed URL (Storage RLS-scoped), "—" when a run has no stored report. **Test (59 web tests):** `run-history.test.tsx` (4) — empty state, a row per run with mode/result/governing, PDF download via signed URL (+window.open), and the no-report dash. **Verified live:** the project page listed 4 real past runs (pass badges, governing 1.00) and a history PDF download produced a working signed Storage URL. Local: web **test 59 passed · typecheck clean · lint clean · build OK** (+ route `/projects/[id]`).
 - [ ] **6.8 States** — loading/empty/error states for every async view. **Test.**
 
 **Acceptance:** all six screens implemented to the design system; component tests pass; accessible.
