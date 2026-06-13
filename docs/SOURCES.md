@@ -56,6 +56,7 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 | React / React-DOM | 19.2.7 | npm | VERIFIED |
 | Tailwind CSS | v4 (`@theme`-based) | npm | VERIFIED |
 | shadcn/ui + Supabase UI Library | design-system foundation (Phase 6) | supabase.com/ui (blog), ui.shadcn.com | VERIFIED |
+| Frontend UI deps (Task 6.1) | clsx, tailwind-merge, class-variance-authority, @radix-ui/react-{dialog,tabs,label,slot}, sonner, react-hook-form, zod, @hookform/resolvers — themed shadcn primitives. No engineering values | npm; ui.shadcn.com component sources (MIT, copied in) | VERIFIED |
 | Geist Sans / Mono | UI + monospace fonts | `next/font` | VERIFIED |
 | PyNite (PyNiteFEA 1.6.2) | first-order linear-elastic plane-frame solver (Tasks 1.8–1.9); E=200 000 N/mm² G=77 000 N/mm² (PROVISIONAL pending SANS 10162-1 cl. 5.2 confirm at 1.10) | PyPI (`pip install PyNiteFEA`) | VERIFIED |
 | SANS 10162-1:2011 cl. 8.7 | U2 sway amplification formula + notional load 0.005×gravity; sway-sensitive threshold U2>1.4 is CSA S16 basis (SANS text does not state explicit cutoff — PROVISIONAL) | standards/SANS 10162-1.pdf p.21 | PROVISIONAL |
