@@ -31,6 +31,7 @@ from pydantic import BaseModel, Field, ValidationError
 from torenone_kernel.models.enums import BaseFixity, SteelGrade, TerrainCategory
 from torenone_kernel.models.frame_spec import (
     DeadLoadInputs,
+    FoundationInputs,
     FrameGeometry,
     FrameSpec,
     ImposedLoadInputs,
@@ -128,6 +129,19 @@ class FrameSpecExtraction(BaseModel):
     column_restraint_spacing_m: float | None = Field(
         None,
         description="Girt spacing that laterally restrains the column, in metres. "
+        "Null if not stated.",
+    )
+
+    # --- Foundation (Task 1.18) ---
+    allowable_bearing_kpa: float | None = Field(
+        None,
+        description="Site allowable (safe) bearing pressure in kPa — a geotechnical input. "
+        "Extract ONLY if the description explicitly states it. Null if not stated; it is "
+        "NEVER assumed (without it the pad footing is simply not designed).",
+    )
+    concrete_fcu_mpa: float | None = Field(
+        None,
+        description="Concrete cube strength fcu in MPa for the baseplate/footing, if stated. "
         "Null if not stated.",
     )
 
@@ -311,6 +325,12 @@ def build_frame_spec(extraction: FrameSpecExtraction) -> ParseResult:
         "column_restraint_spacing_m", "restraints.column_restraint_spacing_m", None,
         "No column lateral restraint stated; treated as unrestrained (conservative).",
     )
+    concrete_fcu_mpa = resolve(
+        "concrete_fcu_mpa", "foundation.concrete_fcu_mpa", 25.0,
+        "Concrete strength not stated; assumed 25 MPa (typical SA value).",
+    )
+    # Allowable bearing is a geotechnical input — NEVER assumed. If the user did not
+    # state it, leave it None: the kernel then designs everything except the pad footing.
 
     # 3. Construct + validate the real FrameSpec (range checks live in the model).
     try:
@@ -339,6 +359,10 @@ def build_frame_spec(extraction: FrameSpecExtraction) -> ParseResult:
                 terrain_category=extraction.terrain_category,
                 site_altitude_m=site_altitude_m,
                 has_dominant_opening=has_dominant_opening,
+            ),
+            foundation=FoundationInputs(
+                allowable_bearing_kpa=extraction.allowable_bearing_kpa,
+                concrete_fcu_mpa=concrete_fcu_mpa,
             ),
         )
     except ValidationError as exc:

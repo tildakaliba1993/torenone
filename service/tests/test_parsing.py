@@ -327,3 +327,53 @@ class TestDeterministicMapping:
         changed = build_frame_spec(_complete_extraction(**{field: 99.0})).spec
         assert base is not None and changed is not None
         assert base.model_dump(mode="json") != changed.model_dump(mode="json")
+
+
+# ---------------------------------------------------------------------------
+# 9. Foundation — allowable bearing is extracted when stated, never assumed
+# ---------------------------------------------------------------------------
+
+
+class TestFoundationInputs:
+    def test_stated_allowable_bearing_is_used(self):
+        spec = build_frame_spec(_complete_extraction(allowable_bearing_kpa=150.0)).spec
+        assert spec is not None
+        assert spec.foundation.allowable_bearing_kpa == 150.0
+
+    def test_stated_allowable_bearing_is_not_an_assumption(self):
+        result = build_frame_spec(_complete_extraction(allowable_bearing_kpa=150.0))
+        assert "foundation.allowable_bearing_kpa" not in {a.field for a in result.assumptions}
+
+    def test_unstated_allowable_bearing_stays_none_and_is_not_missing(self):
+        result = build_frame_spec(_complete_extraction())  # no allowable bearing
+        assert result.spec is not None
+        assert result.spec.foundation.allowable_bearing_kpa is None
+        # It is optional — its absence must NOT block the run, only skip the footing.
+        assert result.is_complete is True
+        assert "foundation.allowable_bearing_kpa" not in {a.field for a in result.assumptions}
+
+    def test_invalid_allowable_bearing_is_an_error(self):
+        result = build_frame_spec(_complete_extraction(allowable_bearing_kpa=-5.0))
+        assert result.spec is None
+        assert any("allowable_bearing_kpa" in e for e in result.errors)
+
+    def test_concrete_strength_defaults_to_25_with_assumption(self):
+        result = build_frame_spec(_complete_extraction())
+        assert result.spec is not None
+        assert result.spec.foundation.concrete_fcu_mpa == 25.0
+        fcu = next(a for a in result.assumptions if a.field == "foundation.concrete_fcu_mpa")
+        assert fcu.value == 25.0
+        assert "25" in fcu.note
+
+    def test_stated_concrete_strength_is_used_and_not_assumed(self):
+        result = build_frame_spec(_complete_extraction(concrete_fcu_mpa=30.0))
+        assert result.spec is not None
+        assert result.spec.foundation.concrete_fcu_mpa == 30.0
+        assert "foundation.concrete_fcu_mpa" not in {a.field for a in result.assumptions}
+
+    def test_extraction_schema_exposes_foundation_fields(self):
+        # The OpenAI Structured-Outputs schema must include these or the model
+        # can never extract them (the bug this fixes).
+        fields = FrameSpecExtraction.model_fields
+        assert "allowable_bearing_kpa" in fields
+        assert "concrete_fcu_mpa" in fields
