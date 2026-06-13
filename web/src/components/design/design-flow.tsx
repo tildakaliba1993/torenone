@@ -4,19 +4,23 @@ import { useState } from "react";
 
 import Link from "next/link";
 
+import { StatusBadge } from "@/components/status-badge";
+import { DescribeStep } from "@/components/design/describe-step";
+import { ReviewStep } from "@/components/design/review-step";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DescribeStep } from "@/components/design/describe-step";
-import { type FrameSpec, type ParseAssumption } from "@/lib/api/service";
+import { type DesignResponse, type FrameSpec } from "@/lib/api/service";
 
 /**
- * Multi-step design flow (Task 6.4 builds the Describe step; the Review/Run
- * step and Results step land in Tasks 6.5/6.6). The parsed spec is held in
- * client state and handed forward through the steps.
+ * Multi-step design flow (Task 6.4 Describe → Task 6.5 Review/Run → Task 6.6
+ * Results). The parsed spec and design result are held in client state and
+ * handed forward through the steps.
  */
-export function DesignFlow({ projectName }: { projectId: string; projectName: string }) {
+export function DesignFlow({ projectId, projectName }: { projectId: string; projectName: string }) {
   const [spec, setSpec] = useState<FrameSpec | null>(null);
-  const [assumptions, setAssumptions] = useState<ParseAssumption[]>([]);
+  const [result, setResult] = useState<DesignResponse | null>(null);
+
+  const step: "describe" | "review" | "results" = result ? "results" : spec ? "review" : "describe";
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 py-10">
@@ -25,86 +29,79 @@ export function DesignFlow({ projectName }: { projectId: string; projectName: st
           ← Projects
         </Link>
         <h1 className="text-2xl font-semibold tracking-tight">New design</h1>
-        <p className="text-sm text-muted">{projectName}</p>
+        <p className="text-sm text-muted">
+          {projectName} · {step === "describe" ? "Describe" : step === "review" ? "Review & run" : "Results"}
+        </p>
       </header>
 
-      {spec === null ? (
-        <DescribeStep
-          onComplete={(result) => {
-            setSpec(result.spec);
-            setAssumptions(result.assumptions);
-          }}
-        />
-      ) : (
-        <ReviewPreview
+      {step === "describe" ? (
+        <DescribeStep onComplete={(res) => setSpec(res.spec)} />
+      ) : null}
+
+      {step === "review" && spec ? (
+        <ReviewStep
           spec={spec}
-          assumptions={assumptions}
-          onBack={() => {
+          projectId={projectId}
+          onComplete={setResult}
+          onBack={() => setSpec(null)}
+        />
+      ) : null}
+
+      {step === "results" && result ? (
+        <ResultsPreview
+          result={result}
+          onRestart={() => {
+            setResult(null);
             setSpec(null);
-            setAssumptions([]);
           }}
         />
-      )}
+      ) : null}
     </main>
   );
 }
 
-function ReviewPreview({
-  spec,
-  assumptions,
-  onBack,
+function ResultsPreview({
+  result,
+  onRestart,
 }: {
-  spec: FrameSpec;
-  assumptions: ParseAssumption[];
-  onBack: () => void;
+  result: DesignResponse;
+  onRestart: () => void;
 }) {
-  const g = spec.geometry;
+  const { result: design, report } = result;
   return (
     <div className="flex flex-col gap-4">
       <Card>
         <CardHeader>
-          <CardTitle>We understood your frame</CardTitle>
+          <CardTitle>Design complete</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4 text-sm">
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <Row label="Span" value={`${g.span_m} m`} />
-            <Row label="Eaves height" value={`${g.eaves_height_m} m`} />
-            <Row label="Roof pitch" value={`${g.roof_pitch_deg}°`} />
-            <Row label="Bay spacing" value={`${g.bay_spacing_m} m`} />
-            <Row label="Number of bays" value={String(g.number_of_bays)} />
-          </dl>
-          {assumptions.length > 0 ? (
-            <div className="flex flex-col gap-1">
-              <p className="font-medium text-foreground">Assumptions we made</p>
-              <ul className="flex flex-col gap-1 text-muted">
-                {assumptions.map((a, i) => (
-                  <li key={i}>• {a.note}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
+        <CardContent className="flex flex-col gap-3 text-sm">
+          <div className="flex items-center gap-3">
+            <StatusBadge status={design.passed ? "pass" : "fail"}>
+              {design.passed ? "All checks pass" : "Some checks fail"}
+            </StatusBadge>
+            {typeof design.governing_utilisation === "number" ? (
+              <span className="font-mono text-muted">
+                governing {design.governing_utilisation.toFixed(2)}
+              </span>
+            ) : null}
+          </div>
+          <p className="text-muted">
+            A calc-package PDF was generated and stored (report {report.report_id.slice(0, 8)}…).
+          </p>
         </CardContent>
       </Card>
 
       <div className="rounded-md border border-dashed border-border-strong p-4 text-sm text-muted">
-        Editable spec review &amp; <span className="font-medium text-foreground">Run design</span>{" "}
-        arrive in the next step.
+        The full results screen — utilisation tables for members, connections, baseplates &amp;
+        footing, plus <span className="font-medium text-foreground">Download calc package (PDF)</span>{" "}
+        — arrives in the next step.
       </div>
 
       <div>
-        <Button variant="secondary" onClick={onBack}>
-          Back to description
+        <Button variant="secondary" onClick={onRestart}>
+          Start another design
         </Button>
       </div>
     </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <>
-      <dt className="text-muted">{label}</dt>
-      <dd className="text-right font-mono">{value}</dd>
-    </>
   );
 }

@@ -25,6 +25,8 @@ const completeResult: ParseResponse = {
       bay_spacing_m: 6,
       number_of_bays: 5,
     },
+    dead: { roof_kpa: 0.15, services_kpa: 0, wall_cladding_kpa: 0 },
+    wind: { basic_wind_speed_ms: 36, terrain_category: "B", site_altitude_m: 0, has_dominant_opening: false },
   },
   assumptions: [],
   questions: [],

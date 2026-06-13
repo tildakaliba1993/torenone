@@ -32,9 +32,26 @@ export interface FrameGeometry {
   building_length_m?: number;
 }
 
+export type TerrainCategory = "A" | "B" | "C" | "D";
+export type SteelGrade = "S275JR" | "S355JR";
+
 export interface FrameSpec {
   geometry: FrameGeometry;
-  [key: string]: unknown;
+  materials?: { steel_grade: SteelGrade };
+  base_fixity?: "pinned" | "fixed";
+  restraints?: {
+    rafter_restraint_spacing_m: number | null;
+    column_restraint_spacing_m: number | null;
+  };
+  dead: { roof_kpa: number; services_kpa: number; wall_cladding_kpa: number };
+  imposed?: { roof_access: boolean };
+  wind: {
+    basic_wind_speed_ms: number;
+    terrain_category: TerrainCategory;
+    site_altitude_m: number;
+    has_dominant_opening: boolean;
+  };
+  foundation?: { allowable_bearing_kpa: number | null; concrete_fcu_mpa: number };
 }
 
 export interface ParseResponse {
@@ -91,4 +108,78 @@ export async function parseDescription(description: string): Promise<ParseRespon
   }
 
   return (await res.json()) as ParseResponse;
+}
+
+// ---------------------------------------------------------------------------
+// /design
+// ---------------------------------------------------------------------------
+
+export interface SectionChoice {
+  member: string;
+  designation: string;
+}
+
+export interface DesignRequest {
+  spec: FrameSpec;
+  mode: "design" | "check";
+  sections?: SectionChoice[] | null;
+  cost_rate_zar_per_kg?: number | null;
+  project_id?: string | null;
+}
+
+export interface StoredReport {
+  run_id: string;
+  report_id: string;
+  storage_path: string;
+  content_type: string;
+  size_bytes: number;
+}
+
+/** Minimal shape used by Task 6.5; the full result is rendered in Task 6.6. */
+export interface DesignResult {
+  passed: boolean;
+  governing_utilisation?: number;
+  [key: string]: unknown;
+}
+
+export interface DesignResponse {
+  result: DesignResult;
+  report: StoredReport;
+}
+
+export async function runDesign(request: DesignRequest): Promise<DesignResponse> {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) {
+    throw new ServiceError("Your session has expired — please sign in again.");
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${serviceBaseUrl()}/design`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(request),
+    });
+  } catch {
+    throw new ServiceError("Couldn’t reach the engineering service. Is it running?");
+  }
+
+  if (!res.ok) {
+    let detail = `The design run failed (${res.status}).`;
+    try {
+      const body = (await res.json()) as { detail?: unknown };
+      if (body?.detail) detail = String(body.detail);
+    } catch {
+      // non-JSON error body — keep the status-based message
+    }
+    throw new ServiceError(detail);
+  }
+
+  return (await res.json()) as DesignResponse;
 }
