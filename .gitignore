@@ -34,3 +34,6 @@ standards/*.PDF
 .idea/
 .vscode/
 *.swp
+
+# Agent runtime state (worktrees, locks)
+.claude/
