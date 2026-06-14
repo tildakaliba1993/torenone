@@ -19,8 +19,6 @@ Assumptions (surfaced in the report's assumptions block, FR-27):
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
-
 from torenone_kernel.loads.wind import air_density, peak_velocity_pressure_kpa, peak_wind_speed
 from torenone_kernel.loads.wind_pressure import (
     dominant_opening_internal_pressure,
@@ -29,36 +27,7 @@ from torenone_kernel.loads.wind_pressure import (
     wall_pressure_coefficients,
 )
 from torenone_kernel.models.frame_spec import FrameSpec
-
-_STRICT = ConfigDict(frozen=True, extra="forbid")
-
-
-class WindLoadCase(BaseModel):
-    """One wind load case: member UDLs + the net coefficients used (for the audit view)."""
-
-    model_config = _STRICT
-    name: str = Field(min_length=1)
-    cpi: float
-    # net pressure coefficients (cpe − cpi) per surface
-    net_cp_windward_wall: float
-    net_cp_leeward_wall: float
-    net_cp_windward_roof: float
-    net_cp_leeward_roof: float
-    # member UDLs (kN/m). Columns: horizontal, +ve = pressure inward. Rafters: normal to the roof,
-    # +ve = pressure onto the roof (downward-normal), −ve = uplift.
-    windward_column_udl_kn_per_m: float
-    leeward_column_udl_kn_per_m: float
-    windward_rafter_udl_kn_per_m: float
-    leeward_rafter_udl_kn_per_m: float
-
-
-class WindLoadResult(BaseModel):
-    model_config = _STRICT
-    peak_velocity_pressure_kpa: float = Field(ge=0)
-    reference_height_m: float = Field(gt=0)
-    scenario: str = Field(min_length=1)
-    cases: tuple[WindLoadCase, ...] = Field(min_length=1)
-    clause: str = Field(min_length=1)
+from torenone_kernel.models.results import WindLoadCase, WindLoadResult
 
 
 def wind_loads(spec: FrameSpec) -> WindLoadResult:

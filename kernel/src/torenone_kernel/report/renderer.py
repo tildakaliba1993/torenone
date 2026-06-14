@@ -362,6 +362,8 @@ def render_html(result: DesignResult) -> str:
         "connections": result.connections,
         "baseplate": result.baseplate,
         "footing": result.footing,
+        # Characteristic wind actions per SANS 10160-3 (qp, net coefficients, member loads)
+        "wind_actions": result.wind,
         "total_steel_tonnes": result.total_steel_tonnes,
         "foundation_allowable_bearing_kpa": result.frame_spec.foundation.allowable_bearing_kpa,
         "member_util": member_util,

@@ -244,6 +244,40 @@ class SwaySensitivityResult(BaseModel):
     )
 
 
+class WindLoadCase(BaseModel):
+    """One wind load case: member UDLs + the net coefficients used (for the audit view).
+
+    Computed by torenone_kernel.loads.wind_loads (SANS 10160-3). Lives here in the models
+    layer so DesignResult can carry it without a loads→models→loads import cycle.
+    """
+
+    model_config = _STRICT
+    name: str = Field(min_length=1)
+    cpi: float
+    # net pressure coefficients (cpe − cpi) per surface
+    net_cp_windward_wall: float
+    net_cp_leeward_wall: float
+    net_cp_windward_roof: float
+    net_cp_leeward_roof: float
+    # member UDLs (kN/m). Columns: horizontal, +ve = pressure inward. Rafters: normal to the roof,
+    # +ve = pressure onto the roof (downward-normal), −ve = uplift.
+    windward_column_udl_kn_per_m: float
+    leeward_column_udl_kn_per_m: float
+    windward_rafter_udl_kn_per_m: float
+    leeward_rafter_udl_kn_per_m: float
+
+
+class WindLoadResult(BaseModel):
+    """Characteristic wind actions for the frame (SANS 10160-3): qp + per-case net loads."""
+
+    model_config = _STRICT
+    peak_velocity_pressure_kpa: float = Field(ge=0)
+    reference_height_m: float = Field(gt=0)
+    scenario: str = Field(min_length=1)
+    cases: tuple[WindLoadCase, ...] = Field(min_length=1)
+    clause: str = Field(min_length=1)
+
+
 class DesignResult(BaseModel):
     """The full output of a design run: input echo, chosen sections, checks, audit metadata."""
 
@@ -276,6 +310,11 @@ class DesignResult(BaseModel):
     connections: tuple[ConnectionDesignResult, ...] = ()
     baseplate: BaseplateDesignResult | None = None
     footing: PadFootingDesignResult | None = None
+    # Characteristic wind actions per SANS 10160-3 (peak velocity pressure + the net
+    # pressure coefficients and member line loads for each wind load case). Computed and
+    # reported for transparency; the wind-combination *frame analysis* (member forces under
+    # ULS-2/3) is a separate step — see the `warnings`.
+    wind: WindLoadResult | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property

@@ -49,6 +49,7 @@ from torenone_kernel.loads.combinations import (
 )
 from torenone_kernel.loads.dead import dead_loads
 from torenone_kernel.loads.imposed import imposed_roof_loads
+from torenone_kernel.loads.wind_loads import wind_loads
 from torenone_kernel.models.frame_spec import FrameSpec
 from torenone_kernel.models.results import (
     BaseplateDesignResult,
@@ -313,9 +314,11 @@ def design(spec: FrameSpec, cost_rate_zar_per_kg: float = DEFAULT_COST_RATE_ZAR_
         "Effective length factors K=1.0 assumed for both rafter and column (PROVISIONAL). "
         "For sway portal frames with pinned bases, cl. 8.6 or rational analysis may require "
         "K > 1.0 for columns. Engineer must verify.",
-        "ULS wind combinations (ULS-2, ULS-3) and SLS wind sway (SLS-2) NOT checked in this "
-        "run — wind analysis requires horizontal frame loading which the current model does "
-        "not include. Engineer must check wind effects independently.",
+        "Characteristic wind actions (peak velocity pressure qp, net pressure coefficients, "
+        "member line loads) are computed and tabulated per SANS 10160-3. However the wind "
+        "LOAD-COMBINATION frame analysis (member forces under ULS-2, ULS-3, SLS-2) is NOT run "
+        "— members are sized on the gravity combination (ULS-1) only. Engineer must check wind "
+        "effects on the frame independently.",
         "Vertical deflection computed by first-order linear elastic FEA (PyNite) under "
         "SLS-1 gravity combination. Second-order deflection amplification not included; "
         "for sway-sensitive frames engineer should verify amplified deflections.",
@@ -345,6 +348,7 @@ def design(spec: FrameSpec, cost_rate_zar_per_kg: float = DEFAULT_COST_RATE_ZAR_
         connections=connections,
         baseplate=baseplate,
         footing=footing,
+        wind=wind_loads(spec),
     )
 
 
@@ -512,7 +516,9 @@ def check(
         "check() mode: sections were supplied by the engineer — no auto-sizing performed.",
         "Effective length factors K=1.0 assumed (PROVISIONAL). Engineer must verify per "
         "SANS 10162-1 cl. 8.6 for sway frames.",
-        "ULS wind combinations (ULS-2, ULS-3) not checked — engineer must verify independently.",
+        "Characteristic wind actions (qp, net pressure coefficients, member line loads) are "
+        "computed and tabulated per SANS 10160-3, but the wind LOAD-COMBINATION frame analysis "
+        "(ULS-2, ULS-3, SLS-2) is NOT run — engineer must verify wind effects independently.",
     ]
     if _sway_sensitive:
         warnings.append(
@@ -536,6 +542,7 @@ def check(
         connections=connections,
         baseplate=baseplate,
         footing=footing,
+        wind=wind_loads(spec),
     )
 
 

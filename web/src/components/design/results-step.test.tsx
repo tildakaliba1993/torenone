@@ -54,6 +54,26 @@ const RESP: DesignResponse = {
       checks: [],
     },
     footing: null,
+    wind: {
+      peak_velocity_pressure_kpa: 0.72,
+      reference_height_m: 7.74,
+      scenario: "enclosed building (no dominant opening)",
+      clause: "SANS 10160-3:2019 cl. 7–8 — net = qp·(cpe − cpi)",
+      cases: [
+        {
+          name: "cpi=+0.20, roof suction (uplift)",
+          cpi: 0.2,
+          net_cp_windward_wall: 0.6,
+          net_cp_leeward_wall: -0.5,
+          net_cp_windward_roof: -1.0,
+          net_cp_leeward_roof: -0.8,
+          windward_column_udl_kn_per_m: 2.6,
+          leeward_column_udl_kn_per_m: -2.2,
+          windward_rafter_udl_kn_per_m: -4.3,
+          leeward_rafter_udl_kn_per_m: -3.5,
+        },
+      ],
+    },
     passed: false,
     governing_utilisation: 1.14,
   },
@@ -87,6 +107,13 @@ describe("ResultsStep", () => {
     expect(screen.getByText("Rafter bending")).toBeTruthy();
     expect(screen.getByText("SANS 10162-1 13.6")).toBeTruthy();
     expect(screen.getByText("0.78")).toBeTruthy();
+  });
+
+  it("renders the wind actions (qp + load cases)", () => {
+    render(<ResultsStep result={RESP} onRestart={vi.fn()} />);
+    expect(screen.getByText("Wind actions — SANS 10160-3")).toBeTruthy();
+    expect(screen.getByText("0.720 kPa")).toBeTruthy();
+    expect(screen.getByText(/roof suction \(uplift\)/i)).toBeTruthy();
   });
 
   it("renders connection and baseplate detail blocks", () => {

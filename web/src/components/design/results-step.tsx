@@ -127,6 +127,51 @@ export function ResultsStep({
         </CardContent>
       </Card>
 
+      {design.wind ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Wind actions — SANS 10160-3</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 text-sm">
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3">
+              <Stat
+                label="Peak velocity pressure qp"
+                value={`${design.wind.peak_velocity_pressure_kpa.toFixed(3)} kPa`}
+                mono
+              />
+              <Stat label="Reference height" value={`${design.wind.reference_height_m.toFixed(2)} m`} mono />
+              <Stat label="Scenario" value={design.wind.scenario} />
+            </dl>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Load case</TableHead>
+                  <TableHead>Col W</TableHead>
+                  <TableHead>Col L</TableHead>
+                  <TableHead>Raf W</TableHead>
+                  <TableHead>Raf L</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {design.wind.cases.map((c, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="text-muted">{c.name}</TableCell>
+                    <TableCell className="font-mono">{c.windward_column_udl_kn_per_m.toFixed(2)}</TableCell>
+                    <TableCell className="font-mono">{c.leeward_column_udl_kn_per_m.toFixed(2)}</TableCell>
+                    <TableCell className="font-mono">{c.windward_rafter_udl_kn_per_m.toFixed(2)}</TableCell>
+                    <TableCell className="font-mono">{c.leeward_rafter_udl_kn_per_m.toFixed(2)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <p className="text-xs text-subtle">
+              Member line loads (kN/m). Columns: horizontal, +ve = inward; rafters: normal to roof,
+              −ve = uplift. The wind load-combination frame analysis isn’t run yet — see Notes.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {design.connections.length > 0 ? (
         <Card>
           <CardHeader>

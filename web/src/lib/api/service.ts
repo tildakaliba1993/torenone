@@ -171,10 +171,32 @@ export interface PadFootingDesignResult {
   checks: CheckResult[];
 }
 
+export interface WindLoadCase {
+  name: string;
+  cpi: number;
+  net_cp_windward_wall: number;
+  net_cp_leeward_wall: number;
+  net_cp_windward_roof: number;
+  net_cp_leeward_roof: number;
+  windward_column_udl_kn_per_m: number;
+  leeward_column_udl_kn_per_m: number;
+  windward_rafter_udl_kn_per_m: number;
+  leeward_rafter_udl_kn_per_m: number;
+}
+
+export interface WindLoadResult {
+  peak_velocity_pressure_kpa: number;
+  reference_height_m: number;
+  scenario: string;
+  cases: WindLoadCase[];
+  clause: string;
+}
+
 export interface DesignResult {
   frame_spec: FrameSpec;
   sections: SectionChoice[];
   checks: CheckResult[];
+  wind?: WindLoadResult | null;
   rules_version: Record<string, string>;
   warnings: string[];
   total_steel_mass_kg: number | null;

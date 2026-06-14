@@ -558,8 +558,57 @@
   </tr>
 </table>
 
-<!-- 11.2 Factored ULS-1 Loads -->
-<h3>11.2 Factored Loads — {{ uls1_name }} ({{ combo_clause }})</h3>
+{% if wind_actions %}
+<!-- 11.2 Characteristic Wind Actions -->
+<h3>11.2 Characteristic Wind Actions — SANS 10160-3:2019</h3>
+<p style="font-size:8.5pt; color:var(--color-muted); margin-bottom:4pt;">
+  Transverse wind (&theta; = 0&deg;), {{ wind_actions.scenario }}. Reference height
+  z<sub>e</sub> = {{ "%.2f"|format(wind_actions.reference_height_m) }} m.
+</p>
+<table>
+  <tr><th style="width:40%">Quantity</th><th class="num">Value</th><th>Source</th></tr>
+  <tr>
+    <td>Peak velocity pressure q<sub>p</sub></td>
+    <td class="num">{{ "%.3f"|format(wind_actions.peak_velocity_pressure_kpa) }} kPa</td>
+    <td style="font-size:8pt;">SANS 10160-3 cl. 7</td>
+  </tr>
+</table>
+<p style="font-size:8.5pt; margin:6pt 0 2pt;">
+  Net pressure coefficients (c<sub>pe</sub> &minus; c<sub>pi</sub>) and member line loads
+  (n = q<sub>p</sub>&middot;(c<sub>pe</sub>&minus;c<sub>pi</sub>)&middot;bay) per load case:
+</p>
+<table>
+  <tr>
+    <th>Wind load case</th>
+    <th class="num">Wall&nbsp;W</th><th class="num">Wall&nbsp;L</th>
+    <th class="num">Roof&nbsp;W</th><th class="num">Roof&nbsp;L</th>
+    <th class="num">Col&nbsp;W</th><th class="num">Col&nbsp;L</th>
+    <th class="num">Raf&nbsp;W</th><th class="num">Raf&nbsp;L</th>
+  </tr>
+  {% for c in wind_actions.cases %}
+  <tr>
+    <td style="font-size:8pt;">{{ c.name }}</td>
+    <td class="num">{{ "%.2f"|format(c.net_cp_windward_wall) }}</td>
+    <td class="num">{{ "%.2f"|format(c.net_cp_leeward_wall) }}</td>
+    <td class="num">{{ "%.2f"|format(c.net_cp_windward_roof) }}</td>
+    <td class="num">{{ "%.2f"|format(c.net_cp_leeward_roof) }}</td>
+    <td class="num">{{ "%.2f"|format(c.windward_column_udl_kn_per_m) }}</td>
+    <td class="num">{{ "%.2f"|format(c.leeward_column_udl_kn_per_m) }}</td>
+    <td class="num">{{ "%.2f"|format(c.windward_rafter_udl_kn_per_m) }}</td>
+    <td class="num">{{ "%.2f"|format(c.leeward_rafter_udl_kn_per_m) }}</td>
+  </tr>
+  {% endfor %}
+</table>
+<p style="font-size:8pt; color:var(--color-muted); margin-top:3pt;">
+  {{ wind_actions.clause }}. Coefficients are c<sub>pe</sub>&minus;c<sub>pi</sub>; line loads in
+  kN/m. Columns: horizontal, +ve = inward pressure. Rafters: normal to roof, &minus;ve = uplift.
+  <strong>These wind actions are tabulated for transparency; the wind load-combination frame
+  analysis (ULS-2/3, SLS-2) is not yet run &mdash; see &sect;1 Assumptions &amp; Limitations.</strong>
+</p>
+{% endif %}
+
+<!-- 11.3 Factored ULS-1 Loads -->
+<h3>11.3 Factored Loads — {{ uls1_name }} ({{ combo_clause }})</h3>
 <table>
   <tr><th style="width:30%">Component</th><th>Characteristic (kN/m)</th>
       <th>&gamma; factor</th><th class="num">Factored (kN/m)</th></tr>
@@ -588,8 +637,8 @@
   </tr>
 </table>
 
-<!-- 11.3 Governing Analysis Forces -->
-<h3>11.3 Governing Analysis Forces — {{ uls1_name }}</h3>
+<!-- 11.4 Governing Analysis Forces -->
+<h3>11.4 Governing Analysis Forces — {{ uls1_name }}</h3>
 <p style="font-size:8.5pt; color:var(--color-muted); margin-bottom:4pt;">
   First-order elastic plane-frame analysis (PyNiteFEA). Forces at key structural locations.
 </p>
@@ -618,7 +667,7 @@
 
 <!-- 11.4 Member Capacity Working -->
 {% for mw in member_workings %}
-<h3>11.{{ loop.index + 3 }} {{ mw.member | capitalize }} Capacity — {{ mw.designation }}</h3>
+<h3>11.{{ loop.index + 4 }} {{ mw.member | capitalize }} Capacity — {{ mw.designation }}</h3>
 
 <h4 style="font-size:9pt; color:var(--color-brand-light); margin: 6pt 0 3pt;">Section Properties</h4>
 <table>
