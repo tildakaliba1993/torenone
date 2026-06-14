@@ -37,10 +37,10 @@ jobs:
       - name: Type-check (kernel + service)
         run: mypy kernel/src tools service/src
       - name: Tests + coverage gate
-        # Kernel coverage gate ramps to 95% as Phase 1 lands (PRD NFR-7).
+        # Kernel coverage gate enforced at 95% (PRD NFR-7); currently ~98%.
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
-        run: pytest --cov=torenone_kernel --cov-report=term-missing --cov-fail-under=0
+        run: pytest --cov=torenone_kernel --cov-report=term-missing --cov-fail-under=95
 
   docker:
     name: Docker image (build + health smoke)

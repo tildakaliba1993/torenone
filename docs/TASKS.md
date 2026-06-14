@@ -240,12 +240,12 @@
 ## Phase 8 — Validation gate & hardening
 *Goal: prove correctness against reality and lock quality before any customer touches it.*
 
-- [ ] **8.1 Benchmark project** — co-founder selects the most typical past portal frame; capture its inputs + original results.
-- [ ] **8.2 Validation test** — run benchmark through TorenOne; assert member sizes + utilisations match the original within agreed tolerances (PRD NFR-1). **THE gate — must pass.**
-- [ ] **8.3 Worked-example regression suite** — published worked examples as permanent regression tests across loads/analysis/checks.
-- [ ] **8.4 Coverage & review** — kernel ≥95%; co-founder reviews every formula + clause mapping.
-- [ ] **8.5 Security pass** — secrets server-side only; RLS verified; dependency audit.
-- [ ] **8.6 Honest-limitations audit** — every out-of-scope/approximation is stated in the report, never hidden.
+- [ ] **8.1 Benchmark project** — 🧑‍🔧 **CO-FOUNDER REQUIRED:** selects the most typical past portal frame; capture its inputs + original results. *(Cannot be done without the domain expert + real past-project data.)*
+- [ ] **8.2 Validation test** — 🧑‍🔧 **CO-FOUNDER REQUIRED (needs 8.1):** run benchmark through TorenOne; assert member sizes + utilisations match the original within agreed tolerances (PRD NFR-1). **THE gate — must pass.**
+- [ ] **8.3 Worked-example regression suite** — 🧑‍🔧 **CO-FOUNDER REQUIRED:** published worked examples (with verified answers) as permanent regression tests across loads/analysis/checks.
+- [~] **8.4 Coverage & review** — **Coverage ✅:** kernel at **98%** (≥95% NFR-7); CI gate raised from 0 → **`--cov-fail-under=95`** to enforce it. 🧑‍🔧 **Co-founder still owes:** review of every formula + clause mapping.
+- [x] **8.5 Security pass** — **Secrets:** server-side only — `web/src` references only the 3 safe public vars (`NEXT_PUBLIC_SUPABASE_URL/ANON_KEY`, service URL); no service-role key, JWT secret, DB URL or OpenAI key reaches the client. **Deps:** **web production surface = 0 vulnerabilities** (added a `postcss ^8.5.15` override clearing Next's transitive `postcss 8.4.31` CSS-stringify advisory; build + 64 tests still green); **Python deps = 0** (pip-audit). Remaining web audit findings are **dev-only** (esbuild dev-server advisory via vitest/vite) with **no production exposure** — accepted. **RLS:** default-deny + per-firm policies (Task 5.4), behavioural isolation test in CI (Postgres service) + verified live via the 7.3 E2E. **Auth:** ES256/JWKS verification + origin-scoped CORS. **AuthConfig redacts the secret in reprs.**
+- [~] **8.6 Honest-limitations audit** — **Mechanism ✅:** the kernel (`design.py`) emits explicit warnings — K=1.0 effective length (PROVISIONAL), ULS wind combinations NOT checked, second-order deflection amplification not included, pad footing NOT designed when no allowable bearing — carried in `DesignResult.warnings` and surfaced in **both** the PDF report (`report/renderer.py` `_PROVISIONAL_WARNINGS`) **and** the results "Notes" card (verified live); PROVISIONAL code values flagged in source + SOURCES.md. 🧑‍🔧 **Co-founder still owes:** confirm the list of stated approximations is *complete*.
 
 **Acceptance:** validation gate passed; regression suite green; co-founder sign-off on correctness.
 
