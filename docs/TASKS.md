@@ -225,11 +225,13 @@
 
 - [x] **7.1 Wire frontend ↔ FastAPI ↔ Supabase ↔ kernel** end-to-end. Verified live this session: browser → **CORS** → **ES256/JWKS auth** → OpenAI `/parse` → kernel `/design` → **PDF → Supabase Storage** → **RLS**-scoped reads. Required three fixes (all committed, CI-green): service CORS (`98d6db1`), asymmetric-JWT verification (`c12d434`), and foundation parsing (`784babf`). The FastAPI service runs locally on :8000 (see memory: *run-engineering-service-locally*).
 - [x] **7.2 E2E happy path (Playwright)** — `web/e2e/happy-path.spec.ts` (+ `support.ts`): real Supabase auth + RLS + **real `/design`** (kernel + PDF + Storage); only the non-deterministic OpenAI `/parse` is mocked via route interception (deterministic + free). Drives sign in → create project → describe → confirm (trust gate) → run → **Results within the 60s NFR (folds in 7.5)** → back to project → run visible in **history with a downloadable PDF**. Gated on `E2E_EMAIL`/`E2E_PASSWORD` (seeded user) so CI stays green until secrets + a running service are wired. **Caught + fixed a real bug:** the project run-history showed a *stale (empty)* list after a run — Next's client Router Cache wasn't invalidated (the run is persisted by the external service, not a Next action); fixed with `router.refresh()` on design-complete in `design-flow.tsx`. **Verified locally: passes (27.6s).** *(Remaining: 7.3 multi-tenant, 7.4 error paths, 7.5 explicit perf assert already covered, and wiring the E2E job into CI — needs Supabase public env + the service running in CI + the E2E creds secret.)*
-- [ ] **7.3 E2E multi-tenant** — second firm cannot see first firm's data. **Test.**
-- [ ] **7.4 E2E error paths** — invalid input, out-of-scope request, auth failure handled gracefully. **Test.**
-- [ ] **7.5 Performance check** — design run < 60s on the demo case (NFR-5). **Test.**
+- [x] **7.3 E2E multi-tenant** — `web/e2e/multi-tenant.spec.ts`: firm A (seeded user) creates a project; firm B (a brand-new sign-up) then **cannot see it in their list** and **cannot open its URL** (RLS → "Project not found"). Real RLS isolation across two firms. Passes locally.
+- [x] **7.4 E2E error paths** — `web/e2e/error-paths.spec.ts`: unauthenticated visit to a protected route **redirects to `/login`**; empty input keeps **Parse disabled** (no silent no-op); an **out-of-scope** description (mocked `/parse`) shows the scope note instead of crashing. Passes locally.
+- [x] **7.5 Performance check** — the design run < 60s NFR (NFR-5) is asserted inside the happy-path E2E (7.2): `expect(Date.now() - startedAt).toBeLessThan(60_000)`. Real runs land in ~15–20s.
 
-**Acceptance:** green E2E suite covering happy path, isolation, errors, performance.
+**E2E config:** `playwright.config.ts` set to **serial (`workers: 1`)** — the suite mutates shared real backend state (one Supabase test user + real data) and sign-out revokes that user's tokens, so parallel runs invalidate each other's sessions. **Full suite (6 tests: smoke + happy + multi-tenant + 3 error paths) passes locally in ~51s** with `E2E_EMAIL`/`E2E_PASSWORD` set and the engineering service running.
+
+**Acceptance:** ✅ E2E suite covers happy path, isolation, errors, performance — **green locally**. *Remaining for full CI acceptance: wire an E2E job into CI (install the Playwright browser, provide Supabase public env + the seeded-user secret, and run the engineering service in CI) — a deliberate infra step needing repo secrets.*
 
 ---
 

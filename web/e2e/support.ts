@@ -54,6 +54,17 @@ export async function mockParse(page: Page, body: unknown = COMPLETE_PARSE): Pro
   });
 }
 
+/** An out-of-scope /parse result (e.g. the user described a non-portal-frame structure). */
+export const OUT_OF_SCOPE_PARSE = {
+  status: "out_of_scope",
+  spec: null,
+  assumptions: [],
+  questions: [],
+  missing: [],
+  errors: [],
+  scope_note: "TorenOne designs single-bay steel portal frames, not multi-storey concrete buildings.",
+};
+
 /** Sign in through the real login form (real Supabase auth). */
 export async function signIn(
   page: Page,
@@ -64,4 +75,32 @@ export async function signIn(
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: /^sign in$/i }).click();
+}
+
+/** Sign up a brand-new firm/user (email confirmation must be off for the flow to land). */
+export async function signUp(
+  page: Page,
+  { email, password, firmName }: { email: string; password: string; firmName: string },
+): Promise<void> {
+  await page.goto("/signup");
+  await page.getByLabel("Firm name").fill(firmName);
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: /create account/i }).click();
+}
+
+/** Sign out via the nav (server action) and wait for the login screen. */
+export async function signOut(page: Page): Promise<void> {
+  await page.getByRole("button", { name: /sign out/i }).click();
+  await page.waitForURL(/\/login/);
+}
+
+/** Create a project from the projects list (assumes already signed in + on /projects). */
+export async function createProject(page: Page, name: string): Promise<void> {
+  await page
+    .getByRole("button", { name: /new project|create your first project/i })
+    .first()
+    .click();
+  await page.getByLabel("Project name").fill(name);
+  await page.getByRole("button", { name: /^create project$/i }).click();
 }
