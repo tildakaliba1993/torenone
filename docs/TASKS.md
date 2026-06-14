@@ -231,7 +231,9 @@
 
 **E2E config:** `playwright.config.ts` set to **serial (`workers: 1`)** — the suite mutates shared real backend state (one Supabase test user + real data) and sign-out revokes that user's tokens, so parallel runs invalidate each other's sessions. **Full suite (6 tests: smoke + happy + multi-tenant + 3 error paths) passes locally in ~51s** with `E2E_EMAIL`/`E2E_PASSWORD` set and the engineering service running.
 
-**Acceptance:** ✅ E2E suite covers happy path, isolation, errors, performance — **green locally**. *Remaining for full CI acceptance: wire an E2E job into CI (install the Playwright browser, provide Supabase public env + the seeded-user secret, and run the engineering service in CI) — a deliberate infra step needing repo secrets.*
+**CI:** a `web-e2e` job (`.github/workflows/ci.yml`) is wired — builds the service Docker image (kernel + PDF via the `[pdf]` extra/pango), runs it on :8000 with the Supabase secrets + `CORS_ALLOW_ORIGINS`, installs the Playwright browser, and runs `npm run e2e` against the real stack. It is **opt-in** (`if: vars.RUN_E2E == 'true'`) so it stays skipped (CI green) until enabled — to avoid writing to the hosted project on every push. **To activate:** set repo variable `RUN_E2E=true` and the secrets `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `E2E_EMAIL`, `E2E_PASSWORD` (a pre-seeded user; email confirmation off) — **ideally pointed at a separate Supabase test project, not production.**
+
+**Acceptance:** ✅ E2E suite covers happy path, isolation, errors, performance — **green locally**, and **CI-wired (opt-in)**. Flip `RUN_E2E=true` + add secrets to run it automatically.
 
 ---
 

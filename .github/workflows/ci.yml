@@ -87,4 +87,70 @@ jobs:
       - run: npm run typecheck
       - run: npm run test
       - run: npm run build
-      # Playwright E2E runs from Phase 7 (needs browser binaries: npx playwright install --with-deps).
+
+  web-e2e:
+    name: Web E2E (Playwright)
+    runs-on: ubuntu-latest
+    # OPT-IN. The suite signs in to the real Supabase project and writes real data
+    # (projects, runs, a fresh firm-B user per run), so it is OFF by default to keep
+    # CI green and avoid polluting the hosted project. Enable by setting the repo
+    # variable RUN_E2E=true and the secrets below — ideally pointed at a SEPARATE
+    # Supabase test project, not production.
+    #   Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_DB_URL,
+    #            NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    #            E2E_EMAIL, E2E_PASSWORD (a pre-seeded user; email confirmation off).
+    if: vars.RUN_E2E == 'true'
+    steps:
+      - uses: actions/checkout@v5
+      # The engineering service serves /design (kernel + PDF). /parse is mocked in
+      # the browser, so no OpenAI key is needed here.
+      - name: Build service image
+        run: docker build -t torenone-service:ci .
+      - name: Run service
+        run: |
+          docker run -d --name torenone -p 8000:8000 \
+            -e SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            -e SUPABASE_SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -e SUPABASE_DB_URL="${{ secrets.SUPABASE_DB_URL }}" \
+            -e CORS_ALLOW_ORIGINS="http://localhost:3000" \
+            torenone-service:ci
+      - name: Wait for service health
+        run: |
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8000/health && break
+            sleep 2
+          done
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+      - name: Install web deps
+        working-directory: web
+        run: npm ci
+      - name: Install Playwright browser
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+      - name: Run E2E
+        working-directory: web
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_ENGINEERING_SERVICE_URL: http://localhost:8000
+          E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        run: npm run e2e
+      - name: Service logs
+        if: always()
+        run: docker logs torenone || true
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: web/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Cleanup
+        if: always()
+        run: docker rm -f torenone || true
