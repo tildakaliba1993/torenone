@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { DescribeStep } from "@/components/design/describe-step";
 import { ResultsStep } from "@/components/design/results-step";
@@ -14,8 +15,17 @@ import { type DesignResponse, type FrameSpec } from "@/lib/api/service";
  * The parsed spec and design result are held in client state across steps.
  */
 export function DesignFlow({ projectId, projectName }: { projectId: string; projectName: string }) {
+  const router = useRouter();
   const [spec, setSpec] = useState<FrameSpec | null>(null);
   const [result, setResult] = useState<DesignResponse | null>(null);
+
+  // The run is persisted by the engineering service (not a Next action), so invalidate
+  // the client Router Cache once it lands — otherwise the project's run history shows
+  // a stale (empty) list when the engineer navigates back.
+  function onDesignComplete(response: DesignResponse) {
+    setResult(response);
+    router.refresh();
+  }
 
   const step: "describe" | "review" | "results" = result ? "results" : spec ? "review" : "describe";
   const stepLabel = step === "describe" ? "Describe" : step === "review" ? "Review & run" : "Results";
@@ -38,7 +48,7 @@ export function DesignFlow({ projectId, projectName }: { projectId: string; proj
         <ReviewStep
           spec={spec}
           projectId={projectId}
-          onComplete={setResult}
+          onComplete={onDesignComplete}
           onBack={() => setSpec(null)}
         />
       ) : null}

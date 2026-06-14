@@ -223,8 +223,8 @@
 ## Phase 7 — Integration & end-to-end
 *Goal: the whole happy path works in the deployed app.*
 
-- [ ] **7.1 Wire frontend ↔ FastAPI ↔ Supabase ↔ kernel** end-to-end.
-- [ ] **7.2 E2E happy path (Playwright)** — sign in → create project → describe → confirm → design → PDF stored → visible in history. **Test.**
+- [x] **7.1 Wire frontend ↔ FastAPI ↔ Supabase ↔ kernel** end-to-end. Verified live this session: browser → **CORS** → **ES256/JWKS auth** → OpenAI `/parse` → kernel `/design` → **PDF → Supabase Storage** → **RLS**-scoped reads. Required three fixes (all committed, CI-green): service CORS (`98d6db1`), asymmetric-JWT verification (`c12d434`), and foundation parsing (`784babf`). The FastAPI service runs locally on :8000 (see memory: *run-engineering-service-locally*).
+- [x] **7.2 E2E happy path (Playwright)** — `web/e2e/happy-path.spec.ts` (+ `support.ts`): real Supabase auth + RLS + **real `/design`** (kernel + PDF + Storage); only the non-deterministic OpenAI `/parse` is mocked via route interception (deterministic + free). Drives sign in → create project → describe → confirm (trust gate) → run → **Results within the 60s NFR (folds in 7.5)** → back to project → run visible in **history with a downloadable PDF**. Gated on `E2E_EMAIL`/`E2E_PASSWORD` (seeded user) so CI stays green until secrets + a running service are wired. **Caught + fixed a real bug:** the project run-history showed a *stale (empty)* list after a run — Next's client Router Cache wasn't invalidated (the run is persisted by the external service, not a Next action); fixed with `router.refresh()` on design-complete in `design-flow.tsx`. **Verified locally: passes (27.6s).** *(Remaining: 7.3 multi-tenant, 7.4 error paths, 7.5 explicit perf assert already covered, and wiring the E2E job into CI — needs Supabase public env + the service running in CI + the E2E creds secret.)*
 - [ ] **7.3 E2E multi-tenant** — second firm cannot see first firm's data. **Test.**
 - [ ] **7.4 E2E error paths** — invalid input, out-of-scope request, auth failure handled gracefully. **Test.**
 - [ ] **7.5 Performance check** — design run < 60s on the demo case (NFR-5). **Test.**
