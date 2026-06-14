@@ -13,7 +13,7 @@ from torenone_kernel.loads.wind import (
     peak_wind_speed,
     roughness_factor,
 )
-from torenone_kernel.loads.wind_loads import WindLoadCase, WindLoadResult, wind_loads
+from torenone_kernel.loads.wind_loads import wind_loads
 from torenone_kernel.loads.wind_pressure import (
     InternalPressureCoefficients,
     RoofPressureCoefficients,
@@ -23,6 +23,10 @@ from torenone_kernel.loads.wind_pressure import (
     enclosed_internal_pressure,
     wall_pressure_coefficients,
 )
+
+# WindLoadCase / WindLoadResult live in the models layer (results.py) to avoid a
+# loads -> models -> loads import cycle; re-exported here for the public loads API.
+from torenone_kernel.models.results import WindLoadCase, WindLoadResult
 
 __all__ = [
     # dead
