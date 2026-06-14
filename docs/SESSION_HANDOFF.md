@@ -1,0 +1,91 @@
+# TorenOne — session handoff (2026-06-14)
+
+Full context for continuing work in a new session. Everything below is committed to
+`main` and CI-green unless stated otherwise.
+
+## Where the project stands
+- **Phases 1–7: complete.** Kernel (SANS portal-frame design), AI parsing, FastAPI service,
+  Supabase (multi-tenant + RLS + auth + storage), full frontend (6.1–6.8), and Phase 7
+  integration + Playwright E2E (happy-path / multi-tenant / error-paths) — all done, CI-green.
+- **Phase 8: partially done.** 8.5 security pass ✅, 8.4 coverage ✅ (kernel 98%, CI gate at 95%),
+  8.6 limitations-mechanism ✅. **8.1/8.2/8.3 + formula review are CO-FOUNDER-gated** (need the
+  registered engineer + real past-project data). Validation harness + guide scaffolded (below).
+- **Wind actions (user-requested fix): DONE (Parts A + B), PROVISIONAL.** See the dedicated
+  section — this is the most important thing for the co-founder to validate.
+- `HEAD = 8af09ba` on `main`. Latest CI run: success. Working tree clean.
+
+## The app is LIVE end-to-end locally
+- **Web** (Next.js 16) at **http://localhost:3000**, **engineering service** (FastAPI) at
+  **http://localhost:8000**, both talking to the **live Supabase project** (`wcjwzpzfoauhixrficzl`).
+- Full loop works: sign in → project → describe a frame (NL) → AI parse → review/edit → run
+  design → SANS calc-package PDF (stored in Supabase Storage) → run history.
+
+### Running locally (services are NOT auto-started)
+Run the engineering service from the MAIN checkout (`/Users/cash/TorenOne`, not the worktree):
+```
+cd /Users/cash/TorenOne
+# one-time: uv venv --python 3.11 .venv && uv pip install -e ".[service,pdf]"
+set -a; . ./.env; set +a
+export DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib      # WeasyPrint finds pango/cairo
+PYTHONPATH=service/src:kernel/src .venv/bin/uvicorn torenone_service.app:create_app --factory --host 127.0.0.1 --port 8000
+```
+- The venv at `/Users/cash/TorenOne/.venv` has the deps. Local test commands use
+  `PYTHONPATH=kernel/src:service/src:tools` + that venv's pytest/ruff/mypy.
+- **Pin sqlglot to the CI version** in the local venv or `supabase/tests` fail spuriously:
+  `uv pip install --python /Users/cash/TorenOne/.venv "sqlglot>=27,<28"`.
+- Test Supabase user (email confirmation is OFF): `claude-preview-630pm@example.com` /
+  `preview-test-12345`. (Its firm differs from some older test projects — use its own projects.)
+
+## Critical gotchas (bit us this session — all fixed, but remember)
+1. **Worktree vs main checkout.** Agent works in `.claude/worktrees/...`; the user runs/edits in
+   `/Users/cash/TorenOne`. Gitignored files (`.env`, `web/.env.local`) must live in the MAIN
+   checkout. Code commits flow to `main`; the running service loads kernel from the main checkout.
+2. **CORS + ES256/JWKS auth.** Supabase signs user tokens with **ES256** (asymmetric); the service
+   verifies via the project **JWKS** (needs `SUPABASE_URL`), not HS256. CORS middleware allows
+   `localhost:3000`. Both already fixed (`98d6db1`, `c12d434`).
+3. **Run FULL mypy** (`mypy kernel/src service/src`), not single files — CI caught a re-export
+   error I missed (`c57d66f`).
+4. **Next 16 renamed `middleware`→`proxy`** (`web/src/proxy.ts`). Read `web/node_modules/next/dist/docs/`
+   before writing Next code (per `web/AGENTS.md`).
+5. **Never commit secrets**; `.env*` gitignored. `.claude/` gitignored (agent runtime).
+
+## Wind actions — Parts A + B (PROVISIONAL — co-founder must validate)
+The user reported wind pressures + combinations were missing from the report. The whole wind chain
+(`loads/wind.py` qp, `wind_pressure.py` cpe/cpi, `wind_loads.py` member UDLs, `combinations.py`
+ULS-2/3+SLS-2) was built + SANS-cited, but `design.py` never invoked it.
+- **Part A (`3041979`):** `design()`/`check()` attach `wind_loads(spec)` to `DesignResult.wind`
+  (wind types moved to `models/results.py` to break an import cycle). PDF §11.2 "Characteristic
+  Wind Actions" + frontend Wind card show qp, net (cpe−cpi), per-case member loads.
+- **Part B (`8af09ba`):** `PortalAnalysis.run_wind_combination()` applies transverse wind to the
+  frame; `design()`/`check()` run **ULS-2/3** per wind case, check members, append checks suffixed
+  `[ULS-2 wind]`/`[ULS-3 wind]` → they render in the checks tables and fold into
+  `passed`/`governing_utilisation`. Mechanically validated (`kernel/tests/test_plane_frame_wind.py`).
+- **PROVISIONAL:** wind-on-frame **sign conventions + governing case need SANS-worked-example
+  validation by the co-founder.** Members are auto-sized on **gravity** and only **CHECKED** (not
+  sized) for wind — a wind-governed inadequacy is surfaced honestly, not silently mis-sized.
+- **Remaining wind work:** (a) co-founder validates the method; (b) flip to **auto-size for wind**
+  once validated; (c) add **SLS-2 wind sway** deflection check.
+
+## Phase 8 validation harness (ready for the co-founder)
+- `kernel/tests/validation/benchmarks.py` — `make_spec(...)` builds a frame from plain numbers;
+  `BenchmarkCase` + empty `BENCHMARKS` (gate skips until filled) + a fill-in template.
+- `kernel/tests/validation/test_validation.py` — runs each case through the kernel (check + design
+  modes), asserts within tolerance. `test_harness_self_check` proves the machinery now.
+- `docs/VALIDATION_GUIDE.md` — non-technical, step-by-step walkthrough for reviewing the kernel with
+  the (non-techie) structural-engineer co-founder.
+
+## Open threads / next steps (pick up here)
+1. **Co-founder validation session (Phase 8.1/8.2 — THE gate):** fill `BENCHMARKS` with a real past
+   frame + results; validate the kernel incl. the **wind method** against a worked example.
+2. **Wind follow-ups:** auto-size for wind (after validation); SLS-2 wind sway.
+3. **`SUPABASE_SERVICE_ROLE_KEY`** — the user fixed it in main `.env` (was the anon key). Confirm
+   report persistence still works after any service restart.
+4. **CI test project** — to flip on the Playwright E2E job (currently skipped, gated on
+   `RUN_E2E=true` + `E2E_EMAIL`/`E2E_PASSWORD` secrets + a running service). Safe to defer.
+5. **Phase 9** — pilot & YC readiness.
+
+## Doc map
+`docs/TASKS.md` (phase-by-phase status, every task annotated), `docs/SOURCES.md` (every transcribed
+value + dependency, cited), `docs/VALIDATION_GUIDE.md`, `standards/README.md` (SANS manifest —
+PDFs are local-only / gitignored). Agent memory: `run-engineering-service-locally`,
+`supabase-asymmetric-jwt-es256`, `verify-foundation-before-parallel-build`.
