@@ -49,6 +49,18 @@ class TestWindInResult:
         assert result.wind is not None
         assert result.wind.peak_velocity_pressure_kpa > 0
 
+    def test_design_runs_the_wind_combinations(self) -> None:
+        # Part B: members are now CHECKED under ULS-2/3 wind (results suffixed + counted).
+        checks = design(_spec()).checks
+        names = [c.name for c in checks]
+        assert any("[ULS-2 wind]" in n for n in names)
+        assert any("[ULS-3 wind]" in n for n in names)
+        wind_checks = [c for c in checks if "wind]" in c.name]
+        assert wind_checks and all(c.utilisation >= 0 for c in wind_checks)
+        # the worst wind utilisation is folded into the governing utilisation / passed
+        result = design(_spec())
+        assert result.governing_utilisation >= max(c.utilisation for c in wind_checks)
+
 
 class TestWindInReport:
     def test_report_prints_the_wind_pressures(self) -> None:

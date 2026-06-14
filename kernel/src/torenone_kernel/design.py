@@ -55,6 +55,7 @@ from torenone_kernel.models.results import (
     BaseplateDesignResult,
     CheckResult,
     ConnectionDesignResult,
+    DeadLoadResult,
     DesignResult,
     LoadCombination,
     PadFootingDesignResult,
@@ -76,6 +77,87 @@ DEFAULT_COST_RATE_ZAR_PER_KG: float = 20.0
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
+def _wind_combination_checks(
+    spec: FrameSpec,
+    *,
+    col_sec: SectionProperties,
+    raf_sec: SectionProperties,
+    dead: DeadLoadResult,
+    combos: dict[str, LoadCombination],
+    fy_col: float,
+    fy_raf: float,
+    kl_col_mm: float,
+    ltb_col_mm: float,
+    kl_raf_mm: float,
+    ltb_raf_mm: float,
+) -> list[CheckResult]:
+    """Check the (gravity-sized) members under the wind combinations ULS-2/3 (Part B).
+
+    For each wind combination, the worst of the wind load cases governs. The members are
+    NOT auto-sized for wind here — they are CHECKED and the worst wind utilisation is
+    reported, so a wind-governed inadequacy is surfaced honestly (passed=False) rather than
+    hidden or silently sized on an unvalidated model.
+
+    **PROVISIONAL.** The wind-on-frame analysis is mechanically validated (equilibrium,
+    uplift, asymmetry) but its SANS engineering correctness — sign conventions and the
+    governing case — is pending registered-engineer validation against worked examples.
+    """
+    wind = wind_loads(spec)
+    col_dead = dead.column_self_weight_kn_per_m + dead.wall_cladding_udl_kn_per_m
+    out: list[CheckResult] = []
+
+    for key in ("ULS-2", "ULS-3"):
+        combo = combos.get(key)
+        if combo is None:
+            continue
+        g_g = combo.factors.get("dead", 1.0)
+        g_w = combo.factors.get("wind", 1.0)
+        best: list[CheckResult] = []
+        best_util = -1.0
+        for case in wind.cases:
+            analysis = PortalAnalysis(spec, col_sec, raf_sec).run_wind_combination(
+                combo.name,
+                rafter_dead_udl_kn_per_m=g_g * dead.rafter_udl_kn_per_m,
+                column_dead_udl_kn_per_m=g_g * col_dead,
+                windward_column_udl_kn_per_m=g_w * case.windward_column_udl_kn_per_m,
+                leeward_column_udl_kn_per_m=g_w * case.leeward_column_udl_kn_per_m,
+                windward_rafter_udl_kn_per_m=g_w * case.windward_rafter_udl_kn_per_m,
+                leeward_rafter_udl_kn_per_m=g_w * case.leeward_rafter_udl_kn_per_m,
+            )
+            f = {x.location: x for x in analysis.forces}
+            col_mu = max(abs(f["eaves_L"].moment_knm), abs(f["eaves_R"].moment_knm))
+            col_vu = max(abs(x.shear_kn) for x in f.values())
+            col_cu = max(abs(f["col_base_L"].axial_kn), abs(f["col_base_R"].axial_kn))
+            raf_mu = max(
+                abs(f["eaves_L"].moment_knm), abs(f["eaves_R"].moment_knm), abs(f["apex"].moment_knm)
+            )
+            raf_vu = max(abs(f["apex"].shear_kn), abs(f["eaves_L"].shear_kn))
+            raf_cu = abs(f["apex"].axial_kn)
+            try:
+                checks = run_member_checks(
+                    col_sec, fy_col, col_cu, col_vu, col_mu, kl_col_mm, ltb_col_mm, member="column"
+                ) + run_member_checks(
+                    raf_sec, fy_raf, raf_cu, raf_vu, raf_mu, kl_raf_mm, ltb_raf_mm, member="rafter"
+                )
+            except SectionIneligibleError:
+                continue
+            util = max((c.utilisation for c in checks), default=0.0)
+            if util > best_util:
+                best_util, best = util, checks
+        for c in best:
+            detail = f"PROVISIONAL wind-combination check ({combo.name}). {c.detail or ''}".strip()
+            out.append(
+                CheckResult(
+                    name=f"{c.name} [{key} wind]",
+                    clause=c.clause,
+                    utilisation=c.utilisation,
+                    passed=c.passed,
+                    detail=detail,
+                )
+            )
+    return out
+
 
 def design(spec: FrameSpec, cost_rate_zar_per_kg: float = DEFAULT_COST_RATE_ZAR_PER_KG) -> DesignResult:
     """Run the full SANS 10162-1 portal-frame design pipeline for *spec*.
@@ -304,6 +386,20 @@ def design(spec: FrameSpec, cost_rate_zar_per_kg: float = DEFAULT_COST_RATE_ZAR_
         + [sway_check_result, vertical_deflection]
         + _last_mile_checks(connections, baseplate, footing)
     )
+    # Wind combinations ULS-2/3 — check the gravity-sized members under wind (Part B).
+    all_checks += _wind_combination_checks(
+        spec,
+        col_sec=col_sec,
+        raf_sec=raf_sec,
+        dead=dead,
+        combos=combos,
+        fy_col=fy_col,
+        fy_raf=fy_raf,
+        kl_col_mm=KL_col_mm,
+        ltb_col_mm=LTB_col_mm,
+        kl_raf_mm=KL_raf_mm,
+        ltb_raf_mm=LTB_raf_mm,
+    )
 
     sections = [
         SectionChoice(member="rafter", designation=raf_sec.designation),
@@ -314,11 +410,14 @@ def design(spec: FrameSpec, cost_rate_zar_per_kg: float = DEFAULT_COST_RATE_ZAR_
         "Effective length factors K=1.0 assumed for both rafter and column (PROVISIONAL). "
         "For sway portal frames with pinned bases, cl. 8.6 or rational analysis may require "
         "K > 1.0 for columns. Engineer must verify.",
-        "Characteristic wind actions (peak velocity pressure qp, net pressure coefficients, "
-        "member line loads) are computed and tabulated per SANS 10160-3. However the wind "
-        "LOAD-COMBINATION frame analysis (member forces under ULS-2, ULS-3, SLS-2) is NOT run "
-        "— members are sized on the gravity combination (ULS-1) only. Engineer must check wind "
-        "effects on the frame independently.",
+        "Characteristic wind actions (qp, net pressure coefficients, member line loads) are "
+        "computed per SANS 10160-3, and the members are now CHECKED under the wind combinations "
+        "ULS-2 and ULS-3 (results suffixed '[ULS-2 wind]' / '[ULS-3 wind]'). PROVISIONAL: the "
+        "wind-on-frame analysis is mechanically validated (equilibrium, uplift, asymmetric "
+        "loading) but its sign conventions and governing case need registered-engineer "
+        "validation against SANS worked examples. Members are auto-sized on gravity (ULS-1) and "
+        "CHECKED — not sized — for wind; if a wind check governs it is reported. SLS-2 wind sway "
+        "deflection is not yet checked.",
         "Vertical deflection computed by first-order linear elastic FEA (PyNite) under "
         "SLS-1 gravity combination. Second-order deflection amplification not included; "
         "for sway-sensitive frames engineer should verify amplified deflections.",
@@ -507,6 +606,20 @@ def check(
         raf_checks + col_checks + [sway_check, deflection_check]
         + _last_mile_checks(connections, baseplate, footing)
     )
+    # Wind combinations ULS-2/3 — check the supplied members under wind (Part B).
+    all_checks += _wind_combination_checks(
+        spec,
+        col_sec=col_sec,
+        raf_sec=raf_sec,
+        dead=dead,
+        combos=combos,
+        fy_col=fy_col,
+        fy_raf=fy_raf,
+        kl_col_mm=KL_col_mm,
+        ltb_col_mm=LTB_col_mm,
+        kl_raf_mm=KL_raf_mm,
+        ltb_raf_mm=LTB_raf_mm,
+    )
 
     section_choices = [
         SectionChoice(member="rafter", designation=raf_sec.designation),
@@ -517,8 +630,10 @@ def check(
         "Effective length factors K=1.0 assumed (PROVISIONAL). Engineer must verify per "
         "SANS 10162-1 cl. 8.6 for sway frames.",
         "Characteristic wind actions (qp, net pressure coefficients, member line loads) are "
-        "computed and tabulated per SANS 10160-3, but the wind LOAD-COMBINATION frame analysis "
-        "(ULS-2, ULS-3, SLS-2) is NOT run — engineer must verify wind effects independently.",
+        "computed per SANS 10160-3, and the supplied members are CHECKED under the wind "
+        "combinations ULS-2/3 (results suffixed '[ULS-2 wind]' / '[ULS-3 wind]'). PROVISIONAL: "
+        "the wind-on-frame analysis is mechanically validated but its sign conventions + "
+        "governing case need registered-engineer validation. SLS-2 wind sway not yet checked.",
     ]
     if _sway_sensitive:
         warnings.append(

@@ -375,6 +375,104 @@ class PortalAnalysis:
             forces=[col_base_L, eaves_L, apex, eaves_R, col_base_R],
         )
 
+    def run_wind_combination(
+        self,
+        combination_name: str,
+        *,
+        rafter_dead_udl_kn_per_m: float,
+        column_dead_udl_kn_per_m: float,
+        windward_column_udl_kn_per_m: float,
+        leeward_column_udl_kn_per_m: float,
+        windward_rafter_udl_kn_per_m: float,
+        leeward_rafter_udl_kn_per_m: float,
+    ) -> AnalysisResult:
+        """Analyse a wind load combination (factored dead + factored transverse wind).
+
+        PROVISIONAL — the wind-on-frame application (sign conventions, asymmetric
+        windward/leeward loading) must be validated against SANS worked examples by a
+        registered engineer before use. Wind from the LEFT (windward = left column / RAF_L).
+
+        All UDLs are already FACTORED by the caller (kN/m = N/mm numerically). Conventions:
+          * dead rafter/column: vertical, downward (local Fy, as gravity ``run``);
+          * column wind: horizontal, +ve = inward pressure (global FX: +X left, −X right);
+          * rafter wind: normal to roof, +ve = pressure onto roof / −ve = uplift (local Fy).
+
+        Returns forces at col_base_L, eaves_L, apex, eaves_R, col_base_R — read directly
+        from the analysis (no symmetry assumptions; both columns differ under wind).
+        """
+        geom = self.spec.geometry
+        span_mm = geom.span_m * 1_000.0
+        eaves_h_mm = geom.eaves_height_m * 1_000.0
+        apex_h_mm = geom.apex_height_m * 1_000.0
+        half_span_mm = span_mm / 2.0
+        rafter_len_mm = math.hypot(half_span_mm, apex_h_mm - eaves_h_mm)
+
+        m = _new_model()
+        _add_section(m, "col_sec", self.col_sec)
+        _add_section(m, "raf_sec", self.raf_sec)
+        m.add_node("BL", 0, 0, 0)
+        m.add_node("EL", 0, eaves_h_mm, 0)
+        m.add_node("AP", half_span_mm, apex_h_mm, 0)
+        m.add_node("ER", span_mm, eaves_h_mm, 0)
+        m.add_node("BR", span_mm, 0, 0)
+        _pin_support(m, "BL")
+        _pin_support(m, "BR")
+        _fix_out_of_plane(m, "EL")
+        _fix_out_of_plane(m, "AP")
+        _fix_out_of_plane(m, "ER")
+        m.add_member("COL_L", "BL", "EL", "steel", "col_sec")
+        m.add_member("RAF_L", "EL", "AP", "steel", "raf_sec")
+        m.add_member("RAF_R", "AP", "ER", "steel", "raf_sec")
+        m.add_member("COL_R", "ER", "BR", "steel", "col_sec")
+
+        # Dead (vertical, local Fy downward)
+        rd = rafter_dead_udl_kn_per_m
+        cd = column_dead_udl_kn_per_m
+        if rd != 0.0:
+            m.add_member_dist_load("RAF_L", "Fy", -rd, -rd, case="DL")
+            m.add_member_dist_load("RAF_R", "Fy", -rd, -rd, case="DL")
+        if cd != 0.0:
+            m.add_member_dist_load("COL_L", "Fy", -cd, -cd, case="DL")
+            m.add_member_dist_load("COL_R", "Fy", -cd, -cd, case="DL")
+
+        # Wind on columns (global horizontal FX; +ve udl = inward pressure)
+        ww_c = windward_column_udl_kn_per_m
+        lw_c = leeward_column_udl_kn_per_m
+        if ww_c != 0.0:
+            m.add_member_dist_load("COL_L", "FX", ww_c, ww_c, case="DL")  # left: inward = +X
+        if lw_c != 0.0:
+            m.add_member_dist_load("COL_R", "FX", -lw_c, -lw_c, case="DL")  # right: inward = −X
+
+        # Wind on rafters (local Fy normal; +ve = pressure onto roof, −ve = uplift)
+        ww_r = windward_rafter_udl_kn_per_m
+        lw_r = leeward_rafter_udl_kn_per_m
+        if ww_r != 0.0:
+            m.add_member_dist_load("RAF_L", "Fy", -ww_r, -ww_r, case="DL")
+        if lw_r != 0.0:
+            m.add_member_dist_load("RAF_R", "Fy", -lw_r, -lw_r, case="DL")
+
+        m.add_load_combo(_COMBO, {"DL": 1.0})
+        m.analyze_linear(log=False, check_stability=False)
+
+        def _f(location: str, member: str, x_mm: float) -> MemberForces:
+            return MemberForces(
+                location=location,
+                axial_kn=m.members[member].axial(x_mm, _COMBO) / 1_000.0,
+                shear_kn=m.members[member].shear("Fy", x_mm, _COMBO) / 1_000.0,
+                moment_knm=m.members[member].moment("Mz", x_mm, _COMBO) / 1_000_000.0,
+            )
+
+        return AnalysisResult(
+            combination=combination_name,
+            forces=[
+                _f("col_base_L", "COL_L", 0.0),
+                _f("eaves_L", "COL_L", eaves_h_mm),
+                _f("apex", "RAF_L", rafter_len_mm),
+                _f("eaves_R", "COL_R", 0.0),
+                _f("col_base_R", "COL_R", eaves_h_mm),
+            ],
+        )
+
     def node_displacements(
         self,
         combination_name: str,
