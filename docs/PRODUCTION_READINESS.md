@@ -52,13 +52,19 @@ before relying on it / scaling past a hand-held pilot. **P2** = polish / competi
 This is the whole ballgame. The tool is a structural engineer; an unvalidated structural
 engineer is a liability, not a product.
 
-- [ ] **1.1 Validate every `PROVISIONAL` value/method** (13 items in `docs/SOURCES.md`):
-  section properties (E1), imposed roof load (E2), **load-combination factors taken from the
-  DRAFT SANS 10160-1** (E9 — confirm against the *final* standard), steel `fy` (EN 10025-2),
-  connection coefficients (1.15), baseplate coefficients (1.16), sway threshold U2>1.4, and
-  the **wind-on-frame method** (sign conventions + governing case).
-  *Why:* each is a number a building depends on. *Done-when:* each row in `SOURCES.md` is
-  `VERIFIED` with the engineer's initials + date, tracked in `REFERENCES-AND-VALIDATION.md`.
+- [~] **1.1 Validate every `PROVISIONAL` value/method** (`docs/SOURCES.md`). **Progress
+  2026-06-15 — SANS 10162-1 verification pass done:** connection coefficients (1.15),
+  baseplate φ-factors (1.16), `fy` base (S355JR 355/480 via Table 6), and the cl. 8.7 sway
+  formula are now **transcribed + verified clause-by-clause against the official PDF** — which
+  *caught and corrected several discrepancies* (bolt bearing φbr 0.80→0.67, baseplate φc
+  0.65→0.60, anchor φ 0.80→0.67, bolt area stress→shank +0.70 thread factor, combined
+  elliptical→linear ≤1.4, bolt fu 800/1000→830/1040; several were ~19% unconservative).
+  **Still open:** section properties (E1), imposed roof load (E2), **load-combination factors
+  from the DRAFT SANS 10160-1** (E9 — needs the *final* standard), `fy` thickness reductions +
+  S275 (EN 10025-2), the connection/baseplate *methods* (T-stub, bearing model), and the
+  **wind-on-frame method**. *Done-when:* each `SOURCES.md` row is `VERIFIED` with the
+  engineer's initials + date (the code↔standard transcription is now done; the Pr.Eng's
+  professional sign-off is the remaining half).
 - [ ] **1.2 Fill the benchmark validation harness (Phase 8.1/8.2 — THE gate, PRD NFR-1).**
   Put one real past portal frame + its original results into `kernel/tests/validation/`
   (`BENCHMARKS`); the gate currently skips while empty. *Done-when:* the kernel matches the
@@ -72,8 +78,10 @@ engineer is a liability, not a product.
 - [ ] **1.6 Wind decision.** After 1.1, decide: flip `design(autosize_for_wind=True)` default +
   expose via service/API, and whether SLS-2 sway should gate (currently advisory). See
   `SESSION_HANDOFF.md` Wind section.
-- [ ] **1.7 Acquire the missing standards PDFs** (SANS 10162-1 is absent from `standards/`, which
-  is *why* connections/baseplates are provisional) so values are transcribed, not inferred.
+- [x] **1.7 Standards PDFs present.** Correction: SANS 10162-1:2011 *is* in `standards/` (the
+  earlier "absent" note was stale) — the 2026-06-15 pass transcribed from it. Genuinely still
+  outstanding: the **final** SANS 10160-1 (load combos — current copy is a draft) and
+  **EN 10025-2** (the `fy` thickness table).
 
 > ⚠️ **Hard rule:** no real project output leaves the building until 1.1 + 1.2 are done.
 > The "Check mode" (FR-24) is the lower-liability wedge — lead pilots with it.

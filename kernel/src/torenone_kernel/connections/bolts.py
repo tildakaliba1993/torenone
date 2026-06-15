@@ -1,34 +1,51 @@
-"""Bolt properties + factored resistances — SANS 10162-1 cl. 13.12 (PROVISIONAL).
+"""Bolt properties + factored resistances — SANS 10162-1:2011 cl. 13.1 / 13.12.
 
-Resistance factors (SANS 10162-1 cl. 13.1):
-    φb  = 0.80   (bolts — shear / tension)
-    φbr = 0.80   (bolts — bearing on connected ply)
+Transcribed from the official SANS 10162-1:2011 (Ed 2.1) PDF (in `standards/`), 2026-06-15.
 
-Per-bolt factored resistances (cl. 13.12.1.2 / 13.12.1.3), one bolt, one shear plane:
-    Tension : Tr = 0.75 · φb · Ab · Fu_bolt
-    Shear   : Vr = 0.60 · φb · Ab · Fu_bolt        (threads intercepted → Ab = stress area)
-    Bearing : Br = 3.0  · φbr · t · d · Fu_ply
+Resistance factors (cl. 13.1):
+    φb  = 0.80   (c) bolts — shear / tension
+    φbr = 0.67   (g) bearing of bolts on steel        ← corrected from 0.80 (was CSA value)
 
-⚠️ PROVISIONAL — coefficients (0.75, 0.60, 3.0) and the φ values follow established
-SANS 10162-1 / CSA S16 practice but were not transcribed from the standard PDF (absent
-from `standards/`). Bolt tensile stress areas (Aₛ) are standard ISO metric coarse-thread
-values. Engineer sign-off required before production use.
+Per-bolt factored resistances — Ab is the bolt area based on its NOMINAL diameter
+(cl. 3.2 symbols: "Ab = cross-sectional area of a bolt, based on its nominal diameter"),
+i.e. the shank area π·d²/4. The 0.75 (tension) and 0.70 (threads-in-shear-plane) factors
+are the standard's allowance for the threaded net area — so the shank area is correct here,
+NOT the tensile stress area.
+    Tension (cl. 13.12.1.3) : Tr = 0.75 · φb · Ab · fu
+    Shear   (cl. 13.12.1.2) : Vr = 0.60 · φb · m · Ab · fu  (× 0.70 if threads intercept
+                                                              the shear plane)
+    Bearing (cl. 13.10(c) / 13.12.1.2) : Br = 3.0 · φbr · t · d · fu_ply
+
+Bolt fu (cl. 13.12.1.2 NOTE): 830 MPa (class 8.8), 1040 MPa (class 10.9).
+
+⚠️ PROVISIONAL — coefficients now match the official SANS 10162-1 text (verified clause by
+clause), but final registered-engineer sign-off is still required before production use, and
+the end-plate *method* (flange-force couple, simplified T-stub) remains an engineering
+modelling choice (see moment_endplate.py).
 """
 
 from __future__ import annotations
 
 import dataclasses
+import math
 
-PHI_B: float = 0.80    # cl. 13.1 — bolts (PROVISIONAL)
-PHI_BR: float = 0.80   # cl. 13.1 — bearing (PROVISIONAL)
+PHI_B: float = 0.80    # cl. 13.1(c) — bolts (shear / tension)
+PHI_BR: float = 0.67   # cl. 13.1(g) / 13.10(c) — bearing of bolts on steel
+PHI_AR: float = 0.67   # cl. 13.1(i) — holding-down (anchor) bolts
 
-# Bolt ultimate tensile strength by property class (MPa) — PROVISIONAL.
+# When the bolt threads are intercepted by a shear plane, Vr is reduced by this factor
+# (cl. 13.12.1.2). Typical for end-plate connections, so applied by default.
+_THREADS_IN_SHEAR_PLANE_FACTOR: float = 0.70
+
+# Bolt ultimate tensile strength by property class (MPa) — cl. 13.12.1.2 NOTE.
 _GRADE_FU: dict[str, float] = {
-    "8.8": 800.0,
-    "10.9": 1000.0,
+    "8.8": 830.0,
+    "10.9": 1040.0,
 }
 
 # ISO metric coarse-thread tensile stress area Aₛ (mm²) — standard geometric values.
+# Retained as a documented bolt property; the SANS resistance formulas use the nominal
+# (shank) area Ab, computed from the diameter (see cl. 3.2 symbols).
 _STRESS_AREA_MM2: dict[str, float] = {
     "M16": 157.0,
     "M20": 245.0,
@@ -51,9 +68,14 @@ class BoltSpec:
 
     designation: str        # e.g. "M20"
     diameter_mm: float
-    stress_area_mm2: float  # tensile stress area Aₛ
+    stress_area_mm2: float  # tensile stress area Aₛ (documented; not used for resistance)
     grade: str              # property class, e.g. "8.8"
     fu_mpa: float           # bolt ultimate strength
+
+    @property
+    def shank_area_mm2(self) -> float:
+        """Nominal (shank) cross-sectional area Ab = π·d²/4 — the area SANS uses (cl. 3.2)."""
+        return math.pi * self.diameter_mm**2 / 4.0
 
 
 def make_bolt(size: str, grade: str) -> BoltSpec:
@@ -81,23 +103,37 @@ STANDARD_BOLTS: list[BoltSpec] = [
 ]
 
 
-def bolt_tension_resistance_kn(bolt: BoltSpec) -> float:
-    """Factored tensile resistance of one bolt, Tr = 0.75·φb·Aₛ·Fu (cl. 13.12.1.2)."""
-    tr_n = 0.75 * PHI_B * bolt.stress_area_mm2 * bolt.fu_mpa
+def bolt_tension_resistance_kn(bolt: BoltSpec, *, phi: float = PHI_B) -> float:
+    """Factored tensile resistance of one bolt, Tr = 0.75·φ·Ab·fu (cl. 13.12.1.3).
+
+    Ab is the nominal (shank) area; the 0.75 factor is the standard's net-tensile-area
+    allowance. *phi* defaults to φb (structural bolts); pass ``PHI_AR`` for holding-down
+    (anchor) bolts (cl. 13.1(i)).
+    """
+    tr_n = 0.75 * phi * bolt.shank_area_mm2 * bolt.fu_mpa
     return float(tr_n / 1_000.0)
 
 
-def bolt_shear_resistance_kn(bolt: BoltSpec, *, shear_planes: int = 1) -> float:
-    """Factored shear resistance of one bolt, Vr = 0.60·φb·m·Aₛ·Fu (cl. 13.12.1.2).
+def bolt_shear_resistance_kn(
+    bolt: BoltSpec,
+    *,
+    shear_planes: int = 1,
+    threads_intercepted: bool = True,
+    phi: float = PHI_B,
+) -> float:
+    """Factored shear resistance of one bolt, Vr = 0.60·φ·m·Ab·fu (cl. 13.12.1.2).
 
-    Uses the tensile stress area (threads assumed intercepted by the shear plane —
-    the conservative case for an end-plate connection).
+    Ab is the nominal (shank) area. When the threads are intercepted by the shear plane
+    (the default, and the usual case for an end-plate connection), Vr is reduced by 0.70.
+    *phi* defaults to φb; pass ``PHI_AR`` for holding-down (anchor) bolts (cl. 13.1(i)).
     """
-    vr_n = 0.60 * PHI_B * shear_planes * bolt.stress_area_mm2 * bolt.fu_mpa
+    vr_n = 0.60 * phi * shear_planes * bolt.shank_area_mm2 * bolt.fu_mpa
+    if threads_intercepted:
+        vr_n *= _THREADS_IN_SHEAR_PLANE_FACTOR
     return float(vr_n / 1_000.0)
 
 
 def bolt_bearing_resistance_kn(bolt: BoltSpec, ply_thickness_mm: float, ply_fu_mpa: float) -> float:
-    """Factored bearing resistance on the connected ply, Br = 3·φbr·t·d·Fu (cl. 13.12.1.3)."""
+    """Factored bearing resistance on the connected ply, Br = 3·φbr·t·d·fu (cl. 13.10(c))."""
     br_n = 3.0 * PHI_BR * ply_thickness_mm * bolt.diameter_mm * ply_fu_mpa
     return float(br_n / 1_000.0)

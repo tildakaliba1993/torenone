@@ -4,7 +4,17 @@
 > verify, and amend anything by knowing exactly where it came from. **Updated in real time**
 > throughout development.
 >
-> **Status:** living · **Last updated:** 2026-06-10
+> **Status:** living · **Last updated:** 2026-06-15
+>
+> **2026-06-15 — SANS 10162-1 verification pass.** The connection (1.15) + baseplate (1.16)
+> coefficients, previously inferred from "CSA S16 practice" with a stale *"PDF absent"* note,
+> were transcribed + verified clause-by-clause against the official SANS 10162-1:2011 PDF.
+> This **caught and corrected several discrepancies** (all now matching the standard):
+> bolt bearing **φbr 0.80→0.67**, baseplate concrete **φc 0.65→0.60**, anchor (holding-down
+> bolt) **φ 0.80→0.67**, bolt area **stress→nominal/shank** with the **0.70 threads-in-shear
+> factor** added, combined shear+tension **elliptical→linear ≤1.4**, and bolt **fu 800/1000→
+> 830/1040**. Several were ~19% unconservative. The *methods* (end-plate T-stub, baseplate
+> bearing model) + final Pr.Eng sign-off remain outstanding.
 
 ## How to use
 - **Status legend:** `VERIFIED` (authoritative/confirmed or universal fact) · `PROVISIONAL` (sourced
@@ -60,7 +70,7 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 | Auth deps (Task 6.2) | @supabase/ssr 0.12, @supabase/supabase-js 2.108 — cookie-based SSR auth. Next 16 renamed `middleware`→`proxy` (per node_modules/next/dist/docs) | npm; supabase.com/docs (Next.js App Router SSR) | VERIFIED |
 | Geist Sans / Mono | UI + monospace fonts | `next/font` | VERIFIED |
 | PyNite (PyNiteFEA 1.6.2) | first-order linear-elastic plane-frame solver (Tasks 1.8–1.9); E=200 000 N/mm² G=77 000 N/mm² (PROVISIONAL pending SANS 10162-1 cl. 5.2 confirm at 1.10) | PyPI (`pip install PyNiteFEA`) | VERIFIED |
-| SANS 10162-1:2011 cl. 8.7 | U2 sway amplification formula + notional load 0.005×gravity; sway-sensitive threshold U2>1.4 is CSA S16 basis (SANS text does not state explicit cutoff — PROVISIONAL) | standards/SANS 10162-1.pdf p.21 | PROVISIONAL |
+| SANS 10162-1:2011 cl. 8.7 | U2 = 1/(1−ΣCu·Δu/(ΣVu·h)) + notional load 0.005×gravity **VERIFIED vs cl. 8.7 (p.21) 2026-06-15**; sway-sensitive threshold U2>1.4 is a CSA S16-basis advisory flag — **confirmed cl. 8.7 states NO numerical cutoff** (the standard instead requires Mu=Mug+U2·Mut; the kernel flags but does not yet apply this amplification — see warnings) | standards/SANS 10162-1.pdf p.21 | Formula VERIFIED; threshold = non-SANS advisory (PROVISIONAL) |
 | SANS 10162-1:2011 cl. 3.2 | E = 200 000 MPa, G = 77 000 MPa (confirmed in Symbols section) | standards/SANS 10162-1.pdf p.12 | VERIFIED |
 | SANS 10162-1:2011 cl. 13.1a | φ = 0.90 (structural steel resistance factor) | standards/SANS 10162-1.pdf p.33 | VERIFIED |
 | SANS 10162-1:2011 cl. 13.3.1 | Cr formula, n=1.34 hot-rolled; λ formula; KL/r≤200 limit | standards/SANS 10162-1.pdf p.34 | VERIFIED |
@@ -70,7 +80,7 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 | SANS 10162-1:2011 cl. 13.6 | Mcr formula; Mr=1.15φMp(1-0.28Mp/Mcr)≤φMp (case 1) or Mr=φMcr (case 2); ω2 formula | standards/SANS 10162-1.pdf p.38–39 | VERIFIED |
 | SANS 10162-1:2011 cl. 13.8.2+13.8.4 | Interaction Cu/Cr+0.85·U1·Mu/Mr≤1; U1=ω1/(1-Cu/Ce); ω1 values | standards/SANS 10162-1.pdf p.40–43 | VERIFIED |
 | SANS 10162-1:2011 Annex D Table D.1 | Deflection limits: L/240 inelastic roof covering (vertical), H/400 building sway wind (informative — non-normative) | standards/SANS 10162-1.pdf p.98 | VERIFIED (informative) |
-| fy for S355JR/S275JR | fy from EN 10025-2 (referenced cl. 5.1.3): 355/345/335 MPa for t≤16/40/63mm | EN 10025-2:2004 Table 7 (not in standards/ folder — PROVISIONAL pending engineer sign-off) | PROVISIONAL |
+| fy for S355JR/S275JR | **S355JR base fy=355 / fu=480 now VERIFIED vs SANS 10162-1:2011 Table 6** (p.47); thickness reductions 345/335 (t≤40/63mm) and all S275 values from EN 10025-2 (not in Table 6) | SANS 10162-1:2011 Table 6 (S355JR/300WA) for the base value; EN 10025-2:2004 Table 7 for thickness + S275 | **S355JR base VERIFIED; thickness reductions + S275 PROVISIONAL** |
 | SANS 10162-1 cl. 10.4.2.1 | KL/r ≤ 200 maximum slenderness limit for compression members | standards/SANS 10162-1.pdf p.28 | VERIFIED |
 | SA fabricated steel cost rate | R20 000/tonne = R20/kg default (indicative_cost_zar). Market range R18 000–R25 000/tonne (2025). PROVISIONAL — confirm with fabricator before using for project cost estimates. | Industry knowledge; verify with SAISC or local fabricator | PROVISIONAL |
 | PyNite node.DX/DY[combo] | Node displacement API — FEA apex deflection (DY, mm); eaves sway (DX, mm) | Inspected PyNite 1.6.2 source (verified in prior tasks) | VERIFIED |
@@ -78,9 +88,9 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 | Pydantic / pytest / vitest / Playwright | kernel + web testing | PyPI / npm | VERIFIED |
 | OpenAI model | `gpt-5.5` primary / `gpt-5.4-mini` fallback (AI orchestration layer; Structured Outputs + function calling) | OpenAI API docs (developers.openai.com, verified 2026-06-11) | VERIFIED |
 | Task 3.2 spec parsing | No new engineering values introduced — the LLM only transcribes/classifies user-stated inputs; all applied defaults (services 0.0 kPa, wall 0.0 kPa, roof inaccessible, altitude 0 m, no dominant opening, S355JR, pinned base, unrestrained) are the already-sourced `FrameSpec` model defaults | `models/frame_spec.py` (defaults documented in Phase 1) | VERIFIED (no new values) |
-| Task 1.15 connections (bolts) | φb=0.80, φbr=0.80 (cl. 13.1); Tr=0.75·φb·As·Fu, Vr=0.60·φb·As·Fu, Br=3·φbr·t·d·Fu (cl. 13.12). Bolt 8.8 Fu=800, 10.9 Fu=1000 MPa; ISO stress areas M16/20/24/30 = 157/245/353/561 mm² | SANS 10162-1 / CSA S16 practice — **standard PDF absent from `standards/`** | **PROVISIONAL — engineer sign-off required** |
-| Task 1.15 connections (welds/plate) | φw=0.67, fillet Vr=0.67·φw·(0.707·leg)·Xu (cl. 13.13.2.2); electrode Xu=480 MPa (E48xx); end-plate plastic bending (T-stub, simplified, no prying/modes 2-3); flange-force-couple moment method; plate Fy/Fu by grade | SANS 10162-1 / CSA S16 practice — not transcribed from PDF | **PROVISIONAL — engineer sign-off required** |
-| Task 1.16 baseplates | φc=0.65, bearing = φc·0.85·f'c (elastic N+M pressure block, no A2/A1 confinement); plate cantilever bending φ·fy·t²/4 with AISC 0.95d/0.80b overhang; anchor tension (moment couple + uplift, axial relief ignored = conservative) + shear via cl. 13.12 bolt resistances; default f'c=25 MPa | SANS 10162-1 / CSA S16 / SANS 10100-1 practice — standard PDFs absent from `standards/` | **PROVISIONAL — engineer sign-off required** |
+| Task 1.15 connections (bolts) | φb=0.80 (cl. 13.1c); **φbr=0.67** (cl. 13.1g/13.10c — ⚠️ **corrected 2026-06-15 from 0.80**, was the CSA value & ~19% unconservative); Tr=0.75·φb·**Ab**·fu (cl. 13.12.1.3); Vr=0.60·φb·m·**Ab**·fu **×0.70 if threads in shear plane** (cl. 13.12.1.2); Br=3·φbr·t·d·fu (cl. 13.10c). **Ab = nominal (shank) area π/4·d²** (cl. 3.2 — corrected from stress area). Combined **Vu/Vr+Tu/Tr ≤ 1.4** linear (cl. 13.12.1.4 — corrected from elliptical). Bolt fu **830 (8.8) / 1040 (10.9)** (cl. 13.12.1.2 NOTE — corrected from 800/1000) | **SANS 10162-1:2011 PDF (in `standards/`) — transcribed + verified clause-by-clause 2026-06-15** | **Coefficients VERIFIED vs standard; end-plate *method* + Pr.Eng sign-off pending** |
+| Task 1.15 connections (welds/plate) | φw=0.67 (cl. 13.1h); fillet Vr=0.67·φw·(0.707·leg)·Xu (cl. 13.13.2.2; directional factor conservatively 1.0, permitted by the clause); **electrode Xu=480 MPa VERIFIED vs Table 6** (S355JR/300WA weld metal); end-plate plastic bending (T-stub, simplified, no prying/modes 2-3) = modelling choice | **SANS 10162-1:2011 PDF Table 6 + cl. 13.13 — verified 2026-06-15** | **Coefficients VERIFIED vs standard; T-stub method + sign-off pending** |
+| Task 1.16 baseplates | **φc=0.60** (cl. 13.1j — ⚠️ **corrected 2026-06-15 from 0.65**); plate flexure φ=0.90 (cl. 13.1a); anchors are **holding-down bolts → φar=0.67** (cl. 13.1i — ⚠️ **corrected from φb=0.80**); bearing = φc·0.85·f'c (elastic N+M pressure block, no A2/A1 confinement — conservative); plate cantilever bending; anchor tension ignores axial relief (conservative); default f'c=25 MPa | **SANS 10162-1:2011 φ factors VERIFIED 2026-06-15**; bearing *model* still to cross-check vs SANS 10100-1 cl. 4.10 | **φ factors VERIFIED vs standard; bearing model + sign-off pending** |
 | Task 1.17 pad footings (concrete) | Flexure: stress block 0.67·fcu/γc (γc=1.5) + fy/γs (γs=1.15), lever arm z=d{0.5+√(0.25−K/0.9)}≤0.95d, K'=0.156 (cl. 4.3.3.1 + Fig. 4 + 4.3.3.4, p.22–24); design concrete shear vc=(0.75/γm)(fcu/25)^⅓(100As/bd)^⅓(400/d)^¼, γm=1.4 (cl. 4.3.4 **eq. 2**, p.27); max shear v_max=min(0.75√fcu, 4.75) (cl. 4.3.4.1); bending critical section at column face + uniform pressure (cl. 4.10.2.1/4.10.2.2, p.87); punching at column perimeter ≤ v_max & 1.5d perimeter (cl. 4.10.4.4, p.90); min reinforcement 0.13 % (cl. 4.11.4) | **SANS 10100-1 (SABS 0100-1 Ed. 2.2)** — PDF now in `standards/`, clauses read & transcribed 2026-06-11 | **VERIFIED vs standard** (defaults fcu=25/fy=450/cover=50 mm typical; durability-cover & full detailing remain engineer's check; allowable bearing is a geotechnical input) |
 | WCAG 2.1 contrast (AA) | design-token accessibility gate | W3C WCAG 2.1 | VERIFIED |
 | Docker base image | `python:3.11-slim` (Debian) — matches the only supported interpreter | Docker Hub official image | VERIFIED |

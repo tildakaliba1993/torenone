@@ -52,10 +52,10 @@ class TestCheckBaseplate:
         }
 
     def test_bearing_capacity_constant(self):
-        # bearing cap = φc·0.85·f'c = 0.65·0.85·25 = 13.8125 MPa
-        assert PHI_C == 0.65
+        # bearing cap = φc·0.85·f'c = 0.60·0.85·25 = 12.75 MPa (φc = 0.60, SANS cl. 13.1(j))
+        assert PHI_C == 0.60
         cap = PHI_C * 0.85 * 25.0
-        assert cap == pytest.approx(13.8125)
+        assert cap == pytest.approx(12.75)
 
     def test_pinned_bearing_utilisation_handcalc(self):
         # p = 200 kN / (350·350 = 122 500 mm²) = 1.6327 MPa; cap = 13.8125 -> util 0.1182
@@ -71,10 +71,10 @@ class TestCheckBaseplate:
         assert tension.utilisation == pytest.approx(0.0)
 
     def test_anchor_shear_handcalc(self):
-        # V = 60 kN / 4 anchors = 15 kN; Vr(M20 8.8) = 94.08 -> util 0.1594
+        # V = 60 kN / 4 anchors = 15 kN; anchor Vr(M20, φar=0.67, threads) = 73.38 -> util 0.2044
         checks = check_baseplate(_plate(), base_fixity="pinned", axial_kn=200.0, shear_kn=60.0)
         shear = next(c for c in checks if c.name == "baseplate: anchor shear")
-        assert shear.utilisation == pytest.approx((60.0 / 4.0) / 94.08, rel=1e-3)
+        assert shear.utilisation == pytest.approx((60.0 / 4.0) / 73.38, rel=1e-3)
 
     def test_moment_increases_bearing_and_anchor_tension(self):
         pinned = check_baseplate(_plate(), base_fixity="pinned", axial_kn=200.0, shear_kn=0.0)
@@ -88,10 +88,10 @@ class TestCheckBaseplate:
         assert t1 > 0.0
 
     def test_uplift_creates_anchor_tension(self):
-        # net uplift: axial = -100 kN (tension); 2 tension anchors M20 Tr=117.6 each
+        # net uplift: axial = -100 kN (tension); 2 tension anchors M20 (φar=0.67) Tr=131.03 each
         checks = check_baseplate(_plate(), base_fixity="pinned", axial_kn=-100.0, shear_kn=0.0)
         tension = next(c for c in checks if c.name == "baseplate: anchor tension")
-        assert tension.utilisation == pytest.approx(100.0 / (2.0 * 117.6), rel=1e-3)
+        assert tension.utilisation == pytest.approx(100.0 / (2.0 * 131.03), rel=1e-3)
 
     def test_huge_axial_fails_bearing(self):
         checks = check_baseplate(_plate(), base_fixity="pinned", axial_kn=5_000.0, shear_kn=0.0)

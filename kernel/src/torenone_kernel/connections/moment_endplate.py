@@ -17,7 +17,6 @@ are not modelled. A registered engineer must verify before use.
 from __future__ import annotations
 
 import dataclasses
-import math
 
 from torenone_kernel.connections.bolts import (
     STANDARD_BOLTS,
@@ -95,7 +94,9 @@ def check_moment_connection(
     u_tension = tension_per_bolt / tr
     u_shear = shear_per_bolt / vr
     u_bearing = shear_per_bolt / br
-    u_combined = math.sqrt(u_tension**2 + u_shear**2)   # elliptical interaction
+    # Combined shear + tension (cl. 13.12.1.4, bearing-type): Vu/Vr + Tu/Tr ≤ 1.4.
+    # Normalised by 1.4 so utilisation is comparable to the other checks (1.0 = at limit).
+    u_combined = (u_tension + u_shear) / 1.4
 
     # end-plate plastic bending (T-stub, simplified)
     m_demand = (tension_per_bolt * 1_000.0) * conn.bolt_to_weld_mm   # N·mm
@@ -116,17 +117,17 @@ def check_moment_connection(
     prov = "PROVISIONAL"
     return [
         _chk("connection: bolt tension",
-             f"SANS 10162-1:2011 cl. 13.12.1.2 (tension) — {prov}", u_tension,
+             f"SANS 10162-1:2011 cl. 13.12.1.3 (tension) — {prov}", u_tension,
              f"Tu={tension_per_bolt:.1f} kN / Tr={tr:.1f} kN per bolt"),
         _chk("connection: bolt shear",
              f"SANS 10162-1:2011 cl. 13.12.1.2 (shear) — {prov}", u_shear,
              f"Vu={shear_per_bolt:.1f} kN / Vr={vr:.1f} kN per bolt"),
         _chk("connection: bolt bearing",
-             f"SANS 10162-1:2011 cl. 13.12.1.3 (bearing) — {prov}", u_bearing,
+             f"SANS 10162-1:2011 cl. 13.10(c) (bearing) — {prov}", u_bearing,
              f"Vu={shear_per_bolt:.1f} kN / Br={br:.1f} kN on {conn.plate_thickness_mm:.0f} mm plate"),
         _chk("connection: bolt tension+shear interaction",
-             f"SANS 10162-1:2011 cl. 13.12.1.2 (interaction) — {prov}", u_combined,
-             f"sqrt((Tu/Tr)^2+(Vu/Vr)^2)={u_combined:.2f}"),
+             f"SANS 10162-1:2011 cl. 13.12.1.4 (interaction) — {prov}", u_combined,
+             f"Tu/Tr+Vu/Vr={(u_tension + u_shear):.2f} ≤ 1.4"),
         _chk("connection: end-plate bending",
              f"SANS 10162-1:2011 cl. 13.13 (end-plate, T-stub) — {prov}", u_plate,
              f"{conn.plate_thickness_mm:.0f} mm plate, m={conn.bolt_to_weld_mm:.0f} mm"),

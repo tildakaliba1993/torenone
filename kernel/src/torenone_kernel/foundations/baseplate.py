@@ -11,10 +11,12 @@ Pinned bases (M ≈ 0) reduce to bearing + plate + nominal anchors; fixed bases 
 moment contribution. ``design_baseplate`` auto-sizes plate dimensions, thickness and
 anchors from a small ladder.
 
-⚠️ PROVISIONAL — coefficients/φ follow SANS 10162-1 / CSA S16 / concrete-code practice
-(standard PDFs absent from `standards/`). Bearing uses the elastic pressure block (no
-confinement A2/A1 benefit); anchor tension conservatively ignores axial relief. A
-registered engineer must verify before use.
+⚠️ PROVISIONAL — the SANS 10162-1 resistance factors are now transcribed from the official
+PDF (φc = 0.60 cl. 13.1(j); anchors are holding-down bolts → φar = 0.67 cl. 13.1(i); plate
+flexure φ = 0.90 cl. 13.1(a)). The bearing *model* (elastic pressure block, 0.85·f'c, no
+confinement A2/A1 benefit) and the conservative anchor-tension treatment (axial relief
+ignored) remain engineering modelling choices to be confirmed against SANS 10100-1 cl. 4.10
+bearing; final registered-engineer sign-off is still required.
 """
 
 from __future__ import annotations
@@ -22,6 +24,7 @@ from __future__ import annotations
 import dataclasses
 
 from torenone_kernel.connections.bolts import (
+    PHI_AR,
     BoltSpec,
     bolt_shear_resistance_kn,
     bolt_tension_resistance_kn,
@@ -30,9 +33,9 @@ from torenone_kernel.connections.bolts import (
 from torenone_kernel.models.enums import SteelGrade
 from torenone_kernel.models.results import BaseplateDesignResult, CheckResult
 
-PHI_C: float = 0.65            # concrete bearing resistance factor (PROVISIONAL)
-_BEARING_COEFF: float = 0.85   # 0.85·f'c bearing strength (PROVISIONAL)
-_PHI_PLATE: float = 0.90       # plate flexure (cl. 13.1)
+PHI_C: float = 0.60            # cl. 13.1(j) — concrete (resistance factor)
+_BEARING_COEFF: float = 0.85   # 0.85·f'c bearing strength (conservative; no A2/A1 — PROVISIONAL)
+_PHI_PLATE: float = 0.90       # cl. 13.1(a) — structural steel (plate flexure)
 _DEFAULT_FC_MPA: float = 25.0  # concrete cylinder strength (PROVISIONAL default)
 
 # AISC-style cantilever overhang factors (PROVISIONAL).
@@ -101,12 +104,13 @@ def check_baseplate(
     t_moment = moment_knm * 1_000.0 / plate.anchor_lever_mm  # kN
     t_uplift = max(-axial_kn, 0.0)                           # kN
     t_total = t_moment + t_uplift
-    tr_group = plate.n_anchors_tension * bolt_tension_resistance_kn(plate.anchor)
+    # Anchors are holding-down bolts → φar = 0.67 (cl. 13.1(i)), not φb.
+    tr_group = plate.n_anchors_tension * bolt_tension_resistance_kn(plate.anchor, phi=PHI_AR)
     u_anchor_t = t_total / tr_group if tr_group > 0 else 0.0
 
     # --- 4. anchor shear (shared by all anchors) ---
     v_per_anchor = shear_kn / plate.n_anchors_total
-    vr_anchor = bolt_shear_resistance_kn(plate.anchor)
+    vr_anchor = bolt_shear_resistance_kn(plate.anchor, phi=PHI_AR)
     u_anchor_v = v_per_anchor / vr_anchor
 
     prov = "PROVISIONAL"
@@ -119,18 +123,19 @@ def check_baseplate(
 
     return [
         _chk("baseplate: concrete bearing",
-             f"SANS 10162-1:2011 cl. 25.3 / SANS 10100-1 — {prov}", u_bearing,
+             f"SANS 10162-1:2011 cl. 13.1(j) φc + SANS 10100-1 cl. 4.10 (bearing) — {prov}",
+             u_bearing,
              f"p={p_max:.2f} MPa / {bearing_cap:.2f} MPa "
              f"({plate.length_mm:.0f}x{plate.width_mm:.0f} plate, f'c={plate.fc_mpa:.0f})"),
         _chk("baseplate: plate bending",
              f"SANS 10162-1:2011 cl. 13.5 (plate flexure) — {prov}", u_plate,
              f"{plate.thickness_mm:.0f} mm plate, cantilever m={m_cant:.0f} mm"),
         _chk("baseplate: anchor tension",
-             f"SANS 10162-1:2011 cl. 13.12 (anchors, tension) — {prov}", u_anchor_t,
+             f"SANS 10162-1:2011 cl. 13.1(i)/13.12 (anchors, tension) — {prov}", u_anchor_t,
              f"Tu={t_total:.1f} kN / Tr={tr_group:.1f} kN "
              f"({plate.n_anchors_tension}× {plate.anchor.designation}, {base_fixity})"),
         _chk("baseplate: anchor shear",
-             f"SANS 10162-1:2011 cl. 13.12 (anchors, shear) — {prov}", u_anchor_v,
+             f"SANS 10162-1:2011 cl. 13.1(i)/13.12 (anchors, shear) — {prov}", u_anchor_v,
              f"Vu={v_per_anchor:.1f} kN / Vr={vr_anchor:.1f} kN per anchor"),
     ]
 
