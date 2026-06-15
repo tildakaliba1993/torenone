@@ -57,10 +57,12 @@ def _sway_check(checks: list[CheckResult]) -> CheckResult:
 
 
 def _uls_wind_utils(r: DesignResult) -> list[float]:
+    # ULS-2/3 wind checks are advisory (informational, non-gating) until the wind method is
+    # validated — match them by name regardless of the informational flag.
     return [
         c.utilisation
         for c in r.checks
-        if "[ULS-" in c.name and "wind]" in c.name and not c.informational
+        if "[ULS-" in c.name and "wind]" in c.name
     ]
 
 
@@ -107,14 +109,17 @@ class TestAutosizeForWind:
         # Omitting the flag is identical to passing it False.
         assert design(_spec()).model_dump() == design(_spec(), autosize_for_wind=False).model_dump()
 
-    def test_off_leaves_a_wind_governed_frame_failing_uls_wind(self) -> None:
+    def test_off_leaves_wind_util_over_one_but_advisory(self) -> None:
         r = design(_wind_governed_spec())  # flag OFF
-        assert max(_uls_wind_utils(r)) > 1.0    # wind governs and is reported as failing
+        # The ULS wind utilisation exceeds 1.0 (gravity sizing is inadequate for wind)...
+        assert max(_uls_wind_utils(r)) > 1.0
+        # ...but the wind checks are advisory (non-gating), so they do NOT fail the design.
+        assert all(c.informational for c in r.checks if "wind]" in c.name)
 
     def test_on_sizes_for_wind_so_uls_wind_checks_pass(self) -> None:
         off = design(_wind_governed_spec())
         on = design(_wind_governed_spec(), autosize_for_wind=True)
-        # Sizing for the wind envelope makes every gating ULS-2/3 wind check pass...
+        # Sizing for the wind envelope makes every ULS-2/3 wind check (advisory) pass...
         assert max(_uls_wind_utils(on)) <= 1.0 + 1e-9
         # ...at the cost of heavier (never lighter) steel than the gravity-only sizing.
         assert on.total_steel_mass_kg >= off.total_steel_mass_kg

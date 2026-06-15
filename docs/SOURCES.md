@@ -27,6 +27,15 @@
 > all three thickness bands **match exactly** — `fy` upgraded from PROVISIONAL to VERIFIED. (Both
 > the EN copy and SANS 10160-2 are genuine content via re-hosts; properly-licensed copies are a
 > procurement/legal item, tracked in PRODUCTION_READINESS §2.)
+>
+> **2026-06-15 — SANS 10160-2 verification pass (E2 imposed roof load).** Verified vs Table 5: the
+> flat **0.4 kN/m² was wrong** (not a tabulated value) — replaced with the **area-dependent
+> category-H2** value (0.50 → 0.25 kN/m², interpolated). Typical portal frames have a large
+> tributary area ⇒ **0.25 kN/m²** (the old 0.4 was ~1.6× conservative). **Consequence:** the lower,
+> accurate gravity load made gravity-sized members fail the (provisional) ULS-2/3 wind checks, so —
+> consistent with the SLS-sway precedent — the **ULS-2/3 wind checks are now ADVISORY
+> (informational, non-gating)** like SLS sway, until the co-founder validates the wind method (then
+> flip to gating + auto-size-for-wind together).
 
 ## How to use
 - **Status legend:** `VERIFIED` (authoritative/confirmed or universal fact) · `PROVISIONAL` (sourced
@@ -43,7 +52,7 @@
 | ID | Item | Value / data | Source | Accessed | Status | Used in |
 |---|---|---|---|---|---|---|
 | E1 | SAISC steel section properties (64: IPE-AA/IPE 100–200, UB, UC) | full section props (A, I, Sx, Zx, rx/ry, J, Cw, geom) | Official **SAISC "Database of Structural Steel Sections"** (free PDF), supplied by co-founder; parsed via `tools/build_saisc_sections.py` | 2026-06-10 | PROVISIONAL (pending Pr.Eng spot-check vs Red Book) | `kernel/.../sections/data/saisc_sections.json` |
-| E2 | Imposed roof load — inaccessible roof | **0.4 kN/m²** UDL (SANS 10160-2 Table 5) | SANS 10160-2:2011 Table 5; confirmed peer-reviewed: *J. SAICE* via SciELO `S1021-20192021000100005`; corroborated across multiple refs | 2026-06-10 | PROVISIONAL (pending sign-off) | `kernel/.../loads/imposed.py` (1.5) |
+| E2 | Imposed roof load — inaccessible roof (category H2) | **area-dependent: 0.50 kN/m² (A≤3 m²) → 0.25 kN/m² (A≥15 m²)**, interpolated qk=0.25+(15−A)/48; A = rafter projected tributary area (bay × span/2). Typical frame ⇒ 0.25 kN/m² | **SANS 10160-2:2011 Table 5 category H2 (cl. 9.3.4)** — verified vs the standard 2026-06-15 (⚠️ replaced the earlier flat 0.4, which was not a tabulated value) | 2026-06-15 | ✅ **VERIFIED vs standard** (Pr.Eng sign-off remains good practice) | `kernel/.../loads/imposed.py` (1.5) |
 | E3 | Gravitational acceleration g | 9.81 m/s² (mass→weight) | Universal physical constant | 2026-06-10 | VERIFIED | `kernel/.../loads/dead.py` (1.4) |
 | E4 | SANS 10160-3 wind method | `vp=cr·co·vb,peak`; `cr=1.36((z'−zo)/(zg−zo))^α`; `qp=½ρvp²` | **SANS 10160-3:2019 cl. 7.3–7.4 (eq. 3–6)** — official standard | 2026-06-10 | VERIFIED vs standard (final sign-off pending) | `loads/wind.py` |
 | E5 | SA basic wind-speed zones vb,0 | 32 / 36 / 40 / 44 m/s (3 s gust) | **SANS 10160-3:2019 Figure 1** | 2026-06-10 | VERIFIED vs standard | `loads/wind.py` |

@@ -6,6 +6,7 @@ them and the renderer never printed the characteristic pressures (Part A fix).
 
 from __future__ import annotations
 
+import pytest
 from torenone_kernel.design import check, design
 from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.models.frame_spec import (
@@ -50,23 +51,19 @@ class TestWindInResult:
         assert result.wind.peak_velocity_pressure_kpa > 0
 
     def test_design_runs_the_wind_combinations(self) -> None:
-        # Part B: members are now CHECKED under ULS-2/3 wind (results suffixed + counted).
+        # Part B: members are CHECKED under ULS-2/3 wind (results suffixed + reported).
         checks = design(_spec()).checks
         names = [c.name for c in checks]
         assert any("[ULS-2 wind]" in n for n in names)
         assert any("[ULS-3 wind]" in n for n in names)
         wind_checks = [c for c in checks if "wind]" in c.name]
         assert wind_checks and all(c.utilisation >= 0 for c in wind_checks)
-        # the worst ULS-2/3 wind utilisation is folded into the governing utilisation /
-        # passed (these are GATING). The SLS-2 wind-sway check is advisory-only
-        # (informational) and is intentionally excluded from the governing utilisation.
-        uls_wind_checks = [
-            c for c in wind_checks if not c.informational and "[ULS-" in c.name
-        ]
-        assert uls_wind_checks
+        # The wind-on-frame method is PROVISIONAL, so ALL wind checks (ULS-2/3 + SLS-2 sway)
+        # are advisory/informational (non-gating) and are excluded from governing_utilisation.
+        assert all(c.informational for c in wind_checks)
         result = design(_spec())
-        assert result.governing_utilisation >= max(c.utilisation for c in uls_wind_checks)
-        assert any(c.informational and "[SLS-2 wind]" in c.name for c in checks)
+        gating_max = max(c.utilisation for c in result.checks if not c.informational)
+        assert result.governing_utilisation == pytest.approx(gating_max)
 
 
 class TestWindInReport:

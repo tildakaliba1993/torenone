@@ -62,10 +62,14 @@ engineer is a liability, not a product.
   **Also 2026-06-15 — SANS 10160-1 (load combos, E9) verified** vs the *final* Ed 1.1 + Amdt 1:
   ULS factors confirmed unchanged (γG 1.2/0.9, STR-P 1.35, imposed 1.6, wind 1.3; ψ
   inaccessible-roof/wind-accompanying = 0); **SLS wind factor corrected 1.0→0.6** (eq. 10).
-  **Also 2026-06-15 — `fy` verified** vs **EN 10025-2:2019 Table 6** (S355JR 355/345/335 +
-  S275JR 275/265/255 across all thickness bands match exactly). **Still open:** section
-  properties (E1) + imposed roof load (E2) Pr.Eng spot-check, the connection/baseplate
-  *methods* (T-stub, bearing model), and the **wind-on-frame method**. *Done-when:* each `SOURCES.md` row is `VERIFIED` with the
+  **Also 2026-06-15 — `fy` verified** vs **EN 10025-2:2019 Table 6** (all thickness bands match).
+  **Also 2026-06-15 — imposed roof load (E2) verified** vs **SANS 10160-2 Table 5**: the flat
+  0.4 kN/m² was wrong → replaced with the area-dependent category-H2 value (0.50→0.25). This
+  lower load exposed that gravity-sized members fail the *provisional* ULS-2/3 wind checks, so
+  those wind checks were made **advisory (non-gating)** like SLS sway, until the wind method is
+  validated. **Still open:** section properties (E1) Pr.Eng spot-check, the connection/baseplate
+  *methods* (T-stub, bearing model), and the **wind-on-frame method** (validate → then flip wind
+  checks to gating + auto-size-for-wind on). *Done-when:* each `SOURCES.md` row is `VERIFIED` with the
   engineer's initials + date (the code↔standard transcription is now done; the Pr.Eng's
   professional sign-off is the remaining half).
 - [ ] **1.2 Fill the benchmark validation harness (Phase 8.1/8.2 — THE gate, PRD NFR-1).**

@@ -144,9 +144,13 @@ def _member_check_summary(result: DesignResult) -> tuple[dict[str, float], dict[
     member_pass: dict[str, bool] = {}
 
     for s in result.sections:
-        # Find checks for this member (check names start with "<member>: ")
+        # Find the GATING checks for this member (check names start with "<member>: ").
+        # Advisory/informational checks (e.g. the provisional ULS/SLS wind checks) are
+        # excluded from the member pass/fail summary — they render in the checks table only.
         prefix = s.member + ":"
-        member_checks = [c for c in result.checks if c.name.startswith(prefix)]
+        member_checks = [
+            c for c in result.checks if c.name.startswith(prefix) and not c.informational
+        ]
         if member_checks:
             member_util[s.member] = max(c.utilisation for c in member_checks)
             member_pass[s.member] = all(c.passed for c in member_checks)

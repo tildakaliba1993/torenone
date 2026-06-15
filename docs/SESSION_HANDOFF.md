@@ -58,8 +58,10 @@ ULS-2/3+SLS-2) was built + SANS-cited, but `design.py` never invoked it.
   Wind Actions" + frontend Wind card show qp, net (cpe−cpi), per-case member loads.
 - **Part B (`8af09ba`):** `PortalAnalysis.run_wind_combination()` applies transverse wind to the
   frame; `design()`/`check()` run **ULS-2/3** per wind case, check members, append checks suffixed
-  `[ULS-2 wind]`/`[ULS-3 wind]` → they render in the checks tables and fold into
-  `passed`/`governing_utilisation`. Mechanically validated (`kernel/tests/test_plane_frame_wind.py`).
+  `[ULS-2 wind]`/`[ULS-3 wind]`. **Update (2026-06-15): these wind checks are now ADVISORY
+  (informational, non-gating)** — they report utilisations but do NOT fold into
+  `passed`/`governing_utilisation` (see the imposed-load note below for why). Mechanically validated
+  (`kernel/tests/test_plane_frame_wind.py`).
 - **PROVISIONAL:** wind-on-frame **sign conventions + governing case need SANS-worked-example
   validation by the co-founder.** Members are auto-sized on **gravity** and only **CHECKED** (not
   sized) for wind — a wind-governed inadequacy is surfaced honestly, not silently mis-sized.
@@ -78,9 +80,15 @@ ULS-2/3+SLS-2) was built + SANS-cited, but `design.py` never invoked it.
     practice limit (sign-off needed), and the wind model is PROVISIONAL — so it must not falsely
     fail a design. (The standard 15 m demo frame shows ~45 mm drift = 3.6× H/400; reported as
     ADVISORY in both the PDF and the web Checks table, never red.)
-- **Remaining wind work:** (a) co-founder validates the method; (b) flip `autosize_for_wind`
-  default to True (and expose via service/API) once validated; (c) revisit the sway limit (H/400 vs
-  H/150) with the engineer and decide if/when it should gate.
+- **ULS-2/3 wind checks are now ADVISORY (2026-06-15).** When the accurate (lower) SANS imposed
+  roof load (E2) landed, gravity-sized members started failing the *provisional* ULS wind checks —
+  so, consistent with the SLS-sway precedent, the ULS wind checks were made **informational
+  (non-gating)** too. So ALL wind-derived checks (ULS-2/3 + SLS-2 sway) are advisory until the
+  method is validated.
+- **Remaining wind work:** (a) co-founder validates the wind-on-frame method; (b) **once validated,
+  flip the ULS-2/3 wind checks back to GATING + flip `autosize_for_wind` default to True** (and
+  expose via service/API) — together; (c) revisit the sway limit (H/400 vs H/150) and whether it
+  should gate.
 
 ## Phase 8 validation harness (ready for the co-founder)
 - `kernel/tests/validation/benchmarks.py` — `make_spec(...)` builds a frame from plain numbers;

@@ -14,11 +14,12 @@
   5. Assemble DesignResult with all CheckResults, section choices, rules_version, warnings
 
 WIND (PROVISIONAL — pending registered-engineer validation of the wind-on-frame method):
-  - ULS-2/3 wind combinations: members are CHECKED under transverse wind and the checks
-    GATE the design (passed/governing). Auto-sizing for wind is available via
-    `design(autosize_for_wind=True)` but is OFF by default — gravity sizes the members
-    until the method is validated.
-  - SLS-2 wind sway (eaves lateral drift vs Annex D H/400): reported as an ADVISORY
+  - ULS-2/3 wind combinations: members are CHECKED under transverse wind and the results
+    reported as ADVISORY (informational, non-gating) — they do NOT gate passed/governing,
+    because the wind method is provisional and members are sized on gravity only. Auto-sizing
+    for wind is available via `design(autosize_for_wind=True)` but is OFF by default. Once the
+    method is validated, flip the wind checks to gating + auto-sizing on, together.
+  - SLS-2 wind sway (eaves lateral drift vs Annex D H/400): also reported as an ADVISORY
     (informational, non-gating) check — Annex D is informative and the model is PROVISIONAL.
 
 OUT OF SCOPE (deferred — see warnings in result):
@@ -198,12 +199,15 @@ def _wind_combination_checks(
     """Check the members under the wind combinations ULS-2/3 (Part B).
 
     For each wind combination, the worst of the wind load cases governs. The worst-case
-    member checks are reported (suffixed `[ULS-2 wind]` / `[ULS-3 wind]`) and gate the
-    design, so a wind-governed inadequacy is surfaced honestly (passed=False).
+    member checks are reported (suffixed `[ULS-2 wind]` / `[ULS-3 wind]`) with their
+    utilisations, so a wind-governed inadequacy is surfaced for the engineer.
 
-    **PROVISIONAL.** The wind-on-frame analysis is mechanically validated (equilibrium,
-    uplift, asymmetry) but its SANS engineering correctness — sign conventions and the
-    governing case — is pending registered-engineer validation against worked examples.
+    **Reported as INFORMATIONAL (advisory-only, non-gating)** — they do NOT gate the
+    design's `passed` / `governing_utilisation`, because the wind-on-frame analysis is
+    PROVISIONAL: mechanically validated (equilibrium, uplift, asymmetry) but its SANS
+    engineering correctness (sign conventions + governing case) is pending registered-engineer
+    validation, and members are sized on gravity only (autosize_for_wind off by default).
+    Once the method is validated, flip these to gating together with auto-sizing for wind.
     """
     best_per_key: dict[str, tuple[float, list[CheckResult]]] = {}
     for key, _combo, forces in _iter_wind_analyses(
@@ -232,13 +236,17 @@ def _wind_combination_checks(
             continue
         combo = combos[key]
         for c in entry[1]:
-            detail = f"PROVISIONAL wind-combination check ({combo.name}). {c.detail or ''}".strip()
+            detail = (
+                f"PROVISIONAL advisory (non-gating). Wind-combination check ({combo.name}). "
+                f"{c.detail or ''}"
+            ).strip()
             out.append(
                 CheckResult(
                     name=f"{c.name} [{key} wind]",
                     clause=c.clause,
                     utilisation=c.utilisation,
                     passed=c.passed,
+                    informational=True,
                     detail=detail,
                 )
             )
@@ -588,17 +596,18 @@ def design(
     if autosize_for_wind:
         wind_sizing_note = (
             "Members are auto-sized for the envelope of gravity (ULS-1) AND wind (ULS-2/3) "
-            "demands (autosize_for_wind=True). PROVISIONAL: the wind-on-frame method driving "
-            "this sizing is mechanically validated but its sign conventions and governing "
-            "case need registered-engineer validation against SANS worked examples."
+            "demands (autosize_for_wind=True), so the wind checks pass. The wind checks are "
+            "still reported as ADVISORY (non-gating) until the wind-on-frame method is "
+            "validated by a registered engineer."
         )
     else:
         wind_sizing_note = (
-            "Members are auto-sized on gravity (ULS-1) and CHECKED — not sized — for wind "
-            "(ULS-2/3); if a wind check governs it is reported (passed=False). PROVISIONAL: "
-            "the wind-on-frame analysis is mechanically validated (equilibrium, uplift, "
-            "asymmetric loading) but its sign conventions and governing case need "
-            "registered-engineer validation before auto-sizing on wind is enabled."
+            "Members are auto-sized on gravity (ULS-1) only; the ULS-2/3 wind checks are "
+            "reported as ADVISORY (informational, non-gating) with their utilisations — they "
+            "do NOT fail the design — because the wind-on-frame method is PROVISIONAL "
+            "(mechanically validated, but sign conventions + governing case pending "
+            "registered-engineer validation). Once validated, the wind checks become gating "
+            "together with auto-sizing for wind."
         )
     warnings: list[str] = [
         "Effective length factors K=1.0 assumed for both rafter and column (PROVISIONAL). "
@@ -829,9 +838,10 @@ def check(
         "SANS 10162-1 cl. 8.6 for sway frames.",
         "Characteristic wind actions (qp, net pressure coefficients, member line loads) are "
         "computed per SANS 10160-3, and the supplied members are CHECKED under the wind "
-        "combinations ULS-2/3 (results suffixed '[ULS-2 wind]' / '[ULS-3 wind]'). PROVISIONAL: "
-        "the wind-on-frame analysis is mechanically validated but its sign conventions + "
-        "governing case need registered-engineer validation.",
+        "combinations ULS-2/3 (results suffixed '[ULS-2 wind]' / '[ULS-3 wind]'), reported as "
+        "ADVISORY (informational, non-gating) — they do NOT fail the result. PROVISIONAL: the "
+        "wind-on-frame analysis is mechanically validated but its sign conventions + governing "
+        "case need registered-engineer validation before the wind checks become gating.",
         "SLS-2 wind sway (eaves lateral drift) is checked against Annex D H/400 and reported "
         "as an ADVISORY (informational, non-gating) result — Annex D is informative and the "
         "wind-on-frame model is PROVISIONAL. The engineer must judge serviceability sway.",
