@@ -3,6 +3,84 @@
 Full context for continuing work in a new session. Everything below is committed to
 `main` and CI-green unless stated otherwise.
 
+---
+
+## ⏩ SESSION 2 CONTINUATION (2026-06-15) — READ THIS FIRST, then `docs/PRODUCTION_READINESS.md`
+
+> A second long session ran on `2026-06-15`. **`main` HEAD = `c99d9ec`**, working tree clean,
+> CI green. The **live gap tracker is `docs/PRODUCTION_READINESS.md`** (every item has a
+> `[x]`/`[~]`/`[ ]` status + a dated note). The standards-verification audit trail is in
+> `docs/SOURCES.md` (see its dated changelog). This block is the bridge.
+
+**Context for the session:** the co-founder (registered structural engineer) is busy writing
+master's exams, so the directive is to **complete everything in `PRODUCTION_READINESS.md` that
+does NOT depend on him** — i.e. everything except §1 (the validation gate) and the
+method/clause/limitations sign-offs. Work proceeds in **batches, P1→P2, committing + pushing
+each batch with CI green** (verified via `gh run watch`).
+
+**Standards verification (done this session — all CI-green):** the co-founder supplied the
+real PDFs (now in the main-checkout `standards/`, gitignored). Verified clause-by-clause and
+fixed real discrepancies — see `SOURCES.md` changelog + commits `6431408`/`3ebf91c`/`5d499c5`/
+`7698cd9`:
+- **SANS 10162-1** (connections/baseplate): corrected φbr 0.80→0.67, φc 0.65→0.60, anchor φ→0.67,
+  bolt stress-area→shank-area + 0.70 thread factor, combined shear+tension elliptical→linear ≤1.4,
+  bolt fu 800/1000→830/1040. (Several were ~19% **unconservative**.)
+- **SANS 10160-1** (final 2011): ULS factors confirmed; **SLS wind 1.0→0.6** corrected.
+- **EN 10025-2:2019**: `fy` verified (all bands matched) → PROVISIONAL→VERIFIED.
+- **SANS 10160-2 Table 5** (imposed roof): flat 0.4 was wrong → **area-dependent H2** (0.50→0.25);
+  typical frame now 0.25 kN/m².
+
+**KEY DECISION — wind gating (carry forward):** the accurate (lower) imposed load made
+gravity-sized members fail the *provisional* ULS-2/3 wind checks. Resolution (user-approved):
+**ALL wind-derived checks (ULS-2/3 strength + SLS-2 sway) are now ADVISORY / informational
+(non-gating)** — they report utilisations but don't gate `passed`/`governing_utilisation` (new
+`CheckResult.informational` flag; excluded from the report's member summary; rendered amber
+"ADVISORY"). **When the co-founder validates the wind method → flip ULS wind back to GATING +
+flip `design(autosize_for_wind=True)` default on, together.**
+
+**Hardening batches DONE (no engineer needed):**
+- **Batch 1** (`dfa6cf0`): docker CI renders a real PDF in the image (3.6); pip-audit + npm-audit
+  CI gates (7.2); OpenAI timeout/retries (4.1); 256 KB request body guard (4.4).
+- **Batch 2** (`c26aeeb`): slowapi per-IP rate limiting on /parse + /design (4.3); service Sentry,
+  init-iff-`SENTRY_DSN` (5.1); web security headers in `next.config.ts` (7.4, CSP deferred).
+- **Batch 3** (`5e9249e`+`c99d9ec`): password-reset flow (`/forgot-password` + `/reset-password`)
+  + shared 10-char password policy (8.1, 7.3); **owner-only team invites** via a Next server
+  action + server-only admin client `web/src/lib/supabase/admin.ts` (8.2); role gating (8.3).
+  *(Team-invite arch decision = service-role in a Next server action, server-only — user-chosen.)*
+
+**▶ NEXT: BATCH 4 — deploy/ops (start here).** All in `PRODUCTION_READINESS.md`:
+- **3.5** CI/CD deploy-automation workflow (on tag or manual dispatch; activation needs the
+  founder's Fly/Vercel tokens as repo secrets — build the workflow + document).
+- **6.4** repeatable prod migration runbook (supabase migrations).
+- **6.2** report-PDF retention/lifecycle policy for the `reports` Storage bucket.
+- **6.3** DB connection-pool sizing under concurrency (session pooler).
+- **5.4** minimal product-analytics/event signal (designs run, pass/fail, latency).
+Then **Batch 5** (P2 product UI: 9.1 BMD/SFD, 9.2 check-mode toggle, 9.3 audit/provenance panel,
+9.4 editable cost) and **Batch 6** (legal drafts: 2.2/2.3/2.4 Terms/Privacy/disclaimer).
+
+**What needs the FOUNDER (not engineer) to *activate* later** (code is built/ready): deploy to
+Fly+Vercel+prod-Supabase+domain (§3.1–3.4), OpenAI spend cap (§4.2), Sentry DSN (§5.1) + web
+`@sentry/nextjs` + uptime monitor (§5.2), Supabase backup tier (§6.1), prod secret vaults +
+rotation (§7.1), CSP per-env (§7.4), buy properly-licensed SABS/BSI standard copies (§2.6),
+insurance/lawyer (§2.1/§2.5).
+
+**Run state (this machine):** web on `:3000` and the engineering service on `:8000` are both
+running and managed by **Claude Preview** (`.claude/launch.json` — gitignored). The service
+entry is a `bash -lc` wrapper that `cd`s to the main checkout, sources `.env`, sets
+`DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`, and runs the venv uvicorn on `:8000`
+(`autoPort:false`). `curl localhost:8000/health` to check.
+
+**Workflow reminders that still hold:** work in the git worktree (`.claude/worktrees/...`);
+the engineering service + venv live in the MAIN checkout `/Users/cash/TorenOne`. Local checks:
+`PYTHONPATH=kernel/src:service/src:tools /Users/cash/TorenOne/.venv/bin/{pytest,ruff,mypy}` and
+always run the **full** `mypy kernel/src service/src`; pin `sqlglot>=27,<28` in the venv. Web:
+the worktree `web/` has its own `node_modules` (from `npm ci`); `npm run typecheck|lint|test|build`.
+Push to `main` via `git push origin HEAD:main`; watch CI with `gh run watch`. The CI **E2E job
+is live** (nightly + manual dispatch, opt-in `RUN_E2E=true`) against a separate Supabase test
+project (`pritvkhipuyowjctrpdx`); see `docs/E2E_CI_SETUP.md`.
+
+---
+
 ## Where the project stands
 - **Phases 1–7: complete.** Kernel (SANS portal-frame design), AI parsing, FastAPI service,
   Supabase (multi-tenant + RLS + auth + storage), full frontend (6.1–6.8), and Phase 7
