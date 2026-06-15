@@ -27,13 +27,13 @@ describe("SignupForm", () => {
     vi.clearAllMocks();
   });
 
-  it("requires firm name, email and an 8+ char password", async () => {
+  it("requires firm name, email and a 10+ char password", async () => {
     render(<SignupForm />);
     await userEvent.type(screen.getByLabelText("Password"), "short");
     await userEvent.click(screen.getByRole("button", { name: /create account/i }));
     expect(await screen.findByText("Firm name is required")).toBeTruthy();
     expect(screen.getByText("Email is required")).toBeTruthy();
-    expect(screen.getByText("Password must be at least 8 characters")).toBeTruthy();
+    expect(screen.getByText("Password must be at least 10 characters")).toBeTruthy();
     expect(signUp).not.toHaveBeenCalled();
   });
 

@@ -187,15 +187,21 @@ Currently: structured stdout logs only. No way to know something broke in prod.
 - [x] **7.2 Dependency scanning in CI** — done 2026-06-15: `pip-audit --skip-editable` gates the
   Python job and `npm audit --omit=dev --audit-level=high` gates the web job (dev-only advisories
   excluded per 8.5). Both currently clean (0 vulns).
-- [ ] **7.3 Auth abuse protections** — login rate limiting / lockout, strong-password policy,
-  and email confirmation **ON in production** (it's off in the E2E test project by design).
+- [~] **7.3 Auth abuse protections** — done 2026-06-15: client-side **password policy** raised
+  to a shared 10-char minimum (`lib/auth/password.ts`, used by sign-up + reset). *(Remaining,
+  Supabase-dashboard settings — founder: login rate-limiting/lockout, the authoritative
+  server-side password policy, and **email confirmation ON in the production project**.)*
 - [~] **7.4 Security headers / CSP** — done 2026-06-15 for the safe set (next.config.ts):
   X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy, Permissions-Policy,
   X-DNS-Prefetch-Control. *(A full CSP is deferred — it needs per-env `connect-src` for the
   Supabase + service URLs and live testing so it doesn't break Next/Supabase inline scripts.)*
 
 ### 8. Auth & account lifecycle  ·  owner: **eng**
-- [ ] **8.1 Password reset + email verification flows** wired and tested against prod SMTP.
+- [~] **8.1 Password reset + email verification** — done 2026-06-15: `/forgot-password` (sends a
+  reset link via `resetPasswordForEmail`) + `/reset-password` (`updateUser`) flow, reusing the
+  existing `/auth/confirm` route for the recovery token; "Forgot your password?" link added to
+  login. Email verification (confirm route) already existed. *(Remaining: a live end-to-end test
+  against prod SMTP — needs the prod Supabase email sender configured.)*
 - [ ] **8.2 Team invites** — the sign-up trigger supports `firm_id` invite metadata (Task 5.2)
   but there's no UI/flow to invite a colleague into a firm. Needed for real firms (>1 engineer).
 - [ ] **8.3 Roles** — `owner`/`engineer` exist in data; confirm whether any role-gating is needed

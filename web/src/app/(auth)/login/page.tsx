@@ -32,6 +32,11 @@ export default async function LoginPage() {
           <LoginForm />
         </Suspense>
         <p className="text-sm text-muted">
+          <Link className="text-accent hover:underline" href="/forgot-password">
+            Forgot your password?
+          </Link>
+        </p>
+        <p className="text-sm text-muted">
           New here?{" "}
           <Link className="text-accent hover:underline" href="/signup">
             Create a firm account

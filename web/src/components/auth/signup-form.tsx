@@ -19,12 +19,13 @@ import {
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { passwordSchema } from "@/lib/auth/password";
 import { createClient } from "@/lib/supabase/client";
 
 const signupSchema = z.object({
   firmName: z.string().trim().min(1, "Firm name is required"),
   email: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: passwordSchema,
 });
 type SignupValues = z.infer<typeof signupSchema>;
 
