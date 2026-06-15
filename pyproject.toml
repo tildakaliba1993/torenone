@@ -25,6 +25,10 @@ service = [
     # Supabase-backed ReportStore (Task 5.6): Postgres writes + Storage REST upload.
     "psycopg[binary]>=3.1",
     "httpx>=0.27",
+    # Per-IP rate limiting on /parse + /design (abuse / runaway-cost guard).
+    "slowapi>=0.1.9",
+    # Error tracking — no-op unless SENTRY_DSN is set in the environment.
+    "sentry-sdk>=2.0",
 ]
 # PDF rendering — needs system pango/cairo (not installed in CI; PDF tests skip there).
 pdf = [

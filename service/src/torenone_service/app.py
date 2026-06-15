@@ -18,6 +18,9 @@ from collections.abc import Awaitable, Callable
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAIError
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from starlette.responses import JSONResponse, Response
 from torenone_ai import parse_description
 
@@ -61,6 +64,32 @@ _DEFAULT_CORS_ORIGINS = ("http://localhost:3000", "http://127.0.0.1:3000")
 # Max accepted request-body size. A FrameSpec/description payload is a few KB; 256 KB is a
 # generous-but-bounded cap that blocks abusive/runaway payloads. Override via env.
 MAX_REQUEST_BYTES: int = int(os.environ.get("MAX_REQUEST_BYTES", "").strip() or 256 * 1024)
+
+# Per-IP rate limits on the expensive POST routes (abuse / runaway-cost guard). Override
+# via env. /parse calls OpenAI (cost); /design runs the FEA + PDF (CPU). Defaults are
+# generous for a single engineer but bound automated abuse.
+PARSE_RATE_LIMIT: str = os.environ.get("PARSE_RATE_LIMIT", "").strip() or "30/minute"
+DESIGN_RATE_LIMIT: str = os.environ.get("DESIGN_RATE_LIMIT", "").strip() or "30/minute"
+
+
+def _init_sentry() -> bool:
+    """Initialise Sentry error tracking iff ``SENTRY_DSN`` is set. No-op otherwise.
+
+    Returns True if Sentry was initialised. Safe to call when sentry-sdk isn't configured —
+    nothing is sent and no key is required for local/dev/tests.
+    """
+    dsn = os.environ.get("SENTRY_DSN", "").strip()
+    if not dsn:
+        return False
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=dsn,
+        environment=os.environ.get("SENTRY_ENVIRONMENT", "production").strip() or "production",
+        traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0").strip() or 0.0),
+        send_default_pii=False,  # never ship user PII / request bodies
+    )
+    return True
 
 
 def _cors_allow_origins() -> list[str]:
@@ -109,12 +138,20 @@ def create_app(
     """
     configure_logging()
     logger = get_logger()
+    _init_sentry()
 
     app = FastAPI(
         title=SERVICE_NAME,
         version=SERVICE_VERSION,
         summary="TorenOne engineering service — AI orchestration + kernel + report.",
     )
+    # Per-app rate limiter (keyed on client IP). Created per app instance so test apps don't
+    # share counter state. Routes opt in via @limiter.limit (see /parse, /design).
+    limiter = Limiter(key_func=get_remote_address)
+    app.state.limiter = limiter
+    # slowapi's handler is typed (Request, RateLimitExceeded); Starlette expects
+    # (Request, Exception). The mismatch is a known slowapi typing quirk — safe to ignore.
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
     app.state.auth_config = (
         auth_config if auth_config is not None else _optional_auth_config_from_env()
     )
@@ -196,7 +233,9 @@ def create_app(
         return user
 
     @app.post("/parse")
+    @limiter.limit(PARSE_RATE_LIMIT)
     def parse(
+        request: Request,
         body: ParseRequest,
         user: AuthenticatedUser = Depends(require_user),
         ai: AIRuntime = Depends(get_ai_runtime),
@@ -225,7 +264,9 @@ def create_app(
         return response
 
     @app.post("/design")
+    @limiter.limit(DESIGN_RATE_LIMIT)
     def design(
+        request: Request,
         body: DesignRequest,
         user: AuthenticatedUser = Depends(require_user),
         builder: ReportBuilder = Depends(get_report_builder),

@@ -57,6 +57,14 @@ class TestBodySizeGuard:
         resp = client.post("/parse", json={"description": "20 m portal frame"})
         assert resp.status_code != 413
 
+
+class TestSentry:
+    def test_sentry_is_noop_without_dsn(self, monkeypatch):
+        from torenone_service.app import _init_sentry
+
+        monkeypatch.delenv("SENTRY_DSN", raising=False)
+        assert _init_sentry() is False  # no DSN → not initialised, no error
+
     def test_unknown_route_404(self):
         client = TestClient(create_app())
         assert client.get("/does-not-exist").status_code == 404

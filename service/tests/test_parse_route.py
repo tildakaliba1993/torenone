@@ -184,3 +184,16 @@ class TestGuards:
     def test_missing_body_422(self):
         resp = _client(_complete_extraction()).post("/parse", json={}, headers=_headers())
         assert resp.status_code == 422
+
+
+class TestRateLimit:
+    def test_parse_is_rate_limited(self, monkeypatch):
+        # Drop the /parse limit to 1/minute, then a 2nd authenticated call → 429.
+        import torenone_service.app as app_module
+
+        monkeypatch.setattr(app_module, "PARSE_RATE_LIMIT", "1/minute")
+        client = _client(_complete_extraction())
+        first = client.post("/parse", json={"description": "x"}, headers=_headers())
+        assert first.status_code == 200
+        second = client.post("/parse", json={"description": "x"}, headers=_headers())
+        assert second.status_code == 429

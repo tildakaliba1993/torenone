@@ -148,8 +148,9 @@ actually deployed** — there is no running production service or web app.
   wired; `max_tokens` cap belongs with 4.2 cost guardrails.)
 - [ ] **4.2 OpenAI cost guardrails** — usage/budget cap + alerting; a runaway loop or abuse could
   generate a large bill. Cap tokens per request; monitor spend.
-- [ ] **4.3 Rate limiting** on the service (`/parse`, `/design`) — none exists. Protect against
-  abuse and runaway cost (e.g. `slowapi` per-user/IP limits).
+- [x] **4.3 Rate limiting** — done 2026-06-15: `slowapi` per-IP limits on `/parse` + `/design`
+  (default 30/min each, env-overridable `PARSE_RATE_LIMIT`/`DESIGN_RATE_LIMIT`) → 429 on abuse.
+  Per-app limiter instance (no cross-test state). *(Per-user keying is a possible refinement.)*
 - [~] **4.4 Request guards** — done 2026-06-15: a global **max-body-size** middleware (256 KB,
   env `MAX_REQUEST_BYTES`) returns 413 on oversized payloads, on top of the existing 5000-char
   `/parse` cap. *(Remaining: per-request server-side timeout for the CPU-bound `/design` — pairs
@@ -160,8 +161,9 @@ actually deployed** — there is no running production service or web app.
 
 ### 5. Observability  ·  owner: **eng**
 Currently: structured stdout logs only. No way to know something broke in prod.
-- [ ] **5.1 Error tracking** (e.g. Sentry) in **both** the service and the web app — no error
-  reporting exists today.
+- [~] **5.1 Error tracking** — done service-side 2026-06-15: `sentry-sdk` initialised iff
+  `SENTRY_DSN` is set (no-op + no key needed for local/dev/tests; `send_default_pii=False`).
+  *(Remaining: wire `@sentry/nextjs` into the web app — needs the same DSN.)*
 - [ ] **5.2 Uptime/health monitoring + alerting** on `/health` and the web app (paging/email).
 - [ ] **5.3 Log aggregation/retention** beyond container stdout (so post-incident debugging is
   possible).
@@ -187,7 +189,10 @@ Currently: structured stdout logs only. No way to know something broke in prod.
   excluded per 8.5). Both currently clean (0 vulns).
 - [ ] **7.3 Auth abuse protections** — login rate limiting / lockout, strong-password policy,
   and email confirmation **ON in production** (it's off in the E2E test project by design).
-- [ ] **7.4 Security headers / CSP** on the web app.
+- [~] **7.4 Security headers / CSP** — done 2026-06-15 for the safe set (next.config.ts):
+  X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy, Permissions-Policy,
+  X-DNS-Prefetch-Control. *(A full CSP is deferred — it needs per-env `connect-src` for the
+  Supabase + service URLs and live testing so it doesn't break Next/Supabase inline scripts.)*
 
 ### 8. Auth & account lifecycle  ·  owner: **eng**
 - [ ] **8.1 Password reset + email verification flows** wired and tested against prod SMTP.
