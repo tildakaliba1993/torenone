@@ -59,10 +59,12 @@ engineer is a liability, not a product.
   *caught and corrected several discrepancies* (bolt bearing φbr 0.80→0.67, baseplate φc
   0.65→0.60, anchor φ 0.80→0.67, bolt area stress→shank +0.70 thread factor, combined
   elliptical→linear ≤1.4, bolt fu 800/1000→830/1040; several were ~19% unconservative).
-  **Still open:** section properties (E1), imposed roof load (E2), **load-combination factors
-  from the DRAFT SANS 10160-1** (E9 — needs the *final* standard), `fy` thickness reductions +
-  S275 (EN 10025-2), the connection/baseplate *methods* (T-stub, bearing model), and the
-  **wind-on-frame method**. *Done-when:* each `SOURCES.md` row is `VERIFIED` with the
+  **Also 2026-06-15 — SANS 10160-1 (load combinations, E9) verified** against the *final*
+  Ed 1.1 + Amdt 1 PDF: ULS factors confirmed unchanged from the draft (γG 1.2/0.9, STR-P 1.35,
+  imposed 1.6, wind 1.3; ψ inaccessible-roof/wind-accompanying = 0), and the **SLS wind factor
+  corrected 1.0→0.6** (eq. 10). **Still open:** section properties (E1), imposed roof load
+  (E2), `fy` thickness reductions + S275 (EN 10025-2), the connection/baseplate *methods*
+  (T-stub, bearing model), and the **wind-on-frame method**. *Done-when:* each `SOURCES.md` row is `VERIFIED` with the
   engineer's initials + date (the code↔standard transcription is now done; the Pr.Eng's
   professional sign-off is the remaining half).
 - [ ] **1.2 Fill the benchmark validation harness (Phase 8.1/8.2 — THE gate, PRD NFR-1).**
@@ -78,10 +80,9 @@ engineer is a liability, not a product.
 - [ ] **1.6 Wind decision.** After 1.1, decide: flip `design(autosize_for_wind=True)` default +
   expose via service/API, and whether SLS-2 sway should gate (currently advisory). See
   `SESSION_HANDOFF.md` Wind section.
-- [x] **1.7 Standards PDFs present.** Correction: SANS 10162-1:2011 *is* in `standards/` (the
-  earlier "absent" note was stale) — the 2026-06-15 pass transcribed from it. Genuinely still
-  outstanding: the **final** SANS 10160-1 (load combos — current copy is a draft) and
-  **EN 10025-2** (the `fy` thickness table).
+- [x] **1.7 Standards PDFs present.** SANS 10162-1:2011 and now **SANS 10160-1:2011 (final, Ed 1.1
+  + Amdt 1)** are both in `standards/` and verified against. Only genuinely outstanding standard:
+  **EN 10025-2** (the `fy` thickness table for t>16 mm and S275).
 
 > ⚠️ **Hard rule:** no real project output leaves the building until 1.1 + 1.2 are done.
 > The "Check mode" (FR-24) is the lower-liability wedge — lead pilots with it.

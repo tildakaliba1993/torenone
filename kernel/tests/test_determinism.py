@@ -164,7 +164,7 @@ class TestJsonRoundTrip:
 
 class TestRulesVersion:
     _REQUIRED_KEYS = {
-        "SANS 10160-1",   # load combinations (DRAFT — but must be cited)
+        "SANS 10160-1",   # load combinations (2011 final — verified)
         "SANS 10160-2",   # imposed loads
         "SANS 10160-3",   # wind actions
         "SANS 10162-1",   # steel design

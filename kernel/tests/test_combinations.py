@@ -1,9 +1,9 @@
 """Tests for SANS 10160-1 load combinations (Task 1.7, PRD FR-8).
 
-Factors transcribed from the DRAFT SANS 10160-1:2009 (Table 3 + eq. 6/7/10) — PROVISIONAL pending
-confirmation vs the final standard. These tests pin the factor values and the key SANS-specific
-structure (inaccessible roof ⇒ imposed & wind never combine as accompanying actions; an explicit
-favourable-permanent uplift combination).
+Factors VERIFIED against the final SANS 10160-1:2011 (Ed 1.1 + Amdt 1) — Table 3 (ULS), Table 2
+(ψ), eq. 6/7 (cl. 7.3.2) + eq. 10 (cl. 8.3.1, irreversible SLS), 2026-06-15. These tests pin the
+factor values and the key SANS-specific structure (inaccessible roof ⇒ imposed & wind never
+combine as accompanying actions; an explicit favourable-permanent uplift combination).
 """
 
 from __future__ import annotations
@@ -58,7 +58,8 @@ def test_sls_combinations() -> None:
     combos = {c.name[:5]: c for c in load_combinations(_spec())}
     assert combos["SLS-1"].factors == {"dead": 1.1, "imposed": 1.0}
     assert combos["SLS-1"].limit_state is LimitState.SLS
-    assert combos["SLS-2"].factors == {"dead": 1.0, "wind": 1.0}
+    # SLS irreversible (eq. 10, cl. 8.3.1.1): γG=1.1 unfavourable, γQ=0.6 for wind.
+    assert combos["SLS-2"].factors == {"dead": 1.1, "wind": 0.6}
 
 
 def test_imposed_and_wind_never_combine_for_inaccessible_roof() -> None:

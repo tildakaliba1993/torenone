@@ -15,6 +15,12 @@
 > factor** added, combined shear+tension **elliptical→linear ≤1.4**, and bolt **fu 800/1000→
 > 830/1040**. Several were ~19% unconservative. The *methods* (end-plate T-stub, baseplate
 > bearing model) + final Pr.Eng sign-off remain outstanding.
+>
+> **2026-06-15 — SANS 10160-1 verification pass (E9).** The final **SANS 10160-1:2011 (Ed 1.1 +
+> Amdt 1)** was obtained (replacing the draft). The load-combination factors were verified against
+> Table 3 / Table 2 / eq. 6/7/10: all **ULS** factors confirmed unchanged from the draft, and the
+> **SLS wind factor was corrected 1.0 → 0.6** (eq. 10, cl. 8.3.1.1). `rules_version` now stamps
+> "2011 (Ed 1.1 + Amdt 1)"; the report's "draft / provisional load factors" caveat is removed.
 
 ## How to use
 - **Status legend:** `VERIFIED` (authoritative/confirmed or universal fact) · `PROVISIONAL` (sourced
@@ -38,7 +44,7 @@
 | E6 | Wind ext. pressure — **walls** | cpe,10 zones D/E vs h/d + correlation factor | **SANS 10160-3:2019 Table 6 + cl. 8.3.2.4** — validated vs Table 6 | 2026-06-10 | VERIFIED vs standard | `loads/wind_pressure.py` |
 | E6b | Wind ext. pressure — **duopitch roof** | zones H/I cpe,10, pitch 5–45°, uplift+downforce | **SANS 10160-3:2019 Table 10** (pdfplumber) — validated vs Table 10 + cross-checked vs EN 1991-1-4 Table 7.4a | 2026-06-10 | VERIFIED vs standard | `loads/wind_pressure.py` |
 | E8 | Wind **internal** pressure cpi | enclosed +0.2/−0.3; dominant opening 0.75/0.90·cpe; favourable cpi=0 | **SANS 10160-3:2019 cl. 8.3.9.6 NOTE 2, eq. 14/15, cl. 8.3.9.1** | 2026-06-10 | VERIFIED vs standard | `loads/wind_pressure.py` |
-| E9 | Load combination factors | γG 1.2/0.9, STR-P 1.35, imposed 1.6, wind 1.3; SLS γG 1.1, γQ 1.0; inaccessible-roof ψ0=0 | **SANS 10160-1:2009 (DRAFT) Table 3, Table 2, eq. 6/7/10** | 2026-06-10 | ⚠️ **PROVISIONAL — DRAFT standard; confirm vs final** | `loads/combinations.py` |
+| E9 | Load combination factors | ULS γG 1.2/0.9, STR-P 1.35, imposed 1.6, wind 1.3 (Table 3); SLS γG 1.1/1.0, imposed 1.0, **wind 0.6** (eq.10); inaccessible-roof ψ=0, wind-accompanying ψ=0 (Table 2) | **SANS 10160-1:2011 (FINAL, Ed 1.1 + Amdt 1) Table 3 (p.38) / Table 2 (p.34) / eq. 6/7 (cl.7.3.2) / eq. 10 (cl.8.3.1)** | 2026-06-15 | ✅ **VERIFIED vs final standard** (⚠️ 2026-06-15: ULS factors confirmed unchanged from draft; **SLS wind corrected 1.0→0.6**) | `loads/combinations.py` |
 | E7 | Terrain params (zg, zo, zc, α per A/B/C/D) + air density ρ(altitude) + vb,peak = 1.0·vb | Table 1; Table 4; eq. 4 | **SANS 10160-3:2019 Table 1/3/4** — implementation **validated against the standard's own Table 3** | 2026-06-10 | VERIFIED vs standard (sign-off pending) | `loads/wind.py` |
 
 > Cross-verification (E1) was done against independently-known standard IPE/UC values; the spot-check
@@ -113,11 +119,11 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 >
 > **Document-quality caveats (from page-1 inspection):**
 > - ✅ **SANS 10160-3:2019** & **SANS 10162-1:2011** — official (ISBN). Wind + steel are on solid footing.
-> - ⚠️ **SANS 10160-1** is a **DRAFT (DSS, public-enquiry)** — combination partial factors **must be confirmed vs the final standard** before relied upon (1.7).
+> - ✅ **SANS 10160-1:2011** (FINAL, Ed 1.1 + Amdt 1) obtained 2026-06-15 — combination factors verified (E9); supersedes the earlier draft copy.
 > - ⚠️ **SANS 10160-2** page-1 looks like a course re-host — verify genuine (imposed 0.4 kN/m² already corroborated).
 > - ⚠️ **Steelwork guide** likely scanned (no text layer) — needs OCR; not the 4th ed.
 >
-> Remaining genuinely-outstanding items: **R5** (validation data the engineer *produces*) + confirm the SANS 10160-1 final-version combination factors.
+> Remaining genuinely-outstanding items: **R5** (validation data the engineer *produces*) + **EN 10025-2** (the `fy` thickness table for t>16 mm and S275). *(SANS 10160-1 final combination factors — confirmed 2026-06-15, E9.)*
 
 | # | Document | Exactly what we need | Unblocks | Priority |
 |---|---|---|---|---|

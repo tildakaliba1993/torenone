@@ -45,9 +45,8 @@ from torenone_kernel.sections.library import SectionLibrary
 _TEMPLATE_PATH = Path(__file__).parent / "template.html.jinja2"
 
 _PROVISIONAL_WARNINGS = [
-    "fy for S355JR sourced from EN 10025-2 (not SANS 1431) — pending Pr.Eng sign-off.",
-    "Load combination partial factors from DRAFT SANS 10160-1 (public enquiry version) "
-    "— confirm vs final published standard.",
+    "fy for S355JR: base 355/480 MPa verified vs SANS 10162-1 Table 6; thickness reductions "
+    "(345/335) from EN 10025-2 — pending Pr.Eng sign-off.",
     "SAISC section properties from free PDF — pending registered-engineer spot-check vs Red Book.",
     "Sway-sensitive threshold U2 > 1.4: CSA S16 basis — SANS 10162-1 cl. 8.7 does not state "
     "an explicit numerical cutoff.",
@@ -279,7 +278,7 @@ def _compute_working(result: DesignResult) -> dict[str, Any]:
         "gamma_Q": gamma_Q,
         "uls_rafter_udl_kn_m": uls_raf_udl,
         "uls_col_udl_kn_m": uls_col_udl,
-        "combo_clause": "SANS 10160-1:2009 (DRAFT) Table 3",
+        "combo_clause": "SANS 10160-1:2011 Table 3",
         # Analysis forces
         "forces": forces,
         "eaves_moment_knm": abs(forces["eaves_L"].moment_knm),
