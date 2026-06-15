@@ -98,12 +98,16 @@ ULS-2/3+SLS-2) was built + SANS-cited, but `design.py` never invoked it.
    default to True + expose via service/API; revisit the H/400 vs H/150 sway limit.
 3. **`SUPABASE_SERVICE_ROLE_KEY`** — the user fixed it in main `.env` (was the anon key). Confirm
    report persistence still works after any service restart.
-4. **CI test project** — to flip on the Playwright E2E job (currently skipped, gated on
-   `RUN_E2E=true` + `E2E_EMAIL`/`E2E_PASSWORD` secrets + a running service). Safe to defer.
+4. **CI E2E job (`web-e2e`)** — now triggers **manual dispatch + nightly (02:00 UTC) only**,
+   never on push/PR, and must target a **SEPARATE Supabase TEST project** (decided this session).
+   The workflow is fully wired + gated on `RUN_E2E=true` + 7 secrets. **Remaining = ops only:**
+   create the test project, push migrations, seed the E2E user, set the secrets + variable, then
+   `gh workflow run CI`. Step-by-step runbook: **`docs/E2E_CI_SETUP.md`**.
 5. **Phase 9** — pilot & YC readiness.
 
 ## Doc map
 `docs/TASKS.md` (phase-by-phase status, every task annotated), `docs/SOURCES.md` (every transcribed
-value + dependency, cited), `docs/VALIDATION_GUIDE.md`, `standards/README.md` (SANS manifest —
+value + dependency, cited), `docs/VALIDATION_GUIDE.md`, `docs/E2E_CI_SETUP.md` (turn on the CI E2E
+job), `standards/README.md` (SANS manifest —
 PDFs are local-only / gitignored). Agent memory: `run-engineering-service-locally`,
 `supabase-asymmetric-jwt-es256`, `verify-foundation-before-parallel-build`.

@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:        # manual trigger (e.g. to run the opt-in E2E suite on demand)
+  schedule:
+    - cron: "0 2 * * *"     # nightly 02:00 UTC — runs the opt-in E2E suite (if enabled)
 
 jobs:
   python:
@@ -91,15 +94,17 @@ jobs:
   web-e2e:
     name: Web E2E (Playwright)
     runs-on: ubuntu-latest
-    # OPT-IN. The suite signs in to the real Supabase project and writes real data
-    # (projects, runs, a fresh firm-B user per run), so it is OFF by default to keep
-    # CI green and avoid polluting the hosted project. Enable by setting the repo
-    # variable RUN_E2E=true and the secrets below — ideally pointed at a SEPARATE
-    # Supabase test project, not production.
+    # OPT-IN + LOW-CADENCE. The suite signs in and writes real data (projects, runs,
+    # a fresh firm-B user per run), so it must point at a SEPARATE Supabase TEST
+    # project — never production. To keep that data churn off every push, it runs ONLY
+    # on the nightly schedule and on manual dispatch (never on push/PR), and only when
+    # the repo variable RUN_E2E=true is set with the secrets below.
     #   Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_DB_URL,
     #            NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
     #            E2E_EMAIL, E2E_PASSWORD (a pre-seeded user; email confirmation off).
-    if: vars.RUN_E2E == 'true'
+    if: >-
+      vars.RUN_E2E == 'true' &&
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     steps:
       - uses: actions/checkout@v5
       # The engineering service serves /design (kernel + PDF). /parse is mocked in
