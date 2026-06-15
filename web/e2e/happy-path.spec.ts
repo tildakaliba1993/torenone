@@ -47,7 +47,11 @@ test.describe("happy path", () => {
 
     // The run is persisted and shows in the project's history with a downloadable PDF.
     await page.getByRole("link", { name: /back to project/i }).click();
-    await expect(page.getByRole("table")).toBeVisible();
+    // Wait for the project page to actually load before asserting — the results page (which
+    // has its own tables) stays mounted until the project's server data resolves, which can
+    // be slow in CI. The project heading appears only once we've navigated.
+    await expect(page.getByRole("heading", { name: projectName })).toBeVisible();
+    await expect(page.getByRole("table").first()).toBeVisible();
     await expect(page.getByRole("button", { name: /^pdf$/i }).first()).toBeVisible();
   });
 });
