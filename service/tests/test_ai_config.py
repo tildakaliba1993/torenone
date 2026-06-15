@@ -75,6 +75,37 @@ class TestFromEnv:
         )
         assert cfg.base_url == "https://proxy.example/v1"
 
+    def test_timeout_and_retries_defaults(self):
+        cfg = AIConfig.from_env({"OPENAI_API_KEY": FAKE_KEY})
+        assert cfg.timeout_s == 30.0
+        assert cfg.max_retries == 2
+
+    def test_timeout_and_retries_from_env(self):
+        cfg = AIConfig.from_env(
+            {"OPENAI_API_KEY": FAKE_KEY, "OPENAI_TIMEOUT_S": "12.5", "OPENAI_MAX_RETRIES": "4"}
+        )
+        assert cfg.timeout_s == 12.5
+        assert cfg.max_retries == 4
+
+    def test_invalid_or_nonpositive_timeout_falls_back_to_default(self):
+        for bad in ("0", "-3", "abc", "  "):
+            cfg = AIConfig.from_env({"OPENAI_API_KEY": FAKE_KEY, "OPENAI_TIMEOUT_S": bad})
+            assert cfg.timeout_s == 30.0
+        # negative / non-numeric retries also fall back; 0 retries is a valid explicit choice
+        assert AIConfig.from_env(
+            {"OPENAI_API_KEY": FAKE_KEY, "OPENAI_MAX_RETRIES": "-1"}
+        ).max_retries == 2
+        assert AIConfig.from_env(
+            {"OPENAI_API_KEY": FAKE_KEY, "OPENAI_MAX_RETRIES": "0"}
+        ).max_retries == 0
+
+    def test_safe_dict_includes_reliability_fields_and_redacts_key(self):
+        cfg = AIConfig.from_env({"OPENAI_API_KEY": FAKE_KEY})
+        d = cfg.safe_dict()
+        assert d["timeout_s"] == 30.0
+        assert d["max_retries"] == 2
+        assert FAKE_KEY not in str(d.values())
+
 
 # ---------------------------------------------------------------------------
 # 2. Key is NEVER exposed (the core security guarantee — NFR-6)

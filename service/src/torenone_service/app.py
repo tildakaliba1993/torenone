@@ -18,7 +18,7 @@ from collections.abc import Awaitable, Callable
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAIError
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 from torenone_ai import parse_description
 
 from torenone_service.ai_runtime import (
@@ -57,6 +57,10 @@ SERVICE_VERSION = "0.1.0"
 # Override in deployment via CORS_ALLOW_ORIGINS (comma-separated). The token is sent
 # as an Authorization header (not cookies), so credentials are not allowed.
 _DEFAULT_CORS_ORIGINS = ("http://localhost:3000", "http://127.0.0.1:3000")
+
+# Max accepted request-body size. A FrameSpec/description payload is a few KB; 256 KB is a
+# generous-but-bounded cap that blocks abusive/runaway payloads. Override via env.
+MAX_REQUEST_BYTES: int = int(os.environ.get("MAX_REQUEST_BYTES", "").strip() or 256 * 1024)
 
 
 def _cors_allow_origins() -> list[str]:
@@ -132,6 +136,31 @@ def create_app(
         allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type"],
     )
+
+    @app.middleware("http")
+    async def limit_body_size(
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
+        """Reject over-large request bodies early (abuse / runaway-cost guard).
+
+        A FrameSpec / description payload is small (a few KB); the cap is generous but
+        bounded. Enforced via the Content-Length header (clients must send it).
+        """
+        content_length = request.headers.get("content-length")
+        if content_length is not None:
+            try:
+                if int(content_length) > MAX_REQUEST_BYTES:
+                    return JSONResponse(
+                        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                        content={"detail": "request body too large"},
+                    )
+            except ValueError:
+                return JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content={"detail": "invalid Content-Length"},
+                )
+        return await call_next(request)
 
     @app.middleware("http")
     async def log_requests(

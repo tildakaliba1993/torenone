@@ -41,7 +41,13 @@ def build_client(config: AIConfig) -> Any:
             "Install it in the engineering-service environment: pip install openai"
         ) from exc
 
-    kwargs: dict[str, Any] = {"api_key": config.api_key}
+    kwargs: dict[str, Any] = {
+        "api_key": config.api_key,
+        # Bound the upstream call so a slow/hung OpenAI request can't block /parse forever,
+        # with a small number of automatic retries on transient errors (cl. PRD reliability).
+        "timeout": config.timeout_s,
+        "max_retries": config.max_retries,
+    }
     if config.base_url:
         kwargs["base_url"] = config.base_url
     return OpenAI(**kwargs)

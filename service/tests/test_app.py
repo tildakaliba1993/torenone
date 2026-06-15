@@ -39,6 +39,24 @@ class TestHealth:
         client = TestClient(create_app())
         assert client.post("/health").status_code == 405
 
+
+class TestBodySizeGuard:
+    def test_oversized_body_rejected_with_413(self):
+        from torenone_service.app import MAX_REQUEST_BYTES
+
+        client = TestClient(create_app())
+        oversized = b"x" * (MAX_REQUEST_BYTES + 1)
+        resp = client.post("/parse", content=oversized, headers={"Content-Type": "application/json"})
+        assert resp.status_code == 413
+        assert resp.json()["detail"] == "request body too large"
+
+    def test_normal_body_passes_the_size_guard(self):
+        # A normal-sized body is not blocked by the guard (it gets past to auth → 401/422,
+        # never 413).
+        client = TestClient(create_app())
+        resp = client.post("/parse", json={"description": "20 m portal frame"})
+        assert resp.status_code != 413
+
     def test_unknown_route_404(self):
         client = TestClient(create_app())
         assert client.get("/does-not-exist").status_code == 404

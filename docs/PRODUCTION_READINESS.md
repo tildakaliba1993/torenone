@@ -133,23 +133,27 @@ actually deployed** — there is no running production service or web app.
   origin (not localhost).
 - [ ] **3.5 CI/CD deploy automation** — currently deploy is manual. Add a deploy workflow (on
   tag or manual dispatch) so releases are repeatable and auditable.
-- [ ] **3.6 Harden the `docker` CI job** to exercise `/design` (not just `/health`) so packaging
-  regressions like the Jinja-template bug are caught at build time, not by the nightly E2E.
+- [x] **3.6 Harden the `docker` CI job** — done 2026-06-15: a step now runs `design()` +
+  `render_pdf()` inside the built image (asserts a real `%PDF`), so packaging regressions like
+  the Jinja-template bug fail at build time. (No auth/Supabase needed — pure kernel + WeasyPrint.)
 
 ---
 
 ## P1 — Needed before relying on it / scaling past a hand-held pilot
 
 ### 4. Reliability & cost controls  ·  owner: **eng**
-- [ ] **4.1 OpenAI hardening** — `service/.../torenone_ai` sets **no timeout, no `max_tokens`,
-  no `max_retries`**. A hung/slow OpenAI call blocks `/parse`. Add explicit timeout + bounded
-  retries + the documented fallback model wiring.
+- [x] **4.1 OpenAI hardening** — done 2026-06-15: the client is now built with a 30 s timeout +
+  2 bounded retries (both env-overridable: `OPENAI_TIMEOUT_S` / `OPENAI_MAX_RETRIES`), so a
+  hung/slow OpenAI call no longer blocks `/parse` indefinitely. (Fallback-model field already
+  wired; `max_tokens` cap belongs with 4.2 cost guardrails.)
 - [ ] **4.2 OpenAI cost guardrails** — usage/budget cap + alerting; a runaway loop or abuse could
   generate a large bill. Cap tokens per request; monitor spend.
 - [ ] **4.3 Rate limiting** on the service (`/parse`, `/design`) — none exists. Protect against
   abuse and runaway cost (e.g. `slowapi` per-user/IP limits).
-- [ ] **4.4 Request guards** — `/parse` caps description at 5000 chars (good); confirm `/design`
-  payload bounds and add a global max-body-size. Add per-request timeouts.
+- [~] **4.4 Request guards** — done 2026-06-15: a global **max-body-size** middleware (256 KB,
+  env `MAX_REQUEST_BYTES`) returns 413 on oversized payloads, on top of the existing 5000-char
+  `/parse` cap. *(Remaining: per-request server-side timeout for the CPU-bound `/design` — pairs
+  with 4.5 capacity.)*
 - [ ] **4.5 Concurrency/capacity** — the service is single-instance and `/design` is CPU-bound
   (FEA + WeasyPrint). Decide min instances / autoscale on Fly; load-test the 60 s NFR under
   a few concurrent designs.
@@ -178,8 +182,9 @@ Currently: structured stdout logs only. No way to know something broke in prod.
 - [ ] **7.1 Secrets management** — production secrets in Fly/Vercel/Supabase vaults, not local
   `.env`. Rotate the keys that have appeared in dev. Confirm `SUPABASE_SERVICE_ROLE_KEY` is the
   real one in prod (open thread #3 in the handoff).
-- [ ] **7.2 Dependency scanning in CI** (pip-audit + npm audit as a gate, not a one-off) so new
-  CVEs surface.
+- [x] **7.2 Dependency scanning in CI** — done 2026-06-15: `pip-audit --skip-editable` gates the
+  Python job and `npm audit --omit=dev --audit-level=high` gates the web job (dev-only advisories
+  excluded per 8.5). Both currently clean (0 vulns).
 - [ ] **7.3 Auth abuse protections** — login rate limiting / lockout, strong-password policy,
   and email confirmation **ON in production** (it's off in the E2E test project by design).
 - [ ] **7.4 Security headers / CSP** on the web app.

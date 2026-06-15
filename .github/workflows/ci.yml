@@ -44,6 +44,11 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
         run: pytest --cov=torenone_kernel --cov-report=term-missing --cov-fail-under=95
+      - name: Dependency vulnerability scan (Python)
+        # Gate on known CVEs in the installed Python deps (skip the local editable package).
+        run: |
+          pip install pip-audit
+          pip-audit --skip-editable
 
   docker:
     name: Docker image (build + health smoke)
@@ -65,6 +70,26 @@ jobs:
           echo "health body:"; cat /tmp/health.json; echo
           grep -q '"status":"ok"' /tmp/health.json
           grep -q 'torenone-engineering-service' /tmp/health.json
+      - name: Smoke-test the kernel + PDF render in the built image
+        # Exercises design() + render_pdf() against the INSTALLED package so packaging
+        # regressions (e.g. a missing report template / section JSON) fail at build time,
+        # not only in the nightly E2E. No auth/Supabase needed — pure kernel + WeasyPrint.
+        run: |
+          docker exec torenone python - <<'PY'
+          from torenone_kernel.models.frame_spec import FrameSpec, FrameGeometry, DeadLoadInputs, WindContext
+          from torenone_kernel.models.enums import TerrainCategory
+          from torenone_kernel.design import design
+          from torenone_kernel.report.renderer import render_pdf
+          spec = FrameSpec(
+              geometry=FrameGeometry(span_m=15.0, eaves_height_m=5.0, roof_pitch_deg=8.0,
+                                     bay_spacing_m=6.0, number_of_bays=5),
+              dead=DeadLoadInputs(roof_kpa=0.2),
+              wind=WindContext(basic_wind_speed_ms=36.0, terrain_category=TerrainCategory.B),
+          )
+          pdf = render_pdf(design(spec))
+          assert pdf[:5] == b"%PDF-", pdf[:20]
+          print(f"PDF rendered in image OK: {len(pdf)} bytes")
+          PY
       - name: Container logs
         if: always()
         run: docker logs torenone || true
@@ -90,6 +115,10 @@ jobs:
       - run: npm run typecheck
       - run: npm run test
       - run: npm run build
+      - name: Dependency vulnerability scan (web production deps)
+        # Gate on high+ CVEs in the PRODUCTION dependency surface. Dev-only advisories
+        # (e.g. the vite/esbuild dev-server one) are excluded via --omit=dev (see 8.5).
+        run: npm audit --omit=dev --audit-level=high
 
   web-e2e:
     name: Web E2E (Playwright)

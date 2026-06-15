@@ -26,15 +26,40 @@ from collections.abc import Mapping
 DEFAULT_MODEL: str = "gpt-5.5"            # flagship: parsing + narrative (Structured Outputs)
 DEFAULT_FALLBACK_MODEL: str = "gpt-5.4-mini"  # cost fallback if parsing volume grows
 
+# Reliability defaults for the OpenAI client — a hung/slow upstream call must not block
+# /parse indefinitely. Overridable via env.
+DEFAULT_TIMEOUT_S: float = 30.0   # per-request timeout (seconds)
+DEFAULT_MAX_RETRIES: int = 2      # bounded SDK retries on transient errors
+
 # Environment variable names — ALL server-side only.  None are ``NEXT_PUBLIC_*``.
 ENV_API_KEY: str = "OPENAI_API_KEY"
 ENV_MODEL: str = "OPENAI_MODEL"
 ENV_FALLBACK_MODEL: str = "OPENAI_FALLBACK_MODEL"
 ENV_BASE_URL: str = "OPENAI_BASE_URL"
+ENV_TIMEOUT_S: str = "OPENAI_TIMEOUT_S"
+ENV_MAX_RETRIES: str = "OPENAI_MAX_RETRIES"
 
 
 class MissingAPIKeyError(RuntimeError):
     """Raised when ``OPENAI_API_KEY`` is absent/blank in the server environment."""
+
+
+def _positive_float(raw: str | None, default: float) -> float:
+    """Parse a positive float from env; fall back to *default* on blank/invalid/non-positive."""
+    try:
+        value = float((raw or "").strip())
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def _non_negative_int(raw: str | None, default: int) -> int:
+    """Parse a non-negative int from env; fall back to *default* on blank/invalid/negative."""
+    try:
+        value = int((raw or "").strip())
+    except ValueError:
+        return default
+    return value if value >= 0 else default
 
 
 def _redact(key: str) -> str:
@@ -62,6 +87,8 @@ class AIConfig:
     model: str = DEFAULT_MODEL
     fallback_model: str = DEFAULT_FALLBACK_MODEL
     base_url: str | None = None
+    timeout_s: float = DEFAULT_TIMEOUT_S
+    max_retries: int = DEFAULT_MAX_RETRIES
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> AIConfig:
@@ -90,22 +117,28 @@ class AIConfig:
         fallback_model = (source.get(ENV_FALLBACK_MODEL) or "").strip() or DEFAULT_FALLBACK_MODEL
         base_url = (source.get(ENV_BASE_URL) or "").strip() or None
 
+        timeout_s = _positive_float(source.get(ENV_TIMEOUT_S), DEFAULT_TIMEOUT_S)
+        max_retries = _non_negative_int(source.get(ENV_MAX_RETRIES), DEFAULT_MAX_RETRIES)
+
         return cls(
             api_key=api_key,
             model=model,
             fallback_model=fallback_model,
             base_url=base_url,
+            timeout_s=timeout_s,
+            max_retries=max_retries,
         )
 
     def __repr__(self) -> str:  # noqa: D105 — redacted on purpose
         return (
             f"AIConfig(api_key={_redact(self.api_key)!r}, model={self.model!r}, "
-            f"fallback_model={self.fallback_model!r}, base_url={self.base_url!r})"
+            f"fallback_model={self.fallback_model!r}, base_url={self.base_url!r}, "
+            f"timeout_s={self.timeout_s!r}, max_retries={self.max_retries!r})"
         )
 
     __str__ = __repr__
 
-    def safe_dict(self) -> dict[str, str | None]:
+    def safe_dict(self) -> dict[str, str | float | int | None]:
         """Return a dict safe to log / send anywhere — the API key is redacted.
 
         This is the ONLY dict representation of the config; there is deliberately no
@@ -115,5 +148,7 @@ class AIConfig:
             "model": self.model,
             "fallback_model": self.fallback_model,
             "base_url": self.base_url,
+            "timeout_s": self.timeout_s,
+            "max_retries": self.max_retries,
             "api_key": _redact(self.api_key),
         }
