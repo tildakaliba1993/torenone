@@ -1,78 +1,77 @@
-# Enabling the CI E2E job (`web-e2e`)
+# Turning on the nightly E2E test (simple guide)
 
-The Playwright E2E suite (`web/e2e/`) drives the **real** stack: Supabase auth + RLS,
-the engineering service (`/design` → kernel + PDF + Storage), and the web app. Only the
-non-deterministic OpenAI `/parse` call is mocked. Because it **signs in and writes real
-data** (a project, a run, and a fresh "firm B" sign-up *per run*), CI runs it:
+This sets up the automated end-to-end test that runs every night. It needs its **own
+throwaway Supabase project** (so it never touches your real data).
 
-- **only on a separate Supabase TEST project** — never production, and
-- **only on the nightly schedule (02:00 UTC) and on manual dispatch** — never on push/PR,
+**You only do the clicking in the Supabase website (Part A).** Then you paste 6 things to
+Claude, and **Claude does the rest** (database setup, GitHub secrets, first run). That's it.
 
-and only when the repo variable `RUN_E2E=true` is set. The workflow (`.github/workflows/ci.yml`,
-job `web-e2e`) is already wired for this; the steps below turn it on.
+---
 
-## 1. Create the separate Supabase test project
+## Part A — what YOU click (about 10 minutes, all in the Supabase website)
 
-In the Supabase dashboard, create a second project (e.g. `torenone-e2e`). Then from a
-checkout with the Supabase CLI:
+### Step 1 — Make a new project
+1. Go to **https://supabase.com/dashboard** and sign in.
+2. Click the green **"New project"** button.
+3. Name it **`torenone-e2e`**.
+4. Where it says **Database Password**, click **"Generate a password"**, then **copy that
+   password and paste it somewhere safe** (a note). You'll give it to Claude later. ⚠️ You
+   can't see it again after this.
+5. Pick the same region as your main project, then click **"Create new project"**.
+6. Wait ~2 minutes for it to finish setting up (you'll see a progress spinner).
 
-```bash
-supabase link --project-ref <TEST_PROJECT_REF>
-supabase db push          # applies supabase/migrations/* (schema, trigger, storage, RLS)
-```
+### Step 2 — Turn off email confirmation
+1. In the left sidebar click **Authentication**.
+2. Click **Sign In / Providers** (or just **Providers**).
+3. Click **Email** in the list.
+4. Find the **"Confirm email"** switch and turn it **OFF**.
+5. Click **Save**.
 
-`supabase db push` does **not** run `supabase/seed.sql` (that is local-`db reset` only), so
-seed the E2E user manually in step 2.
+*(This lets the test log in without checking an inbox.)*
 
-## 2. Seed the E2E user (firm A) — email confirmation OFF
+### Step 3 — Create the test login user
+1. Still under **Authentication**, click **Users**.
+2. Click **Add user** → **Create new user**.
+3. Email: **`e2e@torenone.test`**
+4. Password: make up a password and **save it in your note** (you'll give it to Claude).
+5. Tick the **"Auto Confirm User"** box.
+6. Click **Create user**.
 
-The suite logs in as `E2E_EMAIL` / `E2E_PASSWORD`. In the **test** project:
+### Step 4 — Copy 4 values from Settings
+1. Click the **gear / Project Settings** at the bottom of the left sidebar.
+2. Click **API**. Copy these three (paste each into your note):
+   - **Project URL** (looks like `https://abcd1234.supabase.co`)
+   - **anon** key (the "public" one)
+   - **service_role** key (the "secret" one — keep it private)
+3. Click **Database** (still in Settings). Find **Connection string**, choose the **URI**
+   tab, and copy it. It looks like
+   `postgresql://postgres:[YOUR-PASSWORD]@db.abcd1234.supabase.co:5432/postgres`.
 
-1. Auth → Providers → Email: turn **"Confirm email" OFF** (so the user can sign in without
-   an inbox round-trip).
-2. Auth → Users → **Add user** → create e.g. `e2e@torenone.test` with a strong password and
-   **Auto Confirm User** checked.
+That's all the clicking. ✅
 
-The Task 5.2 sign-up trigger (`handle_new_user`) fires on insert and bootstraps a `firms`
-row + `profiles` row automatically (no `firm_id` metadata ⇒ new firm, role `owner`), so no
-extra SQL is needed. The "firm B" user is created fresh by the multi-tenant spec at runtime.
+---
 
-## 3. Set the GitHub secrets + variable
+## Part B — paste these 6 things to Claude, and you're done
 
-All values come from the **test** project (Settings → API, and Settings → Database →
-Connection string). `NEXT_PUBLIC_SUPABASE_URL` is the same as `SUPABASE_URL`.
+Send Claude a message with:
 
-```bash
-# From the repo root, authenticated as a repo admin (gh auth login):
-gh variable set RUN_E2E --body true
+1. **Project URL** (from Step 4)
+2. **anon key** (from Step 4)
+3. **service_role key** (from Step 4)
+4. **Connection string** (from Step 4) — with `[YOUR-PASSWORD]` replaced by the database
+   password from Step 1
+5. **Test user email** → `e2e@torenone.test`
+6. **Test user password** (from Step 3)
 
-gh secret set SUPABASE_URL                  --body "https://<TEST_PROJECT_REF>.supabase.co"
-gh secret set NEXT_PUBLIC_SUPABASE_URL      --body "https://<TEST_PROJECT_REF>.supabase.co"
-gh secret set SUPABASE_SERVICE_ROLE_KEY     --body "<test service_role key>"
-gh secret set NEXT_PUBLIC_SUPABASE_ANON_KEY --body "<test anon key>"
-gh secret set SUPABASE_DB_URL               --body "postgresql://postgres:<pw>@db.<TEST_PROJECT_REF>.supabase.co:5432/postgres"
-gh secret set E2E_EMAIL                     --body "e2e@torenone.test"
-gh secret set E2E_PASSWORD                  --body "<the password from step 2>"
-```
+> These belong to a *throwaway test project* with no real data, so they're low-stakes — but
+> if you'd rather not paste the two secret ones (service_role key, connection string) into
+> chat, tell Claude and it'll give you a couple of copy-paste commands to set them yourself.
 
-> Secrets are write-only in GitHub and never printed back. Do not paste them into commits,
-> issues, or chat. Prefer `gh secret set NAME < file` to avoid shell history if you like.
+**Claude then automatically:**
+- builds the test database (runs the 4 migrations) and checks the test user can sign in,
+- saves all 7 values as GitHub secrets and flips the `RUN_E2E` switch on,
+- starts the first nightly-style run and watches it go green,
+- reports back with the result.
 
-## 4. Run it and confirm green
-
-```bash
-gh workflow run CI            # manual dispatch (workflow_dispatch)
-gh run watch --exit-status    # or: gh run list --limit 1
-```
-
-The `web-e2e` job builds the service image, runs it with the test-project secrets, installs
-the Playwright Chromium browser, and runs `npm run e2e` against the real stack. On failure it
-uploads the `playwright-report` artifact for debugging. After this, the suite also runs each
-night at 02:00 UTC.
-
-## Notes
-
-- The full suite (smoke + happy-path + multi-tenant + 3 error-paths) passes locally in ~51s
-  with the service running and `E2E_EMAIL`/`E2E_PASSWORD` set (Playwright is serial,
-  `workers: 1`, because it mutates shared backend state).
-- To temporarily disable CI E2E without removing config: `gh variable set RUN_E2E --body false`.
+After that it runs **every night at 02:00 UTC** on its own. To pause it later, just ask
+Claude to "turn off the nightly E2E" (it flips one switch).
