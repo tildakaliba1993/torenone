@@ -202,10 +202,14 @@ Currently: structured stdout logs only. No way to know something broke in prod.
   existing `/auth/confirm` route for the recovery token; "Forgot your password?" link added to
   login. Email verification (confirm route) already existed. *(Remaining: a live end-to-end test
   against prod SMTP — needs the prod Supabase email sender configured.)*
-- [ ] **8.2 Team invites** — the sign-up trigger supports `firm_id` invite metadata (Task 5.2)
-  but there's no UI/flow to invite a colleague into a firm. Needed for real firms (>1 engineer).
-- [ ] **8.3 Roles** — `owner`/`engineer` exist in data; confirm whether any role-gating is needed
-  in the UI for the pilot.
+- [x] **8.2 Team invites** — done 2026-06-15: an **owner-only** "Invite a colleague" form on the
+  dashboard → `inviteColleague` server action → Supabase Auth admin `inviteUserByEmail` with
+  `firm_id` metadata (consumed by the Task 5.2 trigger → invitee joins as `engineer`). Uses a
+  **server-only admin client** (`lib/supabase/admin.ts`). *(Activation needs
+  `SUPABASE_SERVICE_ROLE_KEY` in the web deployment's server env + the prod Supabase Site URL /
+  invite email template — founder.)*
+- [x] **8.3 Roles** — done 2026-06-15: role is read server-side; the invite UI + action are
+  **gated to `owner`** (engineers can't invite). Sufficient role-gating for the pilot.
 
 ---
 

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { InviteColleagueForm } from "@/components/auth/invite-colleague-form";
 import {
   Card,
   CardContent,
@@ -8,6 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
+
+import { inviteColleague } from "./actions";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -50,6 +53,20 @@ export default async function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {role === "owner" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Invite a colleague</CardTitle>
+            <CardDescription>
+              Invite another engineer into {firmName}. They’ll join with the “engineer” role.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <InviteColleagueForm invite={inviteColleague} />
+          </CardContent>
+        </Card>
+      ) : null}
     </main>
   );
 }
