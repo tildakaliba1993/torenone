@@ -98,11 +98,15 @@ ULS-2/3+SLS-2) was built + SANS-cited, but `design.py` never invoked it.
    default to True + expose via service/API; revisit the H/400 vs H/150 sway limit.
 3. **`SUPABASE_SERVICE_ROLE_KEY`** — the user fixed it in main `.env` (was the anon key). Confirm
    report persistence still works after any service restart.
-4. **CI E2E job (`web-e2e`)** — now triggers **manual dispatch + nightly (02:00 UTC) only**,
-   never on push/PR, and must target a **SEPARATE Supabase TEST project** (decided this session).
-   The workflow is fully wired + gated on `RUN_E2E=true` + 7 secrets. **Remaining = ops only:**
-   create the test project, push migrations, seed the E2E user, set the secrets + variable, then
-   `gh workflow run CI`. Step-by-step runbook: **`docs/E2E_CI_SETUP.md`**.
+4. **CI E2E job (`web-e2e`) — DONE / LIVE.** Triggers **manual dispatch + nightly (02:00 UTC)
+   only** (never push/PR), runs against a **separate Supabase TEST project** (`pritvkhipuyowjctrpdx`)
+   with `RUN_E2E=true` + 7 GitHub secrets set, and a seeded user `e2e@torenone.test`. First full
+   run is **green — all 6 specs pass** against the real stack (auth/RLS/`/design`+PDF/Storage/history).
+   Enabling it surfaced + fixed a **latent packaging bug**: the report Jinja template wasn't shipped
+   in the wheel (`render_pdf` → `TemplateNotFound` → `/design` 502 in the Docker image; fine from
+   source). Fixed via `pyproject` `package-data` (`report/*.jinja2`); also raised the Playwright
+   per-test timeout to 90 s and made the happy-path wait for navigation. Runbook (incl. how to pause
+   it): **`docs/E2E_CI_SETUP.md`**. To pause: `gh variable set RUN_E2E --body false`.
 5. **Phase 9** — pilot & YC readiness.
 
 ## Doc map
