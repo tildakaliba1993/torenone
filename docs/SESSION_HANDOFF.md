@@ -63,8 +63,24 @@ ULS-2/3+SLS-2) was built + SANS-cited, but `design.py` never invoked it.
 - **PROVISIONAL:** wind-on-frame **sign conventions + governing case need SANS-worked-example
   validation by the co-founder.** Members are auto-sized on **gravity** and only **CHECKED** (not
   sized) for wind — a wind-governed inadequacy is surfaced honestly, not silently mis-sized.
-- **Remaining wind work:** (a) co-founder validates the method; (b) flip to **auto-size for wind**
-  once validated; (c) add **SLS-2 wind sway** deflection check.
+- **Wind follow-ups — DONE (this session), still PROVISIONAL:**
+  - **Auto-size for wind, behind a flag (OFF by default).** `design(spec, autosize_for_wind=True)`
+    sizes members for the component-wise envelope of gravity (ULS-1) **and** wind (ULS-2/3), so the
+    gating ULS wind checks then pass (≤1.0). **Default stays False** — gravity sizes, wind is only
+    CHECKED — until the co-founder validates the method. Flip the default (and optionally expose it
+    via the service/API, not yet wired) once validated. Verified on a windy frame: OFF → ULS-wind
+    util ~2.5 (fails); ON → ≤1.0 with heavier steel.
+  - **SLS-2 wind sway (eaves lateral drift vs Annex D H/400) is now checked** via
+    `PortalAnalysis.wind_combination_displacements()` + `_wind_sway_check()`, reported in `design()`
+    **and** `check()`. It is **ADVISORY-only (informational, non-gating)**: new
+    `CheckResult.informational` flag; `DesignResult.passed`/`governing_utilisation` exclude
+    informational checks. Rationale: Annex D is informative, portals often use a relaxed H/150
+    practice limit (sign-off needed), and the wind model is PROVISIONAL — so it must not falsely
+    fail a design. (The standard 15 m demo frame shows ~45 mm drift = 3.6× H/400; reported as
+    ADVISORY in both the PDF and the web Checks table, never red.)
+- **Remaining wind work:** (a) co-founder validates the method; (b) flip `autosize_for_wind`
+  default to True (and expose via service/API) once validated; (c) revisit the sway limit (H/400 vs
+  H/150) with the engineer and decide if/when it should gate.
 
 ## Phase 8 validation harness (ready for the co-founder)
 - `kernel/tests/validation/benchmarks.py` — `make_spec(...)` builds a frame from plain numbers;
@@ -77,7 +93,9 @@ ULS-2/3+SLS-2) was built + SANS-cited, but `design.py` never invoked it.
 ## Open threads / next steps (pick up here)
 1. **Co-founder validation session (Phase 8.1/8.2 — THE gate):** fill `BENCHMARKS` with a real past
    frame + results; validate the kernel incl. the **wind method** against a worked example.
-2. **Wind follow-ups:** auto-size for wind (after validation); SLS-2 wind sway.
+2. **Wind follow-ups:** auto-size-for-wind (flag, OFF by default) + SLS-2 wind sway (advisory) are
+   DONE this session — see the Wind section. Left: co-founder validates → flip the `autosize_for_wind`
+   default to True + expose via service/API; revisit the H/400 vs H/150 sway limit.
 3. **`SUPABASE_SERVICE_ROLE_KEY`** — the user fixed it in main `.env` (was the anon key). Confirm
    report persistence still works after any service restart.
 4. **CI test project** — to flip on the Playwright E2E job (currently skipped, gated on

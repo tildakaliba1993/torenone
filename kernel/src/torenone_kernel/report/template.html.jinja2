@@ -167,8 +167,10 @@
 {#   NEAR LIMIT threshold ≤ util ≤ 1.0      (amber  ⚠)               #}
 {#   FAIL       util > 1.0 OR not passed    (red    ✗)                #}
 {# ================================================================== #}
-{% macro status_badge(utilisation, passed) -%}
-  {%- if not passed or utilisation > 1.0 -%}
+{% macro status_badge(utilisation, passed, informational=false) -%}
+  {%- if informational -%}
+    <span class="badge badge-near">&#9888; ADVISORY</span>
+  {%- elif not passed or utilisation > 1.0 -%}
     <span class="badge badge-fail">&#10007; FAIL</span>
   {%- elif utilisation >= near_limit_threshold -%}
     <span class="badge badge-near">&#9888; NEAR LIMIT</span>
@@ -192,7 +194,7 @@
     <td style="font-family: var(--font-mono); font-size:8pt;">{{ c.clause }}</td>
     <td class="num">{{ "%.4f"|format(c.utilisation) }}</td>
     <td>
-      {{ status_badge(c.utilisation, c.passed) }}
+      {{ status_badge(c.utilisation, c.passed, c.informational) }}
       {% if c.detail %}<br><span style="font-size:7.5pt; color:var(--color-muted);">{{ c.detail }}</span>{% endif %}
     </td>
   </tr>

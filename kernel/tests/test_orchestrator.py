@@ -117,7 +117,9 @@ class TestDesignCorrectness:
 
     def test_governing_utilisation_consistent(self):
         r = design(_standard_spec())
-        expected = max(c.utilisation for c in r.checks)
+        # Advisory-only (informational) checks — e.g. SLS-2 wind sway — do not gate the
+        # design, so they are excluded from the governing utilisation.
+        expected = max(c.utilisation for c in r.checks if not c.informational)
         assert r.governing_utilisation == pytest.approx(expected, rel=1e-9)
 
     def test_each_section_designation_non_empty(self):

@@ -57,9 +57,16 @@ class TestWindInResult:
         assert any("[ULS-3 wind]" in n for n in names)
         wind_checks = [c for c in checks if "wind]" in c.name]
         assert wind_checks and all(c.utilisation >= 0 for c in wind_checks)
-        # the worst wind utilisation is folded into the governing utilisation / passed
+        # the worst ULS-2/3 wind utilisation is folded into the governing utilisation /
+        # passed (these are GATING). The SLS-2 wind-sway check is advisory-only
+        # (informational) and is intentionally excluded from the governing utilisation.
+        uls_wind_checks = [
+            c for c in wind_checks if not c.informational and "[ULS-" in c.name
+        ]
+        assert uls_wind_checks
         result = design(_spec())
-        assert result.governing_utilisation >= max(c.utilisation for c in wind_checks)
+        assert result.governing_utilisation >= max(c.utilisation for c in uls_wind_checks)
+        assert any(c.informational and "[SLS-2 wind]" in c.name for c in checks)
 
 
 class TestWindInReport:

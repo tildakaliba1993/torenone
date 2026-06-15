@@ -88,3 +88,52 @@ class TestWindAnalysisMechanics:
             leeward_column_udl_kn_per_m=-1.5,
         )
         assert abs(r["eaves_L"].moment_knm - r["eaves_R"].moment_knm) > 0.5
+
+
+class TestWindDisplacements:
+    """`wind_combination_displacements` — used by the SLS-2 eaves-sway check."""
+
+    def test_pinned_bases_do_not_translate(self) -> None:
+        # Pinned supports restrain DX/DY → both base nodes stay put under any wind.
+        disp = _analysis().wind_combination_displacements(
+            rafter_dead_udl_kn_per_m=2.0,
+            column_dead_udl_kn_per_m=1.0,
+            windward_column_udl_kn_per_m=3.0,
+            leeward_column_udl_kn_per_m=-1.5,
+            windward_rafter_udl_kn_per_m=0.0,
+            leeward_rafter_udl_kn_per_m=0.0,
+        )
+        assert abs(disp["BL"]["DX"]) < 1e-6
+        assert abs(disp["BR"]["DX"]) < 1e-6
+
+    def test_transverse_wind_drifts_the_eaves(self) -> None:
+        # Horizontal pressure on the windward column produces lateral eaves drift; an
+        # unloaded frame produces ~none. (Magnitude is PROVISIONAL — sign-convention
+        # validation is the co-founder's; this only asserts the model responds.)
+        pa = _analysis()
+        drift = abs(
+            pa.wind_combination_displacements(
+                rafter_dead_udl_kn_per_m=0.0,
+                column_dead_udl_kn_per_m=0.0,
+                windward_column_udl_kn_per_m=3.0,
+                leeward_column_udl_kn_per_m=0.0,
+                windward_rafter_udl_kn_per_m=0.0,
+                leeward_rafter_udl_kn_per_m=0.0,
+            )["EL"]["DX"]
+        )
+        assert drift > 0.1
+
+    def test_displacements_match_force_model_path(self) -> None:
+        # The displacement path and the force path must build the SAME model: a pure
+        # gravity rafter load gives a symmetric, downward apex with zero net eaves sway.
+        pa = _analysis()
+        disp = pa.wind_combination_displacements(
+            rafter_dead_udl_kn_per_m=5.0,
+            column_dead_udl_kn_per_m=0.0,
+            windward_column_udl_kn_per_m=0.0,
+            leeward_column_udl_kn_per_m=0.0,
+            windward_rafter_udl_kn_per_m=0.0,
+            leeward_rafter_udl_kn_per_m=0.0,
+        )
+        assert disp["AP"]["DY"] < 0.0  # apex deflects downward under gravity
+        assert abs(disp["EL"]["DX"] + disp["ER"]["DX"]) < 1e-6  # symmetric: equal & opposite

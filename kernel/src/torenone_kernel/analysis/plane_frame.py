@@ -400,6 +400,83 @@ class PortalAnalysis:
         Returns forces at col_base_L, eaves_L, apex, eaves_R, col_base_R — read directly
         from the analysis (no symmetry assumptions; both columns differ under wind).
         """
+        m, eaves_h_mm, rafter_len_mm = self._build_wind_model(
+            rafter_dead_udl_kn_per_m=rafter_dead_udl_kn_per_m,
+            column_dead_udl_kn_per_m=column_dead_udl_kn_per_m,
+            windward_column_udl_kn_per_m=windward_column_udl_kn_per_m,
+            leeward_column_udl_kn_per_m=leeward_column_udl_kn_per_m,
+            windward_rafter_udl_kn_per_m=windward_rafter_udl_kn_per_m,
+            leeward_rafter_udl_kn_per_m=leeward_rafter_udl_kn_per_m,
+        )
+
+        def _f(location: str, member: str, x_mm: float) -> MemberForces:
+            return MemberForces(
+                location=location,
+                axial_kn=m.members[member].axial(x_mm, _COMBO) / 1_000.0,
+                shear_kn=m.members[member].shear("Fy", x_mm, _COMBO) / 1_000.0,
+                moment_knm=m.members[member].moment("Mz", x_mm, _COMBO) / 1_000_000.0,
+            )
+
+        return AnalysisResult(
+            combination=combination_name,
+            forces=[
+                _f("col_base_L", "COL_L", 0.0),
+                _f("eaves_L", "COL_L", eaves_h_mm),
+                _f("apex", "RAF_L", rafter_len_mm),
+                _f("eaves_R", "COL_R", 0.0),
+                _f("col_base_R", "COL_R", eaves_h_mm),
+            ],
+        )
+
+    def wind_combination_displacements(
+        self,
+        *,
+        rafter_dead_udl_kn_per_m: float,
+        column_dead_udl_kn_per_m: float,
+        windward_column_udl_kn_per_m: float,
+        leeward_column_udl_kn_per_m: float,
+        windward_rafter_udl_kn_per_m: float,
+        leeward_rafter_udl_kn_per_m: float,
+    ) -> dict[str, dict[str, float]]:
+        """Node displacements (DX/DY, mm) under a factored transverse-wind combination.
+
+        Same model + loading as :meth:`run_wind_combination`; used for the SLS-2 eaves-sway
+        (lateral drift) check. PROVISIONAL — inherits the wind-on-frame sign conventions of
+        :meth:`run_wind_combination`, which require registered-engineer validation.
+
+        Returns ``{node: {"DX": mm, "DY": mm}}`` for nodes BL, EL, AP, ER, BR (DX = lateral,
+        DY positive = up).
+        """
+        m, _, _ = self._build_wind_model(
+            rafter_dead_udl_kn_per_m=rafter_dead_udl_kn_per_m,
+            column_dead_udl_kn_per_m=column_dead_udl_kn_per_m,
+            windward_column_udl_kn_per_m=windward_column_udl_kn_per_m,
+            leeward_column_udl_kn_per_m=leeward_column_udl_kn_per_m,
+            windward_rafter_udl_kn_per_m=windward_rafter_udl_kn_per_m,
+            leeward_rafter_udl_kn_per_m=leeward_rafter_udl_kn_per_m,
+        )
+        result: dict[str, dict[str, float]] = {}
+        for node_name in ("BL", "EL", "AP", "ER", "BR"):
+            node = m.nodes[node_name]
+            result[node_name] = {"DX": node.DX[_COMBO], "DY": node.DY[_COMBO]}
+        return result
+
+    def _build_wind_model(
+        self,
+        *,
+        rafter_dead_udl_kn_per_m: float,
+        column_dead_udl_kn_per_m: float,
+        windward_column_udl_kn_per_m: float,
+        leeward_column_udl_kn_per_m: float,
+        windward_rafter_udl_kn_per_m: float,
+        leeward_rafter_udl_kn_per_m: float,
+    ) -> tuple[FEModel3D, float, float]:
+        """Build, load and solve the transverse-wind portal model.
+
+        Returns ``(analysed_model, eaves_h_mm, rafter_len_mm)``. All UDLs are already
+        FACTORED by the caller (kN/m = N/mm numerically). Conventions are documented on
+        :meth:`run_wind_combination`. PROVISIONAL — see that method.
+        """
         geom = self.spec.geometry
         span_mm = geom.span_m * 1_000.0
         eaves_h_mm = geom.eaves_height_m * 1_000.0
@@ -453,25 +530,7 @@ class PortalAnalysis:
 
         m.add_load_combo(_COMBO, {"DL": 1.0})
         m.analyze_linear(log=False, check_stability=False)
-
-        def _f(location: str, member: str, x_mm: float) -> MemberForces:
-            return MemberForces(
-                location=location,
-                axial_kn=m.members[member].axial(x_mm, _COMBO) / 1_000.0,
-                shear_kn=m.members[member].shear("Fy", x_mm, _COMBO) / 1_000.0,
-                moment_knm=m.members[member].moment("Mz", x_mm, _COMBO) / 1_000_000.0,
-            )
-
-        return AnalysisResult(
-            combination=combination_name,
-            forces=[
-                _f("col_base_L", "COL_L", 0.0),
-                _f("eaves_L", "COL_L", eaves_h_mm),
-                _f("apex", "RAF_L", rafter_len_mm),
-                _f("eaves_R", "COL_R", 0.0),
-                _f("col_base_R", "COL_R", eaves_h_mm),
-            ],
-        )
+        return m, eaves_h_mm, rafter_len_mm
 
     def node_displacements(
         self,

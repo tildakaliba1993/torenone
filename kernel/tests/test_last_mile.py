@@ -114,8 +114,10 @@ class TestDesignLastMile:
         detail_checks += r.footing.checks
         for dc in detail_checks:
             assert any(c.name == dc.name and c.utilisation == dc.utilisation for c in r.checks)
-        # governing utilisation is the max over the aggregate (incl. details)
-        assert r.governing_utilisation == pytest.approx(max(c.utilisation for c in r.checks))
+        # governing utilisation is the max over the GATING checks (incl. details);
+        # advisory-only (informational) checks — e.g. SLS-2 wind sway — are excluded.
+        gating = [c for c in r.checks if not c.informational]
+        assert r.governing_utilisation == pytest.approx(max(c.utilisation for c in gating))
 
 
 # ---------------------------------------------------------------------------

@@ -74,6 +74,15 @@ class CheckResult(BaseModel):
     utilisation: float = Field(ge=0, description="Demand / capacity.")
     passed: bool
     detail: str | None = None
+    informational: bool = Field(
+        default=False,
+        description=(
+            "If True this check is ADVISORY ONLY — it is reported with its utilisation and "
+            "clause but does NOT gate the design's aggregate `passed` / "
+            "`governing_utilisation`. Used for serviceability advisories whose limit is "
+            "non-normative (e.g. Annex D wind sway) and/or rests on a PROVISIONAL model."
+        ),
+    )
 
 
 class SectionChoice(BaseModel):
@@ -319,13 +328,17 @@ class DesignResult(BaseModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def passed(self) -> bool:
-        # SAFETY: an empty check set must never report a pass.
-        return bool(self.checks) and all(c.passed for c in self.checks)
+        # SAFETY: an empty check set must never report a pass. Informational
+        # (advisory-only) checks do not gate the design — see CheckResult.informational.
+        gating = [c for c in self.checks if not c.informational]
+        return bool(gating) and all(c.passed for c in gating)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def governing_utilisation(self) -> float:
-        return max((c.utilisation for c in self.checks), default=0.0)
+        # Advisory-only checks are excluded so the governing utilisation reflects the
+        # design's binding (code-gating) demand, not a non-normative advisory.
+        return max((c.utilisation for c in self.checks if not c.informational), default=0.0)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
