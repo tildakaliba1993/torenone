@@ -19,4 +19,13 @@ describe("StatusBadge", () => {
     render(<StatusBadge status="review">Near limit</StatusBadge>);
     expect(screen.getByText("Near limit")).toBeTruthy();
   });
+
+  it("renders an ADVISORY (non-gating) status distinctly from FAIL", () => {
+    render(<StatusBadge status="advisory" />);
+    const el = screen.getByRole("status");
+    expect(screen.getByText("ADVISORY")).toBeTruthy();
+    expect(el.getAttribute("aria-label")).toBe("ADVISORY");
+    // Advisory must not use the danger (red) styling reserved for hard failures.
+    expect(el.className).not.toContain("text-danger");
+  });
 });

@@ -141,6 +141,12 @@ export interface CheckResult {
   utilisation: number;
   passed: boolean;
   detail?: string | null;
+  /**
+   * Advisory-only check (e.g. SLS-2 wind sway). Reported with its utilisation but does NOT
+   * gate the design's `passed` / `governing_utilisation`. Optional for backward-compat with
+   * older service responses (treated as false when absent).
+   */
+  informational?: boolean;
 }
 
 export interface ConnectionDesignResult {

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type CheckStatus = "pass" | "fail" | "review";
+export type CheckStatus = "pass" | "fail" | "review" | "advisory";
 
 const VARIANTS: Record<
   CheckStatus,
@@ -18,6 +18,13 @@ const VARIANTS: Record<
   },
   review: {
     label: "REVIEW",
+    icon: "⚠",
+    className: "text-warning border-warning/40 bg-warning/10",
+  },
+  // Advisory-only checks (e.g. SLS-2 wind sway) — reported but non-gating. Styled like a
+  // caution, never red: a failing advisory must not read as a code failure.
+  advisory: {
+    label: "ADVISORY",
     icon: "⚠",
     className: "text-warning border-warning/40 bg-warning/10",
   },

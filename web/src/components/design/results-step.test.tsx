@@ -109,6 +109,32 @@ describe("ResultsStep", () => {
     expect(screen.getByText("0.78")).toBeTruthy();
   });
 
+  it("shows an informational (non-gating) check as ADVISORY, not FAIL", () => {
+    const withAdvisory: DesignResponse = {
+      ...RESP,
+      result: {
+        ...RESP.result,
+        checks: [
+          ...RESP.result.checks,
+          {
+            name: "Horizontal sway (SLS) — H/400 [SLS-2 wind]",
+            clause: "SANS 10162-1:2011 Annex D, Table D.1 (H/400)",
+            utilisation: 3.6, // exceeds the limit, but advisory-only
+            passed: false,
+            informational: true,
+          },
+        ],
+      },
+    };
+    render(<ResultsStep result={withAdvisory} onRestart={vi.fn()} />);
+    expect(screen.getByText("Horizontal sway (SLS) — H/400 [SLS-2 wind]")).toBeTruthy();
+    // The advisory row carries the ADVISORY label even though it exceeds its limit...
+    const advisoryBadge = screen.getByText("advisory");
+    expect(advisoryBadge).toBeTruthy();
+    // ...and the gating column LTB failure is still the only "fail" badge.
+    expect(screen.getAllByText("fail")).toHaveLength(1);
+  });
+
   it("renders the wind actions (qp + load cases)", () => {
     render(<ResultsStep result={RESP} onRestart={vi.fn()} />);
     expect(screen.getByText("Wind actions — SANS 10160-3")).toBeTruthy();

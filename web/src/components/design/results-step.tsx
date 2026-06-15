@@ -20,13 +20,22 @@ import {
   getReportSignedUrl,
 } from "@/lib/api/service";
 
-type Status = "pass" | "review" | "fail";
+type Status = "pass" | "review" | "fail" | "advisory";
 
 /** Presentation-only: flag near-limit (passing) checks for the engineer's eye. */
 function checkStatus(check: CheckResult): Status {
+  // Advisory-only checks (e.g. SLS-2 wind sway) are non-gating — never show them as a
+  // hard FAIL even when they exceed their limit.
+  if (check.informational) return "advisory";
   if (!check.passed || check.utilisation > 1.0) return "fail";
   if (check.utilisation >= 0.9) return "review";
   return "pass";
+}
+
+/** Short label shown inside the status badge. */
+function checkStatusLabel(check: CheckResult): string {
+  if (check.informational) return "advisory";
+  return check.passed ? "pass" : "fail";
 }
 
 function fmtZar(value: number): string {
@@ -117,7 +126,7 @@ export function ResultsStep({
                   <TableCell className="font-mono">{check.utilisation.toFixed(2)}</TableCell>
                   <TableCell>
                     <StatusBadge status={checkStatus(check)}>
-                      {check.passed ? "pass" : "fail"}
+                      {checkStatusLabel(check)}
                     </StatusBadge>
                   </TableCell>
                 </TableRow>
