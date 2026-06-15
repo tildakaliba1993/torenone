@@ -21,6 +21,12 @@
 > Table 3 / Table 2 / eq. 6/7/10: all **ULS** factors confirmed unchanged from the draft, and the
 > **SLS wind factor was corrected 1.0 → 0.6** (eq. 10, cl. 8.3.1.1). `rules_version` now stamps
 > "2011 (Ed 1.1 + Amdt 1)"; the report's "draft / provisional load factors" caveat is removed.
+>
+> **2026-06-15 — EN 10025-2 verification pass (fy).** Obtained **BS EN 10025-2:2019** and verified
+> the steel yield values against **Table 6**: S355JR (355/345/335) and S275JR (275/265/255) across
+> all three thickness bands **match exactly** — `fy` upgraded from PROVISIONAL to VERIFIED. (Both
+> the EN copy and SANS 10160-2 are genuine content via re-hosts; properly-licensed copies are a
+> procurement/legal item, tracked in PRODUCTION_READINESS §2.)
 
 ## How to use
 - **Status legend:** `VERIFIED` (authoritative/confirmed or universal fact) · `PROVISIONAL` (sourced
@@ -86,7 +92,7 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 | SANS 10162-1:2011 cl. 13.6 | Mcr formula; Mr=1.15φMp(1-0.28Mp/Mcr)≤φMp (case 1) or Mr=φMcr (case 2); ω2 formula | standards/SANS 10162-1.pdf p.38–39 | VERIFIED |
 | SANS 10162-1:2011 cl. 13.8.2+13.8.4 | Interaction Cu/Cr+0.85·U1·Mu/Mr≤1; U1=ω1/(1-Cu/Ce); ω1 values | standards/SANS 10162-1.pdf p.40–43 | VERIFIED |
 | SANS 10162-1:2011 Annex D Table D.1 | Deflection limits: L/240 inelastic roof covering (vertical), H/400 building sway wind (informative — non-normative) | standards/SANS 10162-1.pdf p.98 | VERIFIED (informative) |
-| fy for S355JR/S275JR | **S355JR base fy=355 / fu=480 now VERIFIED vs SANS 10162-1:2011 Table 6** (p.47); thickness reductions 345/335 (t≤40/63mm) and all S275 values from EN 10025-2 (not in Table 6) | SANS 10162-1:2011 Table 6 (S355JR/300WA) for the base value; EN 10025-2:2004 Table 7 for thickness + S275 | **S355JR base VERIFIED; thickness reductions + S275 PROVISIONAL** |
+| fy for S355JR/S275JR | S355JR 355/345/335 + S275JR 275/265/255 (t≤16 / >16≤40 / >40≤63 mm) — **all bands VERIFIED vs EN 10025-2:2019 Table 6** (2026-06-15); S355JR base 355 also confirmed vs SANS 10162-1 Table 6. (fu: EN Rm min 470 for S355 3–100 mm; kernel uses SANS Table 6 value 480 for weld/connection fu.) | **EN 10025-2:2019 Table 6** (Min yield ReH) — genuine BSI content via re-host; SANS 10162-1 Table 6 | ✅ **VERIFIED vs EN 10025-2:2019** (Pr.Eng sign-off remains good practice; licensing copy of the standard = separate procurement) |
 | SANS 10162-1 cl. 10.4.2.1 | KL/r ≤ 200 maximum slenderness limit for compression members | standards/SANS 10162-1.pdf p.28 | VERIFIED |
 | SA fabricated steel cost rate | R20 000/tonne = R20/kg default (indicative_cost_zar). Market range R18 000–R25 000/tonne (2025). PROVISIONAL — confirm with fabricator before using for project cost estimates. | Industry knowledge; verify with SAISC or local fabricator | PROVISIONAL |
 | PyNite node.DX/DY[combo] | Node displacement API — FEA apex deflection (DY, mm); eaves sway (DX, mm) | Inspected PyNite 1.6.2 source (verified in prior tasks) | VERIFIED |
@@ -123,7 +129,7 @@ Genia (genia.design; funding via VentureBeat), Stru AI (stru.ai), ConGro AI (con
 > - ⚠️ **SANS 10160-2** page-1 looks like a course re-host — verify genuine (imposed 0.4 kN/m² already corroborated).
 > - ⚠️ **Steelwork guide** likely scanned (no text layer) — needs OCR; not the 4th ed.
 >
-> Remaining genuinely-outstanding items: **R5** (validation data the engineer *produces*) + **EN 10025-2** (the `fy` thickness table for t>16 mm and S275). *(SANS 10160-1 final combination factors — confirmed 2026-06-15, E9.)*
+> Remaining genuinely-outstanding items: **R5** (validation data the engineer *produces*). *(SANS 10160-1 final combination factors — confirmed 2026-06-15, E9. EN 10025-2 fy table — confirmed 2026-06-15. SAISC section properties E1 — still pending Pr.Eng spot-check vs the Red Book.)*
 
 | # | Document | Exactly what we need | Unblocks | Priority |
 |---|---|---|---|---|
