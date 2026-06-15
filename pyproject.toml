@@ -46,7 +46,10 @@ dev = [
 where = ["kernel/src"]
 
 [tool.setuptools.package-data]
-torenone_kernel = ["sections/data/*.json"]
+# Runtime data files that must ship inside the installed wheel (e.g. the Docker image),
+# not just be importable from source. Missing the Jinja template here makes /design 502
+# in the packaged service (TemplateNotFound) while working fine from a source checkout.
+torenone_kernel = ["sections/data/*.json", "report/*.jinja2"]
 
 [tool.pytest.ini_options]
 pythonpath = ["kernel/src", "tools", "service/src"]
