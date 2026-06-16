@@ -206,12 +206,30 @@ class SupabaseReportStore:
         )
 
 
+# Bound how long a single design request will wait to acquire a DB connection. The
+# store opens one short-lived connection per /design call (and closes it), so DB
+# concurrency is bounded by the service's request concurrency (capped at the Fly edge
+# — see docs/DB_OPS.md), not by a long-lived in-process pool. A finite connect-timeout
+# means a saturated session-pooler surfaces as a fast 502 rather than a hung worker.
+DB_CONNECT_TIMEOUT_S: int = int(
+    os.environ.get("SUPABASE_DB_CONNECT_TIMEOUT_S", "").strip() or "10"
+)
+# Tags connections in the Supabase pooler / pg_stat_activity for observability.
+DB_APPLICATION_NAME: str = (
+    os.environ.get("SUPABASE_DB_APPLICATION_NAME", "").strip() or "torenone-service"
+)
+
+
 def report_store_from_env() -> ReportStore | None:
     """Build a Supabase-backed store from env, or None if not fully configured.
 
     Requires ``SUPABASE_DB_URL`` (direct Postgres connection), ``SUPABASE_URL`` and
     ``SUPABASE_SERVICE_ROLE_KEY`` (Storage REST). When any is absent the caller falls
     back to the in-process store, so local/dev and tests still work.
+
+    Point ``SUPABASE_DB_URL`` at the Supabase **transaction pooler** (port 6543) in
+    production so many short-lived service connections multiplex onto few Postgres
+    backends — see ``docs/DB_OPS.md`` for sizing.
     """
     db_url = os.environ.get("SUPABASE_DB_URL")
     base_url = os.environ.get("SUPABASE_URL")
@@ -221,8 +239,15 @@ def report_store_from_env() -> ReportStore | None:
 
     import psycopg
 
+    def connect() -> Any:
+        return psycopg.connect(
+            db_url,
+            connect_timeout=DB_CONNECT_TIMEOUT_S,
+            application_name=DB_APPLICATION_NAME,
+        )
+
     uploader = SupabaseStorageUploader(base_url=base_url, service_role_key=service_role_key)
-    return SupabaseReportStore(connect=lambda: psycopg.connect(db_url), uploader=uploader)
+    return SupabaseReportStore(connect=connect, uploader=uploader)
 
 
 def default_report_store() -> ReportStore:

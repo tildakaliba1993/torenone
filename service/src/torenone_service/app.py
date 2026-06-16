@@ -29,6 +29,7 @@ from torenone_service.ai_runtime import (
     get_ai_runtime,
     optional_ai_runtime_from_env,
 )
+from torenone_service.analytics import design_event_fields
 from torenone_service.auth import (
     AuthConfig,
     AuthenticatedUser,
@@ -278,6 +279,7 @@ def create_app(
         sections (PRD FR-24). Input-driven kernel failures become 422; a failed
         *check* (passed=False) is a normal 200 result.
         """
+        started = time.perf_counter()
         try:
             result = run_design(body)
         except DesignError as exc:
@@ -304,14 +306,18 @@ def create_app(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="failed to generate or store the report",
             ) from exc
+        # Minimal product-analytics signal (Task 5.4): one structured event per design
+        # run — pass/fail, governing utilisation, tonnage, latency. No PII.
+        duration_ms = round((time.perf_counter() - started) * 1000.0, 2)
         logger.info(
             "design",
-            extra={
-                "user_id": user.user_id,
-                "mode": body.mode,
-                "passed": result.passed,
-                "report_id": stored.report_id,
-            },
+            extra=design_event_fields(
+                user_id=user.user_id,
+                mode=body.mode,
+                result=result,
+                duration_ms=duration_ms,
+                report_id=stored.report_id,
+            ),
         )
         return DesignResponse(result=result, report=stored)
 

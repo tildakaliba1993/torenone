@@ -48,15 +48,27 @@ flip `design(autosize_for_wind=True)` default on, together.**
   action + server-only admin client `web/src/lib/supabase/admin.ts` (8.2); role gating (8.3).
   *(Team-invite arch decision = service-role in a Next server action, server-only — user-chosen.)*
 
-**▶ NEXT: BATCH 4 — deploy/ops (start here).** All in `PRODUCTION_READINESS.md`:
-- **3.5** CI/CD deploy-automation workflow (on tag or manual dispatch; activation needs the
-  founder's Fly/Vercel tokens as repo secrets — build the workflow + document).
-- **6.4** repeatable prod migration runbook (supabase migrations).
-- **6.2** report-PDF retention/lifecycle policy for the `reports` Storage bucket.
-- **6.3** DB connection-pool sizing under concurrency (session pooler).
-- **5.4** minimal product-analytics/event signal (designs run, pass/fail, latency).
-Then **Batch 5** (P2 product UI: 9.1 BMD/SFD, 9.2 check-mode toggle, 9.3 audit/provenance panel,
-9.4 editable cost) and **Batch 6** (legal drafts: 2.2/2.3/2.4 Terms/Privacy/disclaimer).
+**Batch 4 — deploy/ops: DONE (2026-06-16, Session 3).** All in `PRODUCTION_READINESS.md`, CI-green:
+- **3.5** `.github/workflows/deploy.yml` — Fly (service) + Vercel (web) deploy on `v*` tag / manual
+  dispatch (`target` input), `/health` verify; **opt-in/inert** until `DEPLOY_ENABLED=true` +
+  `FLY_API_TOKEN`/`VERCEL_*` secrets (founder). Documented in `docs/DEPLOY.md` §CI/CD.
+- **6.4** `docs/MIGRATIONS.md` — repeatable prod migration runbook (author → `pytest supabase/tests`
+  → `db push --dry-run` → `db push` → verify; forward-only/idempotent + rollback).
+- **6.2** `docs/DATA_RETENTION.md` + `tools/prune_reports.py` — 365-day report-PDF retention; an
+  idempotent, dry-run-by-default pruner (Storage-then-row), **8 tests**.
+- **6.3** `docs/DB_OPS.md` + connect-per-request bounded by `connect_timeout`/`application_name`
+  (`SUPABASE_DB_CONNECT_TIMEOUT_S`) + Fly edge concurrency cap (`hard_limit=8`); transaction-pooler
+  guidance + pre-pilot load-test checklist.
+- **5.4** `service/.../analytics.py` — one structured `event="design_run"` log line per design
+  (mode, pass/fail, governing util, tonnage, latency `duration_ms`; no PII), **6 tests**.
+
+**▶ NEXT: BATCH 5 — P2 product UI (start here).** All in `PRODUCTION_READINESS.md` §9 / `TASKS.md`
+6.6 deferred sub-items, web-only (`web/`):
+- **9.1** Interactive on-screen BMD/SFD + 2D stick model (FR-32) before PDF export.
+- **9.2** Check-mode toggle surfaced prominently in the wizard (FR-24; backend exists).
+- **9.3** Audit / "show-your-working" panel + deterministic-kernel provenance badge (FR-26).
+- **9.4** Editable cost-per-ton input on the results screen (FR-25/31).
+Then **Batch 6** (legal drafts: 2.2/2.3/2.4 Terms/Privacy/disclaimer routes in `web/`).
 
 **What needs the FOUNDER (not engineer) to *activate* later** (code is built/ready): deploy to
 Fly+Vercel+prod-Supabase+domain (§3.1–3.4), OpenAI spend cap (§4.2), Sentry DSN (§5.1) + web

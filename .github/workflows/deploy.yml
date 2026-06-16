@@ -1,0 +1,97 @@
+name: Deploy
+
+# Production-Readiness §3.5 — repeatable, auditable release automation.
+#
+# Triggers on a version tag (`vX.Y.Z`) or manual dispatch. It is OPT-IN: nothing
+# deploys until the repo variable DEPLOY_ENABLED == 'true' and the relevant tokens are
+# set as repo secrets (the founder's accounts — see docs/DEPLOY.md §CI/CD). Until then
+# the jobs are skipped, so this file is inert and safe to merge.
+#
+# Required secrets:
+#   FLY_API_TOKEN                          — `fly tokens create deploy` (service)
+#   VERCEL_TOKEN / VERCEL_ORG_ID /
+#     VERCEL_PROJECT_ID                    — Vercel project (web)
+#
+# The service is deployed from the repo-root Dockerfile + fly.toml (region jnb); the
+# web app is deployed from web/ to Vercel production. Application secrets themselves
+# (OPENAI_API_KEY, SUPABASE_*, …) live in Fly/Vercel, NOT here — see docs/DEPLOY.md.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "What to deploy"
+        type: choice
+        default: both
+        options: [both, service, web]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-service:
+    name: Deploy engineering service (Fly.io)
+    runs-on: ubuntu-latest
+    if: >-
+      vars.DEPLOY_ENABLED == 'true' &&
+      (github.event_name == 'push' ||
+       contains(fromJSON('["both","service"]'), github.event.inputs.target))
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy
+        # Builds the repo-root Dockerfile remotely on Fly and releases it. App secrets
+        # are already set on the app (`fly secrets set`), so none are passed here.
+        run: flyctl deploy --remote-only --config fly.toml
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Verify /health
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS https://torenone-engineering-service.fly.dev/health -o /tmp/h.json; then
+              break
+            fi
+            sleep 5
+          done
+          cat /tmp/h.json; echo
+          grep -q '"status":"ok"' /tmp/h.json
+
+  deploy-web:
+    name: Deploy web app (Vercel)
+    runs-on: ubuntu-latest
+    if: >-
+      vars.DEPLOY_ENABLED == 'true' &&
+      (github.event_name == 'push' ||
+       contains(fromJSON('["both","web"]'), github.event.inputs.target))
+    environment: production
+    defaults:
+      run:
+        working-directory: web
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
+      # Env vars (NEXT_PUBLIC_*, the service URL) are configured in the Vercel project,
+      # so the production build picks them up — none are committed here.
+      - name: Pull Vercel env
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Build
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy
+        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

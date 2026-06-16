@@ -34,8 +34,8 @@ Pilot. Do not invite a firm before the first two are done.
 | 2 | Legal, liability & compliance | **P0** | Founder + lawyer | ❌ Not started |
 | 3 | Live deployment (service + web) | **P0** | Eng | ❌ Not done (configured only) |
 | 4 | Reliability & cost controls (OpenAI, rate limits) | **P1** | Eng | ❌ Absent |
-| 5 | Observability (errors, uptime, logs) | **P1** | Eng | ❌ Absent |
-| 6 | Data durability & ops (backups, retention) | **P1** | Eng | ⚠️ Default only |
+| 5 | Observability (errors, uptime, logs) | **P1** | Eng | 🟡 Partial (5.1/5.4 done) |
+| 6 | Data durability & ops (backups, retention) | **P1** | Eng | 🟡 Partial (6.1 founder-only) |
 | 7 | Security hardening for prod | **P1** | Eng | 🟡 Partial (8.5 done) |
 | 8 | Auth/account lifecycle | **P1** | Eng | 🟡 Partial |
 | 9 | Product completeness (deferred FRs) | **P2** | Eng + Founder | 🟡 Partial |
@@ -131,8 +131,11 @@ actually deployed** — there is no running production service or web app.
   `supabase db push` migrations, enable email auth, set a custom SMTP sender, lock down.
 - [ ] **3.4 Custom domain + HTTPS** for web and service; set `CORS_ALLOW_ORIGINS` to the real
   origin (not localhost).
-- [ ] **3.5 CI/CD deploy automation** — currently deploy is manual. Add a deploy workflow (on
-  tag or manual dispatch) so releases are repeatable and auditable.
+- [x] **3.5 CI/CD deploy automation** — done 2026-06-16: `.github/workflows/deploy.yml` deploys
+  the service to Fly.io + the web app to Vercel on a `v*` tag or manual dispatch (with a
+  `target` input), and verifies the service `/health`. **Opt-in/inert** until the founder sets
+  `DEPLOY_ENABLED=true` + the `FLY_API_TOKEN`/`VERCEL_*` secrets (no app secrets in the workflow);
+  documented in `docs/DEPLOY.md` §CI/CD. *(Activation = the founder's accounts/tokens.)*
 - [x] **3.6 Harden the `docker` CI job** — done 2026-06-15: a step now runs `design()` +
   `render_pdf()` inside the built image (asserts a real `%PDF`), so packaging regressions like
   the Jinja-template bug fail at build time. (No auth/Supabase needed — pure kernel + WeasyPrint.)
@@ -167,18 +170,32 @@ Currently: structured stdout logs only. No way to know something broke in prod.
 - [ ] **5.2 Uptime/health monitoring + alerting** on `/health` and the web app (paging/email).
 - [ ] **5.3 Log aggregation/retention** beyond container stdout (so post-incident debugging is
   possible).
-- [ ] **5.4 A minimal product-analytics/event signal** (designs run, pass/fail rate, latency) —
-  also feeds the Phase-9 pilot evidence.
+- [x] **5.4 A minimal product-analytics/event signal** — done 2026-06-16: each `/design` run emits
+  one structured `event="design_run"` log line (`service/.../analytics.py`) carrying mode,
+  pass/fail, governing utilisation, tonnage, section count and end-to-end **latency** (`duration_ms`)
+  — no third-party SDK, no PII (only the opaque `user_id`). The JSON formatter promotes every field
+  to a top-level key, so a log collector aggregates designs-run / pass-rate / latency directly; also
+  feeds Phase-9 pilot evidence. **6 tests** (`service/tests/test_analytics.py`).
 
 ### 6. Data durability & ops  ·  owner: **eng**
 - [ ] **6.1 Supabase backups** — confirm the production tier's backup/PITR policy; free tier is
   not sufficient for customer data. Document restore steps.
-- [ ] **6.2 Report-PDF retention/lifecycle** in the `reports` Storage bucket (they accumulate
-  forever today).
-- [ ] **6.3 DB connection management** — the service uses the session pooler; verify pool sizing
-  under concurrency so designs don't exhaust connections.
-- [ ] **6.4 Migration workflow for prod** — a repeatable, reviewed way to apply new migrations to
-  the live project (not ad-hoc).
+- [x] **6.2 Report-PDF retention/lifecycle** — done 2026-06-16: a documented **365-day** retention
+  policy (`docs/DATA_RETENTION.md`) + `tools/prune_reports.py` — a standalone, idempotent,
+  **dry-run-by-default** pruner that deletes the Storage object (Storage REST) then the `reports`
+  row for runs past the window. Same injected-seam design as `SupabaseReportStore`; **8 tests**
+  (`service/tests/test_prune_reports.py`, no live project). *(Scheduling it monthly = an ops/cron
+  step, documented.)*
+- [x] **6.3 DB connection management** — done 2026-06-16: the store opens **one short-lived
+  connection per `/design`** (then closes it), so peak DB connections ≈ peak concurrent designs —
+  no leaky pool. Bounded acquire via `connect_timeout` (env `SUPABASE_DB_CONNECT_TIMEOUT_S`, 10 s) +
+  `application_name` tag; **Fly edge concurrency capped** (`fly.toml` `hard_limit = 8`) so peak
+  connections/machine ≤ 8, well under the Supabase **transaction pooler** (use the 6543 host).
+  Sizing + a pre-pilot load-test checklist in `docs/DB_OPS.md`.
+- [x] **6.4 Migration workflow for prod** — done 2026-06-16: `docs/MIGRATIONS.md` — a repeatable,
+  reviewed runbook (author → `pytest supabase/tests` CI-parity gate → `supabase db push --dry-run`
+  → `db push` → `migration list` verify), forward-only/idempotent, with a rollback section. Backed
+  by the existing `supabase/tests` sqlglot + behavioural-RLS gates in CI.
 
 ### 7. Security hardening for prod  ·  owner: **eng**  ·  (8.5 security pass already done)
 - [ ] **7.1 Secrets management** — production secrets in Fly/Vercel/Supabase vaults, not local

@@ -18,6 +18,16 @@ primary_region = "jnb"   # Johannesburg — closest Fly region to our Cape Town 
   auto_start_machines = true
   min_machines_running = 0
 
+  # Cap concurrent requests per machine. /design opens one short-lived DB connection
+  # per request (then closes it), so peak DB connections per machine <= hard_limit.
+  # Keeping this small keeps total connections well under the Supabase transaction
+  # pooler's limit even with several machines — see docs/DB_OPS.md. It also protects
+  # the single CPU from oversubscription during the FEA + WeasyPrint run (NFR-5).
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 6
+    hard_limit = 8
+
   [[http_service.checks]]
     interval = "30s"
     timeout = "5s"

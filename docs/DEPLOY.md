@@ -74,6 +74,35 @@ they are never in the image or this repo.
 Both auto-detect the `Dockerfile`. Set the same env vars in the dashboard, expose
 port 8000, and point the health check at `/health`. No code change required.
 
+## CI/CD — automated deploys (§3.5)
+
+`.github/workflows/deploy.yml` makes releases **repeatable and auditable**: pushing a
+version tag (`vX.Y.Z`) — or running the workflow manually (Actions → Deploy → Run) —
+deploys the service to Fly.io and the web app to Vercel production, then verifies the
+service `/health`.
+
+It is **opt-in and inert until activated** (so merging it changes nothing):
+
+1. Set the repo **variable** `DEPLOY_ENABLED=true`
+   (`gh variable set DEPLOY_ENABLED --body true`). Without it both jobs skip.
+2. Set the repo **secrets** (the founder's accounts):
+   - `FLY_API_TOKEN` — `fly tokens create deploy` (scoped to the app).
+   - `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` — from the Vercel project.
+3. Tag a release: `git tag v0.1.0 && git push origin v0.1.0`.
+
+The workflow carries **no application secrets** — `OPENAI_API_KEY`, `SUPABASE_*`,
+`NEXT_PUBLIC_*` etc. live in Fly (`fly secrets set`) and the Vercel project env. The
+`workflow_dispatch` `target` input (`both` / `service` / `web`) lets you redeploy one
+side. A `production` GitHub environment is referenced so you can add a required
+reviewer / deployment protection rule later.
+
+> **Manual fallback** (before activation, or for a one-off): the `fly deploy` and
+> `vercel --prod` commands above still work from a laptop with the same tokens.
+
+Related ops runbooks: **`docs/MIGRATIONS.md`** (apply DB migrations to prod),
+**`docs/DB_OPS.md`** (connection-pool sizing), **`docs/DATA_RETENTION.md`** (report-PDF
+lifecycle).
+
 ## CI verification
 
 The `docker` job in `.github/workflows/ci.yml` builds the image on every push/PR, runs
