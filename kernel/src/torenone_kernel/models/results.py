@@ -65,6 +65,52 @@ class AnalysisResult(BaseModel):
     forces: list[MemberForces] = Field(min_length=1)
 
 
+class DiagramStation(BaseModel):
+    """One sampled point along a member: its global position + internal forces.
+
+    All values come from the PyNite analysis (no arithmetic in this contract). Moments
+    are kN·m, shears + axial are kN; positions are global metres. These drive the
+    on-screen BMD/SFD + stick model (FR-32) — the same numbers the PDF diagram renders.
+    """
+
+    model_config = _STRICT
+    pos_m: float = Field(ge=0.0, description="Distance along the member from its start node (m).")
+    x_m: float = Field(description="Global X of this station (m).")
+    y_m: float = Field(description="Global Y of this station (m).")
+    axial_kn: float
+    shear_kn: float
+    moment_knm: float
+
+
+class MemberDiagram(BaseModel):
+    """Sampled internal-force diagram for one frame member (column or rafter half)."""
+
+    model_config = _STRICT
+    name: str = Field(min_length=1)          # "column_left" | "rafter_left" | ...
+    label: str = Field(min_length=1)         # short label, e.g. "Col L"
+    member: str = Field(min_length=1)        # which section: "column" | "rafter"
+    start: tuple[float, float]               # global (x, y) of the start node (m)
+    end: tuple[float, float]                 # global (x, y) of the end node (m)
+    length_m: float = Field(gt=0.0)
+    stations: list[DiagramStation] = Field(min_length=2)
+
+
+class FrameDiagram(BaseModel):
+    """BMD/SFD + stick-model data for the governing ULS-1 combination (FR-32).
+
+    Exposed on :class:`DesignResult` so the web app can draw the bending-moment and
+    shear-force diagrams (and the deflected/stick model) on-screen, before the PDF —
+    rendered from the exact same kernel analysis the report uses (one source of truth).
+    """
+
+    model_config = _STRICT
+    combination: str = Field(min_length=1)
+    nodes: dict[str, tuple[float, float]]    # the 5 portal nodes (BL/EL/AP/ER/BR) → (x, y) m
+    members: list[MemberDiagram] = Field(min_length=1)
+    max_abs_moment_knm: float = Field(ge=0.0)
+    max_abs_shear_kn: float = Field(ge=0.0)
+
+
 class CheckResult(BaseModel):
     """One code check. Every check MUST cite its clause (PRD FR-18)."""
 
@@ -324,6 +370,10 @@ class DesignResult(BaseModel):
     # reported for transparency; the wind-combination *frame analysis* (member forces under
     # ULS-2/3) is a separate step — see the `warnings`.
     wind: WindLoadResult | None = None
+    # Sampled BMD/SFD + stick-model data for the governing ULS-1 combination (FR-32),
+    # so the web can draw the diagrams on-screen from the same analysis the PDF uses.
+    # Optional: populated by design()/check(); None on hand-built results.
+    diagram: FrameDiagram | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property

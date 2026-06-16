@@ -127,6 +127,15 @@ class TestDesignMode:
         assert body["report"]["run_id"] == "run-123"
         assert body["report"]["size_bytes"] == len(FAKE_PDF)
 
+    def test_response_includes_bmd_sfd_diagram(self):
+        # FR-32: the BMD/SFD + stick-model data is exposed to the web via DesignResult.
+        body = _client().post("/design", json=_body(), headers=_headers()).json()
+        diagram = body["result"]["diagram"]
+        assert diagram is not None
+        assert len(diagram["members"]) == 4
+        assert diagram["combination"].startswith("ULS-1")
+        assert len(diagram["members"][0]["stations"]) >= 2
+
     def test_result_matches_kernel(self):
         body = _client().post("/design", json=_body(), headers=_headers()).json()
         expected = design(SPEC)

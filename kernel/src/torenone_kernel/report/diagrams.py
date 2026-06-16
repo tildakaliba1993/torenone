@@ -22,7 +22,6 @@ Design constraints
 from __future__ import annotations
 
 import io
-import math
 from typing import Any
 
 import matplotlib
@@ -34,13 +33,10 @@ import numpy as np  # noqa: E402
 from matplotlib.axes import Axes  # noqa: E402
 from matplotlib.figure import Figure  # noqa: E402
 
-from torenone_kernel.loads.combinations import load_combinations  # noqa: E402
-from torenone_kernel.loads.dead import dead_loads  # noqa: E402
-from torenone_kernel.loads.imposed import imposed_roof_loads  # noqa: E402
+from torenone_kernel.analysis.diagram_data import compute_frame_diagram  # noqa: E402
 from torenone_kernel.models.frame_spec import FrameSpec  # noqa: E402
-from torenone_kernel.models.results import DesignResult, LoadCombination  # noqa: E402
+from torenone_kernel.models.results import DesignResult  # noqa: E402
 from torenone_kernel.sections.library import SectionLibrary  # noqa: E402
-from torenone_kernel.sections.properties import SectionProperties  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Brand colours (matching template.html.jinja2)
@@ -61,13 +57,6 @@ _N_SAMPLES = 50   # sample points per member for BMD/SFD curves
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-def _combo_starting_with(combos: dict[str, LoadCombination], prefix: str) -> LoadCombination:
-    for name, combo in combos.items():
-        if name.startswith(prefix):
-            return combo
-    raise KeyError(f"No load combination starting with {prefix!r}")
-
 
 def _frame_nodes(spec: FrameSpec) -> dict[str, tuple[float, float]]:
     """Return global (X, Y) coordinates for the 5 portal frame nodes (m)."""
@@ -219,79 +208,29 @@ def bmd_sfd_png(result: DesignResult) -> bytes:
     Returns deterministic PNG bytes.
     """
     spec = result.frame_spec
-    lib = SectionLibrary.load_default()
-    sec_map = {s.member: lib.get(s.designation) for s in result.sections}
-    col_sec = sec_map["column"]
-    raf_sec = sec_map["rafter"]
-
-    # Reconstruct governing ULS-1 loads (same logic as design.py)
-    combos_list = load_combinations(spec)
-    combos = {c.name.split()[0]: c for c in combos_list}
-    uls1 = _combo_starting_with(combos, "ULS-1")
-    gamma_G = uls1.factors["dead"]
-    gamma_Q = uls1.factors.get("imposed", 0.0)
-
-    dead = dead_loads(spec, rafter=raf_sec, column=col_sec)
-    imposed = imposed_roof_loads(spec)
-
-    uls_rafter_udl  = gamma_G * dead.rafter_udl_kn_per_m + gamma_Q * imposed.roof_udl_kn_per_m
-    uls_col_axial   = gamma_G * (dead.column_self_weight_kn_per_m + dead.wall_cladding_udl_kn_per_m)
-
-    # We need the PyNite model internals to sample M/V — build the model directly.
-    pynite_model, _COMBO = _build_pynite_model(spec, col_sec, raf_sec,
-                                                uls_rafter_udl, uls_col_axial,
-                                                uls1.name)
-
-    # ---- Sample M and V along each member ----
     g = spec.geometry
-    span_mm      = g.span_m          * 1_000.0
-    eaves_h_mm   = g.eaves_height_m  * 1_000.0
-    half_span_mm = span_mm / 2.0
-    rafter_len_mm = math.hypot(half_span_mm,
-                               (g.apex_height_m - g.eaves_height_m) * 1_000.0)
 
-    members_def = [
-        # (member_name, length_mm, node_i_name, node_j_name, label)
-        ("COL_L", eaves_h_mm,    "BL", "EL", "Col L"),
-        ("RAF_L", rafter_len_mm, "EL", "AP", "Rafter L"),
-        ("RAF_R", rafter_len_mm, "AP", "ER", "Rafter R"),
-        ("COL_R", eaves_h_mm,    "ER", "BR", "Col R"),
+    # Single source of truth: the SAME sampled BMD/SFD data the web UI consumes
+    # (DesignResult.diagram). design()/check() already computed it; fall back to
+    # computing it for hand-built results that have no diagram attached.
+    if result.diagram is not None:
+        diagram = result.diagram
+    else:
+        lib = SectionLibrary.load_default()
+        sec_map = {s.member: lib.get(s.designation) for s in result.sections}
+        diagram = compute_frame_diagram(spec, sec_map["column"], sec_map["rafter"])
+
+    nodes_global = {name: np.array(xy) for name, xy in diagram.nodes.items()}
+    member_curves: list[dict[str, Any]] = [
+        {
+            "label": md.label,
+            "global_pos": np.array([[s.x_m, s.y_m] for s in md.stations]),  # (N, 2) m
+            "moments": np.array([s.moment_knm for s in md.stations]),        # kN·m
+            "shears": np.array([s.shear_kn for s in md.stations]),           # kN
+            "length_m": md.length_m,
+        }
+        for md in diagram.members
     ]
-
-    nodes_global = {
-        "BL": np.array([0.0,            0.0]),
-        "EL": np.array([0.0,            g.eaves_height_m]),
-        "AP": np.array([g.span_m / 2.0, g.apex_height_m]),
-        "ER": np.array([g.span_m,       g.eaves_height_m]),
-        "BR": np.array([g.span_m,       0.0]),
-    }
-
-    # Collect member curve data
-    member_curves: list[dict[str, Any]] = []
-    for mem_name, length_mm, ni, nj, label in members_def:
-        xs_local = np.linspace(0.0, length_mm, _N_SAMPLES)
-        moments = np.array([
-            pynite_model.members[mem_name].moment("Mz", x, _COMBO) / 1_000_000.0  # → kN·m
-            for x in xs_local
-        ])
-        shears = np.array([
-            pynite_model.members[mem_name].shear("Fy", x, _COMBO) / 1_000.0  # → kN
-            for x in xs_local
-        ])
-
-        # Global positions along member
-        Pi = nodes_global[ni]
-        Pj = nodes_global[nj]
-        ts = xs_local / length_mm
-        global_pos = np.outer(1 - ts, Pi) + np.outer(ts, Pj)  # (N, 2)
-
-        member_curves.append({
-            "label": label,
-            "global_pos": global_pos,   # (N, 2) — global X, Y (m)
-            "moments": moments,          # kN·m
-            "shears": shears,            # kN
-            "length_m": length_mm / 1_000.0,
-        })
 
     # ---- Plot ----
     fig, (ax_bmd, ax_sfd) = plt.subplots(
@@ -335,7 +274,7 @@ def bmd_sfd_png(result: DesignResult) -> bytes:
                     ha="center", va="center", zorder=5)
 
     # Titles
-    combo_label = uls1.name
+    combo_label = diagram.combination
     ax_bmd.set_title(
         f"Bending Moment Diagram — {combo_label}",
         fontsize=10, color=_BRAND, fontweight="bold", pad=6,
@@ -413,87 +352,3 @@ def _draw_bmd_sfd(
     # Axis limits with padding
     ax.set_xlim(-1.0, g.span_m + 1.0)
     ax.set_ylim(-0.8, g.apex_height_m + 1.2)
-
-
-# ---------------------------------------------------------------------------
-# Internal: build PyNite model for force sampling
-# ---------------------------------------------------------------------------
-
-def _build_pynite_model(
-    spec: FrameSpec,
-    col_sec: SectionProperties,
-    raf_sec: SectionProperties,
-    uls_rafter_udl: float,
-    uls_col_axial: float,
-    combo_name: str,
-) -> tuple[Any, str]:
-    """Build and solve the PyNite model; return (model, combo_name_internal).
-
-    Duplicates the model-build logic from PortalAnalysis.run() so we can
-    sample forces at arbitrary positions along each member.
-    """
-    import site as _site
-    import sys as _sys
-
-    for _sp in _site.getsitepackages() + [_site.getusersitepackages()]:
-        if _sp not in _sys.path:
-            _sys.path.insert(0, _sp)
-
-    from Pynite import FEModel3D
-
-    _E = 200_000.0
-    _G =  77_000.0
-    _NU = 0.3
-    _RHO = 7.85e-9
-    _COMBO_INTERNAL = "LC"
-
-    g = spec.geometry
-    span_mm      = g.span_m          * 1_000.0
-    eaves_h_mm   = g.eaves_height_m  * 1_000.0
-    apex_h_mm    = g.apex_height_m   * 1_000.0
-    half_span_mm = span_mm / 2.0
-
-    m = FEModel3D()
-    m.add_material("steel", _E, _G, _NU, _RHO)
-
-    def _add_sec(name: str, sec: SectionProperties) -> None:
-        m.add_section(name, A=sec.area_mm2, Iy=sec.second_moment_iy_mm4,
-                      Iz=sec.second_moment_ix_mm4, J=sec.torsion_constant_j_mm4)
-
-    _add_sec("col_sec", col_sec)
-    _add_sec("raf_sec", raf_sec)
-
-    m.add_node("BL",          0,          0, 0)
-    m.add_node("EL",          0,  eaves_h_mm, 0)
-    m.add_node("AP", half_span_mm, apex_h_mm, 0)
-    m.add_node("ER",      span_mm, eaves_h_mm, 0)
-    m.add_node("BR",      span_mm,          0, 0)
-
-    def _pin(node: str) -> None:
-        m.def_support(node, True, True, True, True, True, False)
-
-    def _oop(node: str) -> None:
-        m.def_support(node, False, False, True, True, True, False)
-
-    _pin("BL")
-    _pin("BR")
-    _oop("EL")
-    _oop("AP")
-    _oop("ER")
-
-    m.add_member("COL_L", "BL", "EL", "steel", "col_sec")
-    m.add_member("RAF_L", "EL", "AP", "steel", "raf_sec")
-    m.add_member("RAF_R", "AP", "ER", "steel", "raf_sec")
-    m.add_member("COL_R", "ER", "BR", "steel", "col_sec")
-
-    if uls_rafter_udl != 0.0:
-        m.add_member_dist_load("RAF_L", "Fy", -uls_rafter_udl, -uls_rafter_udl, case="DL")
-        m.add_member_dist_load("RAF_R", "Fy", -uls_rafter_udl, -uls_rafter_udl, case="DL")
-    if uls_col_axial != 0.0:
-        m.add_member_dist_load("COL_L", "Fy", -uls_col_axial, -uls_col_axial, case="DL")
-        m.add_member_dist_load("COL_R", "Fy", -uls_col_axial, -uls_col_axial, case="DL")
-
-    m.add_load_combo(_COMBO_INTERNAL, {"DL": 1.0})
-    m.analyze_linear(log=False, check_stability=False)
-
-    return m, _COMBO_INTERNAL

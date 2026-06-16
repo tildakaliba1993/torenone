@@ -38,6 +38,7 @@ import math
 from collections.abc import Iterator
 from typing import NamedTuple
 
+from torenone_kernel.analysis.diagram_data import compute_frame_diagram
 from torenone_kernel.analysis.plane_frame import PortalAnalysis
 from torenone_kernel.analysis.sway_check import FrameUnstableError, compute_sway_check
 from torenone_kernel.checks.autosize import (
@@ -649,6 +650,7 @@ def design(
         baseplate=baseplate,
         footing=footing,
         wind=wind_loads(spec),
+        diagram=compute_frame_diagram(spec, raf_sec, col_sec),
     )
 
 
@@ -869,6 +871,7 @@ def check(
         baseplate=baseplate,
         footing=footing,
         wind=wind_loads(spec),
+        diagram=compute_frame_diagram(spec, raf_sec, col_sec),
     )
 
 
