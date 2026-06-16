@@ -349,6 +349,11 @@ export function ReviewStep({
                 Check my sections
               </Button>
             </div>
+            <p className="text-sm text-muted">
+              {mode === "design"
+                ? "Design mode auto-sizes the lightest adequate sections for you."
+                : "Check mode verifies sections you've already chosen against every SANS clause — you stay the author of the design, TorenOne just checks your working."}
+            </p>
             {mode === "check" ? (
               <div className="grid grid-cols-2 gap-4">
                 <FormField

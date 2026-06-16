@@ -167,4 +167,111 @@ describe("ResultsStep", () => {
     await userEvent.click(screen.getByRole("button", { name: /download calc package/i }));
     expect(await screen.findByText("Could not generate a download link.")).toBeTruthy();
   });
+
+  // FR-26 — provenance on-screen
+  it("renders the deterministic-kernel provenance badge", () => {
+    render(<ResultsStep result={RESP} onRestart={vi.fn()} />);
+    expect(screen.getByText(/deterministic kernel — not ai/i)).toBeTruthy();
+  });
+
+  it("renders the standards card with pinned editions when rules_version is present", () => {
+    const withRules: DesignResponse = {
+      ...RESP,
+      result: {
+        ...RESP.result,
+        rules_version: { steel_design: "SANS 10162-1:2011", wind: "SANS 10160-3:2019" },
+      },
+    };
+    render(<ResultsStep result={withRules} onRestart={vi.fn()} />);
+    expect(screen.getByText("Provenance & standards")).toBeTruthy();
+    expect(screen.getByText("SANS 10162-1:2011")).toBeTruthy();
+    expect(screen.getByText("SANS 10160-3:2019")).toBeTruthy();
+  });
+
+  // FR-25/31 — editable cost per tonne
+  it("recomputes the indicative cost when cost-per-tonne is edited", async () => {
+    render(<ResultsStep result={RESP} onRestart={vi.fn()} />);
+    const input = screen.getByLabelText("Cost per tonne (ZAR)");
+    await userEvent.clear(input);
+    await userEvent.type(input, "30000");
+    // 1.234 t × R30,000/t = R37,020.
+    expect(screen.getByText("R 37,020")).toBeTruthy();
+  });
+
+  // FR-32 — on-screen BMD/SFD
+  it("renders the BMD/SFD diagrams when the result carries diagram data", () => {
+    const withDiagram: DesignResponse = {
+      ...RESP,
+      result: {
+        ...RESP.result,
+        diagram: {
+          combination: "ULS-1 (1.2G + 1.6Q)",
+          nodes: {
+            BL: [0, 0],
+            EL: [0, 6],
+            AP: [10, 7.76],
+            ER: [20, 6],
+            BR: [20, 0],
+          },
+          members: [
+            {
+              name: "column_left",
+              label: "Col L",
+              member: "column",
+              start: [0, 0],
+              end: [0, 6],
+              length_m: 6,
+              stations: [
+                { pos_m: 0, x_m: 0, y_m: 0, axial_kn: -50, shear_kn: 10, moment_knm: 0 },
+                { pos_m: 6, x_m: 0, y_m: 6, axial_kn: -50, shear_kn: 10, moment_knm: 60 },
+              ],
+            },
+            {
+              name: "rafter_left",
+              label: "Rafter L",
+              member: "rafter",
+              start: [0, 6],
+              end: [10, 7.76],
+              length_m: 10.15,
+              stations: [
+                { pos_m: 0, x_m: 0, y_m: 6, axial_kn: -30, shear_kn: 8, moment_knm: 60 },
+                { pos_m: 10.15, x_m: 10, y_m: 7.76, axial_kn: -30, shear_kn: -8, moment_knm: -40 },
+              ],
+            },
+            {
+              name: "rafter_right",
+              label: "Rafter R",
+              member: "rafter",
+              start: [10, 7.76],
+              end: [20, 6],
+              length_m: 10.15,
+              stations: [
+                { pos_m: 0, x_m: 10, y_m: 7.76, axial_kn: -30, shear_kn: 8, moment_knm: -40 },
+                { pos_m: 10.15, x_m: 20, y_m: 6, axial_kn: -30, shear_kn: -8, moment_knm: 60 },
+              ],
+            },
+            {
+              name: "column_right",
+              label: "Col R",
+              member: "column",
+              start: [20, 6],
+              end: [20, 0],
+              length_m: 6,
+              stations: [
+                { pos_m: 0, x_m: 20, y_m: 6, axial_kn: -50, shear_kn: -10, moment_knm: 60 },
+                { pos_m: 6, x_m: 20, y_m: 0, axial_kn: -50, shear_kn: -10, moment_knm: 0 },
+              ],
+            },
+          ],
+          max_abs_moment_knm: 60,
+          max_abs_shear_kn: 10,
+        },
+      },
+    };
+    render(<ResultsStep result={withDiagram} onRestart={vi.fn()} />);
+    expect(screen.getByText("Bending moment & shear force")).toBeTruthy();
+    expect(screen.getByRole("img", { name: /bending moment: peak/i })).toBeTruthy();
+    expect(screen.getByRole("img", { name: /shear force: peak/i })).toBeTruthy();
+    expect(screen.getByText(/ULS-1/)).toBeTruthy();
+  });
 });

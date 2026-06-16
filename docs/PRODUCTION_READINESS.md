@@ -38,7 +38,7 @@ Pilot. Do not invite a firm before the first two are done.
 | 6 | Data durability & ops (backups, retention) | **P1** | Eng | 🟡 Partial (6.1 founder-only) |
 | 7 | Security hardening for prod | **P1** | Eng | 🟡 Partial (8.5 done) |
 | 8 | Auth/account lifecycle | **P1** | Eng | 🟡 Partial |
-| 9 | Product completeness (deferred FRs) | **P2** | Eng + Founder | 🟡 Partial |
+| 9 | Product completeness (deferred FRs) | **P2** | Eng + Founder | ✅ Done (9.1–9.4) |
 | 10 | Pilot readiness & GTM evidence (Phase 9) | **P2** | Founder | ❌ Not started |
 
 Severity: **P0** = blocks the first real customer (life-safety + legal). **P1** = needed
@@ -233,14 +233,20 @@ Currently: structured stdout logs only. No way to know something broke in prod.
 ## P2 — Polish & competitive edge
 
 ### 9. Product completeness (deferred FRs)  ·  owner: **eng + founder**
-From `docs/TASKS.md` Phase 6.6 (shipped core, these sub-items deferred):
-- [ ] **9.1 Interactive on-screen BMD/SFD + stick model** (FR-32) before PDF export — a key
-  "show-your-working" trust/demo feature.
-- [ ] **9.2 Check-mode toggle in the UI** (FR-24) — the lower-liability wedge; backend exists,
-  surface it prominently in the wizard.
-- [ ] **9.3 Audit / "show-your-working" panel + deterministic-kernel provenance badge** (FR-26)
-  in the web results (it's in the PDF; bring it on-screen).
-- [ ] **9.4 Editable cost-per-ton input** (FR-25/31) on the results screen.
+From `docs/TASKS.md` Phase 6.6 (shipped core, these sub-items deferred) — **all done 2026-06-16
+(Batch 5):**
+- [x] **9.1 Interactive on-screen BMD/SFD + stick model** (FR-32) — done: the kernel now exposes
+  `DesignResult.diagram` (sampled M/V/N + node coords for the governing ULS-1 combo, via the new
+  `analysis/diagram_data.py`, the same data the PDF renders); the web `frame-diagrams.tsx` draws the
+  BMD + SFD (frame outline = stick model) on the results screen before PDF export.
+- [x] **9.2 Check-mode toggle in the UI** (FR-24) — done: the wizard's "Run mode" card (Design /
+  Check my sections) now carries the lower-liability framing ("you stay the author; TorenOne checks
+  your working"). Backend already existed.
+- [x] **9.3 Audit / "show-your-working" panel + deterministic-kernel provenance badge** (FR-26) —
+  done: a "Deterministic kernel — not AI" badge on the results header + a "Provenance & standards"
+  card listing the pinned `rules_version` editions on-screen.
+- [x] **9.4 Editable cost-per-ton input** (FR-25/31) — done: a cost-per-tonne field on the results
+  screen recomputes the indicative cost client-side (tonnage × rate), defaulting to the kernel's rate.
 
 ### 10. Pilot readiness & GTM (Phase 9)  ·  owner: **founder**
 - [ ] **10.1 Final design/QA polish** so the report PDF looks stamp-worthy (Phase 9.1).

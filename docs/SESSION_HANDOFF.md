@@ -62,13 +62,24 @@ flip `design(autosize_for_wind=True)` default on, together.**
 - **5.4** `service/.../analytics.py` — one structured `event="design_run"` log line per design
   (mode, pass/fail, governing util, tonnage, latency `duration_ms`; no PII), **6 tests**.
 
-**▶ NEXT: BATCH 5 — P2 product UI (start here).** All in `PRODUCTION_READINESS.md` §9 / `TASKS.md`
-6.6 deferred sub-items, web-only (`web/`):
-- **9.1** Interactive on-screen BMD/SFD + 2D stick model (FR-32) before PDF export.
-- **9.2** Check-mode toggle surfaced prominently in the wizard (FR-24; backend exists).
-- **9.3** Audit / "show-your-working" panel + deterministic-kernel provenance badge (FR-26).
-- **9.4** Editable cost-per-ton input on the results screen (FR-25/31).
-Then **Batch 6** (legal drafts: 2.2/2.3/2.4 Terms/Privacy/disclaimer routes in `web/`).
+**Batch 5 — P2 product UI: DONE (2026-06-16, Session 3).** §9 / `TASKS.md` 6.6 deferred sub-items.
+**Not web-only** — 9.1 needed a kernel data-exposure change (user-approved "full Batch 5 incl. kernel
+change"). Two commits, CI-green:
+- **kernel/service (`9d5facd`):** `DesignResult.diagram` (FrameDiagram/MemberDiagram/DiagramStation)
+  — sampled BMD/SFD/axial + node coords for the governing ULS-1 combo, via new
+  `analysis/diagram_data.py` (PyNite-only, no matplotlib); populated by `design()`+`check()`. The PDF
+  `bmd_sfd_png` now renders from this same data (one source of truth; removed the duplicated PyNite
+  build). +12 kernel tests.
+- **web:** `frame-diagrams.tsx` BMD/SFD + stick model on results (9.1); check-mode lower-liability
+  framing in the wizard (9.2); "Deterministic kernel — not AI" badge + "Provenance & standards" card
+  (9.3); editable cost-per-tonne re-costing client-side (9.4). Web 82 tests / typecheck / lint / build
+  green.
+
+**▶ NEXT: BATCH 6 — legal drafts (start here).** `PRODUCTION_READINESS.md` §2, web-only (`web/`):
+- **2.2** Terms of Service (computational aid; the registered engineer is the authoritative agent).
+- **2.3** Privacy policy + PoPIA (no `terms`/`privacy` routes exist in `web/` yet).
+- **2.4** In-product liability disclaimer on the report PDF cover + results screen.
+These are **drafts** for the founder + lawyer to finalise (2.1/2.5/2.6 stay founder/lawyer-gated).
 
 **What needs the FOUNDER (not engineer) to *activate* later** (code is built/ready): deploy to
 Fly+Vercel+prod-Supabase+domain (§3.1–3.4), OpenAI spend cap (§4.2), Sentry DSN (§5.1) + web

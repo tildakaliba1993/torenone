@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 
+import { FrameDiagrams } from "@/components/design/frame-diagrams";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -54,6 +56,22 @@ export function ResultsStep({
   const [downloading, setDownloading] = useState(false);
   const [dlError, setDlError] = useState<string | null>(null);
 
+  // Editable cost-per-tonne (FR-25/31). Default = the rate the kernel used
+  // (indicative_cost / tonnage); recompute the indicative cost client-side as the
+  // engineer adjusts it — no re-run needed (cost = tonnage × rate).
+  const defaultRatePerTonne =
+    design.total_steel_tonnes && design.indicative_cost_zar
+      ? design.indicative_cost_zar / design.total_steel_tonnes
+      : 20000;
+  const [ratePerTonne, setRatePerTonne] = useState<string>(
+    String(Math.round(defaultRatePerTonne)),
+  );
+  const parsedRate = Number(ratePerTonne);
+  const computedCost =
+    design.total_steel_tonnes != null && Number.isFinite(parsedRate) && parsedRate > 0
+      ? design.total_steel_tonnes * parsedRate
+      : design.indicative_cost_zar;
+
   async function onDownload() {
     setDownloading(true);
     setDlError(null);
@@ -73,9 +91,12 @@ export function ResultsStep({
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <CardTitle>Design result</CardTitle>
-            <StatusBadge status={design.passed ? "pass" : "fail"}>
-              {design.passed ? "All checks pass" : "Some checks fail"}
-            </StatusBadge>
+            <div className="flex items-center gap-2">
+              <ProvenanceBadge />
+              <StatusBadge status={design.passed ? "pass" : "fail"}>
+                {design.passed ? "All checks pass" : "Some checks fail"}
+              </StatusBadge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 text-sm">
@@ -84,13 +105,31 @@ export function ResultsStep({
             {design.total_steel_tonnes != null ? (
               <Stat label="Steel" value={`${design.total_steel_tonnes.toFixed(2)} t`} mono />
             ) : null}
-            {design.indicative_cost_zar != null ? (
-              <Stat label="Indicative cost" value={fmtZar(design.indicative_cost_zar)} mono />
+            {computedCost != null ? (
+              <Stat label="Indicative cost" value={fmtZar(computedCost)} mono />
             ) : null}
             {design.sections.map((s) => (
               <Stat key={s.member} label={s.member} value={s.designation} mono />
             ))}
           </dl>
+          {design.total_steel_tonnes != null ? (
+            <div className="flex max-w-xs flex-col gap-1">
+              <label htmlFor="cost-per-tonne" className="text-xs text-muted">
+                Cost per tonne (ZAR)
+              </label>
+              <Input
+                id="cost-per-tonne"
+                type="number"
+                inputMode="decimal"
+                value={ratePerTonne}
+                onChange={(e) => setRatePerTonne(e.target.value)}
+                className="font-mono"
+              />
+              <p className="text-xs text-subtle">
+                Indicative only — confirm with your fabricator. Adjust to re-cost the tonnage.
+              </p>
+            </div>
+          ) : null}
           <div className="flex flex-col gap-2">
             <Button onClick={onDownload} disabled={downloading} className="self-start">
               {downloading ? "Preparing…" : "Download calc package (PDF)"}
@@ -103,6 +142,17 @@ export function ResultsStep({
           </div>
         </CardContent>
       </Card>
+
+      {design.diagram ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Bending moment &amp; shear force</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <FrameDiagrams diagram={design.diagram} />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -239,6 +289,8 @@ export function ResultsStep({
         </Card>
       ) : null}
 
+      <StandardsCard rulesVersion={design.rules_version} />
+
       {design.warnings.length > 0 ? (
         <Card>
           <CardContent className="flex flex-col gap-1 py-4 text-sm">
@@ -258,6 +310,46 @@ export function ResultsStep({
         </Button>
       </div>
     </div>
+  );
+}
+
+/** Provenance badge (FR-26): every number is from the deterministic kernel, not the AI. */
+function ProvenanceBadge() {
+  return (
+    <span
+      className="inline-flex items-center rounded-full border border-border bg-surface px-2.5 py-0.5 text-xs font-medium text-muted"
+      title="Every figure is computed by the deterministic SANS kernel — the AI only parses your description."
+    >
+      Deterministic kernel — not AI
+    </span>
+  );
+}
+
+/** Audit / show-your-working: the pinned standard editions behind this run (FR-26). */
+function StandardsCard({ rulesVersion }: { rulesVersion: Record<string, string> }) {
+  const entries = Object.entries(rulesVersion);
+  if (entries.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Provenance &amp; standards</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3 text-sm">
+        <p className="text-muted">
+          Every figure above is produced by TorenOne&rsquo;s deterministic kernel and traced to a
+          SANS clause — not generated by AI. This run used the pinned standard editions below; the
+          full clause-by-clause working is in the downloadable calc package.
+        </p>
+        <dl className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
+          {entries.map(([key, value]) => (
+            <div key={key} className="flex justify-between gap-4 border-b border-border/50 py-1">
+              <dt className="text-muted capitalize">{key.replace(/_/g, " ")}</dt>
+              <dd className="font-mono text-xs">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </CardContent>
+    </Card>
   );
 }
 

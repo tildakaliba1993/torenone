@@ -198,11 +198,41 @@ export interface WindLoadResult {
   clause: string;
 }
 
+/** One sampled point along a member: global position (m) + internal forces. */
+export interface DiagramStation {
+  pos_m: number;
+  x_m: number;
+  y_m: number;
+  axial_kn: number;
+  shear_kn: number;
+  moment_knm: number;
+}
+
+export interface MemberDiagram {
+  name: string;
+  label: string;
+  member: string; // "column" | "rafter"
+  start: [number, number];
+  end: [number, number];
+  length_m: number;
+  stations: DiagramStation[];
+}
+
+/** BMD/SFD + stick-model data for the governing ULS-1 combination (FR-32). */
+export interface FrameDiagram {
+  combination: string;
+  nodes: Record<string, [number, number]>;
+  members: MemberDiagram[];
+  max_abs_moment_knm: number;
+  max_abs_shear_kn: number;
+}
+
 export interface DesignResult {
   frame_spec: FrameSpec;
   sections: SectionChoice[];
   checks: CheckResult[];
   wind?: WindLoadResult | null;
+  diagram?: FrameDiagram | null;
   rules_version: Record<string, string>;
   warnings: string[];
   total_steel_mass_kg: number | null;

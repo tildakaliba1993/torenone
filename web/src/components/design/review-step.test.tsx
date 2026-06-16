@@ -74,6 +74,15 @@ describe("ReviewStep", () => {
     await waitFor(() => expect(onComplete).toHaveBeenCalledWith(OK));
   });
 
+  it("explains Check mode as the lower-liability path (FR-24)", async () => {
+    renderStep();
+    // Design mode framing by default…
+    expect(screen.getByText(/auto-sizes the lightest adequate sections/i)).toBeTruthy();
+    // …switching to Check mode surfaces the "you stay the author" framing.
+    await userEvent.click(screen.getByRole("button", { name: /check my sections/i }));
+    expect(screen.getByText(/you stay the author of the design/i)).toBeTruthy();
+  });
+
   it("requires section sizes in Check mode", async () => {
     const { onComplete } = renderStep();
     await userEvent.click(screen.getByRole("button", { name: /check my sections/i }));
