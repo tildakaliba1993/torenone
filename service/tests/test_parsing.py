@@ -268,6 +268,22 @@ class TestParseDescription:
         assert client.capture["model"] == "gpt-5.5"
         assert client.capture["text_format"] is FrameSpecExtraction
 
+    def test_applies_output_token_cap(self):
+        # §4.2 cost guardrail: a per-request output-token cap is forwarded by default.
+        client = _FakeClient(_complete_extraction())
+        parse_description("desc", client=client, model="gpt-5.5")
+        assert client.capture["max_output_tokens"] == 2048
+
+    def test_output_token_cap_overridable(self):
+        client = _FakeClient(_complete_extraction())
+        parse_description("desc", client=client, model="gpt-5.5", max_output_tokens=512)
+        assert client.capture["max_output_tokens"] == 512
+
+    def test_output_token_cap_can_be_disabled(self):
+        client = _FakeClient(_complete_extraction())
+        parse_description("desc", client=client, model="gpt-5.5", max_output_tokens=0)
+        assert "max_output_tokens" not in client.capture
+
     def test_user_text_forwarded_to_model(self):
         client = _FakeClient(_complete_extraction())
         parse_description("a 20 metre warehouse", client=client, model="gpt-5.5")

@@ -33,10 +33,10 @@ Pilot. Do not invite a firm before the first two are done.
 | 1 | Engineering validation gate (the moat) | **P0** | Co-founder (Pr.Eng) | ❌ Not started |
 | 2 | Legal, liability & compliance | **P0** | Founder + lawyer | 🟡 Drafts (2.2–2.4); 2.1/2.5/2.6 founder/lawyer |
 | 3 | Live deployment (service + web) | **P0** | Eng | ❌ Not done (configured only) |
-| 4 | Reliability & cost controls (OpenAI, rate limits) | **P1** | Eng | ❌ Absent |
-| 5 | Observability (errors, uptime, logs) | **P1** | Eng | 🟡 Partial (5.1/5.4 done) |
-| 6 | Data durability & ops (backups, retention) | **P1** | Eng | 🟡 Partial (6.1 founder-only) |
-| 7 | Security hardening for prod | **P1** | Eng | 🟡 Partial (8.5 done) |
+| 4 | Reliability & cost controls (OpenAI, rate limits) | **P1** | Eng | 🟡 Eng-side done; 4.2 cap/4.5 load-test = founder/infra |
+| 5 | Observability (errors, uptime, logs) | **P1** | Eng | 🟡 5.1/5.4 done; 5.2/5.3 = founder accounts |
+| 6 | Data durability & ops (backups, retention) | **P1** | Eng | 🟡 6.2–6.4 done; 6.1 = founder (Supabase tier) |
+| 7 | Security hardening for prod | **P1** | Eng | 🟢 Eng-side done (7.2/7.4 + 8.5); 7.1/7.3 = founder |
 | 8 | Auth/account lifecycle | **P1** | Eng | 🟡 Partial |
 | 9 | Product completeness (deferred FRs) | **P2** | Eng + Founder | ✅ Done (9.1–9.4) |
 | 10 | Pilot readiness & GTM evidence (Phase 9) | **P2** | Founder | ❌ Not started |
@@ -155,8 +155,10 @@ actually deployed** — there is no running production service or web app.
   2 bounded retries (both env-overridable: `OPENAI_TIMEOUT_S` / `OPENAI_MAX_RETRIES`), so a
   hung/slow OpenAI call no longer blocks `/parse` indefinitely. (Fallback-model field already
   wired; `max_tokens` cap belongs with 4.2 cost guardrails.)
-- [ ] **4.2 OpenAI cost guardrails** — usage/budget cap + alerting; a runaway loop or abuse could
-  generate a large bill. Cap tokens per request; monitor spend.
+- [~] **4.2 OpenAI cost guardrails** — **code half done 2026-06-17:** a per-request **output-token
+  cap** is now sent on every `/parse` call (`OPENAI_MAX_OUTPUT_TOKENS`, default 2048; `<=0` disables)
+  — bounds the cost/blast-radius of any single request. *(Remaining = founder: an account-level
+  usage/budget cap + spend alerting in the OpenAI dashboard — not settable from code.)*
 - [x] **4.3 Rate limiting** — done 2026-06-15: `slowapi` per-IP limits on `/parse` + `/design`
   (default 30/min each, env-overridable `PARSE_RATE_LIMIT`/`DESIGN_RATE_LIMIT`) → 429 on abuse.
   Per-app limiter instance (no cross-test state). *(Per-user keying is a possible refinement.)*
@@ -170,9 +172,12 @@ actually deployed** — there is no running production service or web app.
 
 ### 5. Observability  ·  owner: **eng**
 Currently: structured stdout logs only. No way to know something broke in prod.
-- [~] **5.1 Error tracking** — done service-side 2026-06-15: `sentry-sdk` initialised iff
-  `SENTRY_DSN` is set (no-op + no key needed for local/dev/tests; `send_default_pii=False`).
-  *(Remaining: wire `@sentry/nextjs` into the web app — needs the same DSN.)*
+- [x] **5.1 Error tracking** — **code-complete 2026-06-17.** Service-side (2026-06-15): `sentry-sdk`
+  initialised iff `SENTRY_DSN`. Web (2026-06-17): `@sentry/nextjs` wired via `instrumentation.ts` +
+  `instrumentation-client.ts` (init **iff** `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN`), a `global-error.tsx`
+  boundary + `captureException` in the app error boundary; `send_default_pii=False`. No-op without a
+  DSN (local/dev/CI/tests; prod audit clean). *(Activation = the founder sets the DSN in the web
+  deployment env.)*
 - [ ] **5.2 Uptime/health monitoring + alerting** on `/health` and the web app (paging/email).
 - [ ] **5.3 Log aggregation/retention** beyond container stdout (so post-incident debugging is
   possible).
@@ -214,10 +219,12 @@ Currently: structured stdout logs only. No way to know something broke in prod.
   to a shared 10-char minimum (`lib/auth/password.ts`, used by sign-up + reset). *(Remaining,
   Supabase-dashboard settings — founder: login rate-limiting/lockout, the authoritative
   server-side password policy, and **email confirmation ON in the production project**.)*
-- [~] **7.4 Security headers / CSP** — done 2026-06-15 for the safe set (next.config.ts):
-  X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy, Permissions-Policy,
-  X-DNS-Prefetch-Control. *(A full CSP is deferred — it needs per-env `connect-src` for the
-  Supabase + service URLs and live testing so it doesn't break Next/Supabase inline scripts.)*
+- [x] **7.4 Security headers / CSP** — safe header set done 2026-06-15; **CSP done 2026-06-17.** A
+  Content-Security-Policy (`lib/security/csp.ts`, env-derived `connect-src` for the Supabase REST +
+  Realtime-wss + service URLs) is now emitted from `next.config.ts` as **`Content-Security-Policy-
+  Report-Only`** by default — it surfaces violations without any risk of breaking the app. Set
+  `CSP_ENFORCE=true` to switch to an enforcing header after a verification pass (a tighten-with-nonces
+  pass can drop `'unsafe-inline'` later). **5 unit tests** (`lib/security/csp.test.ts`).
 
 ### 8. Auth & account lifecycle  ·  owner: **eng**
 - [~] **8.1 Password reset + email verification** — done 2026-06-15: `/forgot-password` (sends a

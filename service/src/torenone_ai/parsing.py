@@ -25,6 +25,7 @@ mapping is fully unit-testable without any network call or API key.
 from __future__ import annotations
 
 import dataclasses
+import os
 from typing import Any
 
 from pydantic import BaseModel, Field, ValidationError
@@ -402,7 +403,21 @@ SYSTEM_PROMPT = (
 )
 
 
-def parse_description(text: str, *, client: Any, model: str) -> ParseResult:
+# Per-request output-token cap (§4.2 cost guardrail). The structured FrameSpecExtraction is
+# small, so a modest cap bounds the cost (and blast radius) of any single /parse call while
+# leaving ample headroom for the response. Env-overridable; set <=0 to disable the cap.
+def _default_max_output_tokens() -> int:
+    raw = os.environ.get("OPENAI_MAX_OUTPUT_TOKENS", "").strip()
+    return int(raw) if raw else 2048
+
+
+def parse_description(
+    text: str,
+    *,
+    client: Any,
+    model: str,
+    max_output_tokens: int | None = None,
+) -> ParseResult:
     """Parse *text* into a :class:`ParseResult` using an OpenAI client.
 
     Parameters
@@ -413,10 +428,15 @@ def parse_description(text: str, *, client: Any, model: str) -> ParseResult:
         An OpenAI client (``openai.OpenAI``) — injected for testability.
     model:
         The model id (e.g. ``"gpt-5.5"``).
+    max_output_tokens:
+        Per-request output-token cap (§4.2). Defaults to ``OPENAI_MAX_OUTPUT_TOKENS``
+        (or 2048); pass a value ``<= 0`` to disable the cap.
 
     The LLM only fills the nullable :class:`FrameSpecExtraction`; all defaulting,
     missing-field flagging and validation happen deterministically afterwards.
     """
+    cap = _default_max_output_tokens() if max_output_tokens is None else max_output_tokens
+    extra: dict[str, Any] = {"max_output_tokens": cap} if cap and cap > 0 else {}
     response = client.responses.parse(
         model=model,
         input=[
@@ -424,6 +444,7 @@ def parse_description(text: str, *, client: Any, model: str) -> ParseResult:
             {"role": "user", "content": text},
         ],
         text_format=FrameSpecExtraction,
+        **extra,
     )
     extraction = getattr(response, "output_parsed", None)
     if extraction is None:

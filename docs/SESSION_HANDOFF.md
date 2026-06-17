@@ -85,12 +85,23 @@ change"). Two commits, CI-green:
 Shared `(legal)/layout.tsx` shows a prominent "Draft — not legal advice" banner; `components/legal/prose.tsx`
 primitives. Web 86 tests + kernel report disclaimer test; full suite 838 passed.
 
-**▶ PROGRAM STATUS:** every `PRODUCTION_READINESS.md` item that does NOT depend on the co-founder or
-on founder-activation is now **DONE** (Batches 1–6). What remains is **co-founder-gated** (§1
-validation gate 1.1–1.6 + method/clause/limitations sign-offs; the wind re-gating decision) and
-**founder/lawyer-activation-gated** (deploy §3.1–3.4, spend cap 4.2, web Sentry/uptime 5.1–5.2,
-backups 6.1, secret vaults 7.1, CSP 7.4; legal finalisation 2.1/2.2/2.3/2.5/2.6; pilot §10). No
-further autonomous batches remain — next steps need the co-founder or the founder's accounts/lawyer.
+**Batch 7 — final code slivers: DONE (2026-06-17, Session 3).** The last code-only pieces inside
+`[~]` items, none co-founder-dependent (CI-green):
+- **4.2 (code half)** per-request OpenAI **output-token cap** (`OPENAI_MAX_OUTPUT_TOKENS`, default 2048;
+  `service/.../parsing.py`); spend *monitoring* stays the founder's OpenAI dashboard.
+- **7.4** **CSP** shipped **report-only** (`web/src/lib/security/csp.ts`, env-derived connect-src;
+  `CSP_ENFORCE=true` to enforce after a verification pass). 5 tests.
+- **5.1 (web half)** `@sentry/nextjs` wired (`instrumentation*.ts` + `global-error.tsx`), no-op without
+  a DSN; prod npm-audit clean. 5.1 now code-complete (service + web).
+`.env.example` documents the new knobs.
+
+**▶ PROGRAM STATUS:** every `PRODUCTION_READINESS.md` item that is **code/eng work** is now **DONE**
+(Batches 1–7). What remains is only: **co-founder (Pr.Eng)-gated** — §1 validation gate 1.1–1.6 +
+method/clause/limitations sign-offs + the wind re-gating decision; and **founder-account/credential/
+money/lawyer-gated** (NOT co-founder) — deploy §3.1–3.4, OpenAI spend cap/alerting (4.2 dashboard),
+load-test 4.5, uptime 5.2, log aggregation 5.3, Supabase backups 6.1, prod secret vaults 7.1, Supabase
+auth toggles 7.3, prod-SMTP test 8.1, insurance 2.1, OpenAI data agreement 2.5, licensed standards 2.6,
+finalising the 2.2/2.3 legal drafts with a lawyer, pilot §10. **No autonomous coding work remains.**
 
 **What needs the FOUNDER (not engineer) to *activate* later** (code is built/ready): deploy to
 Fly+Vercel+prod-Supabase+domain (§3.1–3.4), OpenAI spend cap (§4.2), Sentry DSN (§5.1) + web

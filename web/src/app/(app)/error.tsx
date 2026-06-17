@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+import * as Sentry from "@sentry/nextjs";
+
 import { ErrorState } from "@/components/ui/error-state";
 
 // Error boundaries must be Client Components (Next.js App Router).
@@ -14,6 +16,7 @@ export default function AppError({
 }) {
   useEffect(() => {
     console.error(error);
+    Sentry.captureException(error); // no-op unless a DSN is configured (§5.1)
   }, [error]);
 
   return (
