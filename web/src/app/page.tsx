@@ -39,6 +39,15 @@ export default function Home() {
           <StatusBadge status="fail">LTB 1.14</StatusBadge>
         </div>
       </section>
+
+      <footer className="text-subtle mt-auto flex gap-4 text-xs">
+        <Link href="/terms" className="hover:underline">
+          Terms
+        </Link>
+        <Link href="/privacy" className="hover:underline">
+          Privacy
+        </Link>
+      </footer>
     </main>
   );
 }

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import Link from "next/link";
+
 import { FrameDiagrams } from "@/components/design/frame-diagrams";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -142,6 +144,8 @@ export function ResultsStep({
           </div>
         </CardContent>
       </Card>
+
+      <LiabilityNotice />
 
       {design.diagram ? (
         <Card>
@@ -309,6 +313,32 @@ export function ResultsStep({
           Start another design
         </Button>
       </div>
+    </div>
+  );
+}
+
+/** In-product liability disclaimer on the results screen (§2.4). */
+function LiabilityNotice() {
+  return (
+    <div
+      role="note"
+      className="border-warning/40 bg-warning/10 rounded-md border px-4 py-3 text-sm"
+    >
+      <p className="text-foreground font-medium">Computational aid — not a stamped design</p>
+      <p className="text-muted mt-1">
+        Every figure here is computed by TorenOne&rsquo;s deterministic SANS kernel and is{" "}
+        <strong>indicative</strong>. It is not a substitute for an engineer&rsquo;s professional
+        judgement. A registered engineer (ECSA) must review, verify and stamp this design — and check
+        all items marked out of scope or provisional — before it is used in construction. See the{" "}
+        <Link href="/terms" className="text-accent hover:underline">
+          Terms
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="text-accent hover:underline">
+          Privacy Policy
+        </Link>
+        .
+      </p>
     </div>
   );
 }

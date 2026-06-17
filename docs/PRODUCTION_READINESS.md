@@ -31,7 +31,7 @@ Pilot. Do not invite a firm before the first two are done.
 | # | Area | Severity | Owner | State |
 |---|------|----------|-------|-------|
 | 1 | Engineering validation gate (the moat) | **P0** | Co-founder (Pr.Eng) | ❌ Not started |
-| 2 | Legal, liability & compliance | **P0** | Founder + lawyer | ❌ Not started |
+| 2 | Legal, liability & compliance | **P0** | Founder + lawyer | 🟡 Drafts (2.2–2.4); 2.1/2.5/2.6 founder/lawyer |
 | 3 | Live deployment (service + web) | **P0** | Eng | ❌ Not done (configured only) |
 | 4 | Reliability & cost controls (OpenAI, rate limits) | **P1** | Eng | ❌ Absent |
 | 5 | Observability (errors, uptime, logs) | **P1** | Eng | 🟡 Partial (5.1/5.4 done) |
@@ -100,15 +100,21 @@ South-African structural-engineering SaaS.
 
 - [ ] **2.1 Professional indemnity / product-liability insurance** appropriate to engineering
   software (or a clear contractual model where the firm's Pr.Eng remains the responsible agent).
-- [ ] **2.2 Terms of Service** — explicitly: TorenOne is a *computational aid*; the registered
-  engineer is the **authoritative responsible agent** (the PRD's framing — currently only a
-  checkbox in `review-step.tsx`). Limit liability; define acceptable use.
-- [ ] **2.3 Privacy policy + PoPIA compliance** (SA Protection of Personal Information Act) —
-  there are **no `terms`/`privacy`/legal routes** in `web/`. Data processing, retention,
-  subject rights. (GDPR too if any EU users.)
-- [ ] **2.4 In-product liability disclaimer** on the report PDF cover and the results screen
-  (beyond the review checkbox) — "computational aid, verified by the deterministic kernel, not a
-  substitute for the engineer's professional judgement; engineer must review and stamp."
+- [~] **2.2 Terms of Service** — **DRAFT done 2026-06-17** (Batch 6): `web/src/app/(legal)/terms`
+  route states TorenOne is a *computational aid* and the ECSA-registered engineer is the
+  **authoritative responsible agent**; covers acceptable use, the AI step, disclaimer of warranties,
+  limitation of liability, indemnity, SA governing law. **Marked DRAFT — pending attorney review**
+  (liability cap + fees + dispute mechanism are bracketed placeholders for counsel). *Done-when (full):*
+  reviewed + finalised by a qualified SA attorney (founder/lawyer).
+- [~] **2.3 Privacy policy + PoPIA compliance** — **DRAFT done 2026-06-17** (Batch 6):
+  `web/src/app/(legal)/privacy` route — PoPIA-aware (info processed, purpose/lawful basis, the
+  third-party AI/OpenAI disclosure + trans-border note, retention, security, data-subject rights +
+  Information Regulator). **Marked DRAFT** (Information Officer + sub-processors + hosting regions are
+  bracketed). *Done-when (full):* attorney-reviewed; ties to 2.5 (AI data-processing terms).
+- [x] **2.4 In-product liability disclaimer** — done 2026-06-17 (Batch 6): an explicit liability box
+  on the **report PDF cover** ("Computational aid — not a stamped design … ECSA … review, verify and
+  stamp") **and** a `LiabilityNotice` on the **results screen**, plus Terms/Privacy links on the
+  landing + a signup agreement line. (This is in-product text, not legal sign-off — that rides on 2.2.)
 - [ ] **2.5 Data-processing terms for the AI step** — the user's project description goes to
   OpenAI. Disclose it; confirm it's acceptable to firms; consider a no-train data agreement.
 - [ ] **2.6 Properly-licensed copies of the design standards.** The kernel's values are verified

@@ -75,11 +75,22 @@ change"). Two commits, CI-green:
   (9.3); editable cost-per-tonne re-costing client-side (9.4). Web 82 tests / typecheck / lint / build
   green.
 
-**▶ NEXT: BATCH 6 — legal drafts (start here).** `PRODUCTION_READINESS.md` §2, web-only (`web/`):
-- **2.2** Terms of Service (computational aid; the registered engineer is the authoritative agent).
-- **2.3** Privacy policy + PoPIA (no `terms`/`privacy` routes exist in `web/` yet).
-- **2.4** In-product liability disclaimer on the report PDF cover + results screen.
-These are **drafts** for the founder + lawyer to finalise (2.1/2.5/2.6 stay founder/lawyer-gated).
+**Batch 6 — legal drafts: DONE (2026-06-17, Session 3).** `PRODUCTION_READINESS.md` §2, CI-green:
+- **2.2** `web/src/app/(legal)/terms` — ToS draft (computational aid; ECSA engineer = authoritative
+  responsible agent; warranties/liability/indemnity/SA law). **Marked DRAFT, pending attorney review.**
+- **2.3** `web/src/app/(legal)/privacy` — Privacy + PoPIA draft (AI/OpenAI disclosure, trans-border,
+  data-subject rights + Information Regulator). **DRAFT, pending attorney review.**
+- **2.4** liability box on the **report PDF cover** (kernel template) + `LiabilityNotice` on the
+  **results screen**; Terms/Privacy links on landing + a signup agreement line.
+Shared `(legal)/layout.tsx` shows a prominent "Draft — not legal advice" banner; `components/legal/prose.tsx`
+primitives. Web 86 tests + kernel report disclaimer test; full suite 838 passed.
+
+**▶ PROGRAM STATUS:** every `PRODUCTION_READINESS.md` item that does NOT depend on the co-founder or
+on founder-activation is now **DONE** (Batches 1–6). What remains is **co-founder-gated** (§1
+validation gate 1.1–1.6 + method/clause/limitations sign-offs; the wind re-gating decision) and
+**founder/lawyer-activation-gated** (deploy §3.1–3.4, spend cap 4.2, web Sentry/uptime 5.1–5.2,
+backups 6.1, secret vaults 7.1, CSP 7.4; legal finalisation 2.1/2.2/2.3/2.5/2.6; pilot §10). No
+further autonomous batches remain — next steps need the co-founder or the founder's accounts/lawyer.
 
 **What needs the FOUNDER (not engineer) to *activate* later** (code is built/ready): deploy to
 Fly+Vercel+prod-Supabase+domain (§3.1–3.4), OpenAI spend cap (§4.2), Sentry DSN (§5.1) + web

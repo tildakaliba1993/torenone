@@ -164,6 +164,13 @@ class TestHTMLProvenance:
             or "kernel" in html.lower()
         )
 
+    def test_liability_disclaimer_present(self, html):
+        """§2.4: explicit liability disclaimer — computational aid; ECSA review + stamp."""
+        low = html.lower()
+        assert "computational aid" in low
+        assert "ecsa" in low
+        assert "stamp" in low
+
 
 class TestHTMLRulesVersion:
     def test_rules_version_embedded(self, html, result):

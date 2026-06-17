@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -129,6 +130,17 @@ export function SignupForm() {
         <Button type="submit" className="mt-2" disabled={form.formState.isSubmitting}>
           {form.formState.isSubmitting ? "Creating account…" : "Create account"}
         </Button>
+        <p className="text-subtle text-xs">
+          By creating an account you agree to our{" "}
+          <Link href="/terms" className="text-accent hover:underline">
+            Terms
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="text-accent hover:underline">
+            Privacy Policy
+          </Link>
+          .
+        </p>
       </form>
     </Form>
   );

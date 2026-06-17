@@ -168,6 +168,13 @@ describe("ResultsStep", () => {
     expect(await screen.findByText("Could not generate a download link.")).toBeTruthy();
   });
 
+  // §2.4 — in-product liability disclaimer
+  it("renders the in-product liability disclaimer", () => {
+    render(<ResultsStep result={RESP} onRestart={vi.fn()} />);
+    expect(screen.getByText(/computational aid — not a stamped design/i)).toBeTruthy();
+    expect(screen.getByText(/must review, verify and stamp/i)).toBeTruthy();
+  });
+
   // FR-26 — provenance on-screen
   it("renders the deterministic-kernel provenance badge", () => {
     render(<ResultsStep result={RESP} onRestart={vi.fn()} />);
