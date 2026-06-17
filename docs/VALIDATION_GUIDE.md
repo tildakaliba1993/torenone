@@ -119,3 +119,33 @@ scaffold before the first real number goes in.
 The goal of the whole session is his **sign-off on correctness** — the green light
 the plan requires before a pilot. He's not approving software; he's confirming the
 engineering. That's a checkpoint only he can give.
+
+---
+
+## Part 5 — Sign-off checklist (the co-founder's deliverables)
+
+These map 1:1 to `PRODUCTION_READINESS.md` §1. The pilot **cannot** open until **1.1 + 1.2**
+are done; the rest should follow before scaling. Record his initials + date against each.
+
+- [ ] **1.1 Validate the PROVISIONAL methods/values** (`docs/SOURCES.md`). The code↔standard
+  *transcription* is already verified; this is his **professional sign-off** of: the SAISC
+  section data (E1) vs the Red Book; the connection/baseplate **methods** (end-plate T-stub,
+  baseplate bearing model); and the **wind-on-frame method** (sign conventions + governing case).
+  *Done-when:* each `SOURCES.md` row he's responsible for is `VERIFIED` with his initials + date.
+- [ ] **1.2 Fill the benchmark gate** — one real past frame + its original results into
+  `kernel/tests/validation/` (you do the typing; see Part 3). *Done-when:* the kernel matches his
+  real design within agreed tolerance, **in CI**. **← the launch blocker.**
+- [ ] **1.3 Worked-example regressions** — ≥2 published worked examples as permanent
+  `BenchmarkCase`s. *Done-when:* green in CI.
+- [ ] **1.4 Formula/clause review** — he reads every check's clause mapping in the report and
+  confirms it. *Done-when:* signed off.
+- [ ] **1.5 Limitations completeness** — he confirms the report's "out of scope / engineer must
+  verify" block omits nothing dangerous. *Done-when:* signed off.
+- [ ] **1.6 Wind decision** — after 1.1, decide whether to flip the wind checks from **advisory**
+  back to **gating** + turn `design(autosize_for_wind=True)` on (and whether SLS-2 sway should
+  gate). See `SESSION_HANDOFF.md` → Wind section. *(This is a code change the technical co-founder
+  makes once the engineer decides — it's the only remaining code item, and it's blocked on his
+  judgement.)*
+
+> When **1.1 + 1.2** are signed off, the engineering green light is given. Combine that with the
+> founder's go-live phases (`GO_LIVE.md`) and you have a production-ready MVP.

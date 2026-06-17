@@ -241,8 +241,16 @@ ULS-2/3+SLS-2) was built + SANS-cited, but `design.py` never invoked it.
 5. **Phase 9** — pilot & YC readiness.
 
 ## Doc map
-`docs/TASKS.md` (phase-by-phase status, every task annotated), `docs/SOURCES.md` (every transcribed
-value + dependency, cited), `docs/VALIDATION_GUIDE.md`, `docs/E2E_CI_SETUP.md` (turn on the CI E2E
-job), `standards/README.md` (SANS manifest —
-PDFs are local-only / gitignored). Agent memory: `run-engineering-service-locally`,
-`supabase-asymmetric-jwt-es256`, `verify-foundation-before-parallel-build`.
+- **`docs/GO_LIVE.md`** — the founder's end-to-end **production launch runbook** (Phases A–I:
+  prod Supabase → Fly → Vercel → domain/CSP → observability → backups/retention → secrets →
+  CI/CD → smoke test), with the exact env per surface. **Start here for the launch.**
+- **`docs/VALIDATION_GUIDE.md`** — non-technical co-founder session + the **§1.1–1.6 sign-off
+  checklist** (Part 5) — the engineering launch gate.
+- Ops mechanics: `docs/DEPLOY.md` (service image/Fly + CI/CD), `docs/MIGRATIONS.md` (prod DB),
+  `docs/DB_OPS.md` (pooler/sizing), `docs/DATA_RETENTION.md` (PDF pruning), `docs/E2E_CI_SETUP.md`
+  (turn on/pause the CI E2E job).
+- Status/provenance: `docs/PRODUCTION_READINESS.md` (the live gap tracker), `docs/TASKS.md`
+  (phase-by-phase), `docs/SOURCES.md` (every transcribed value, cited), `standards/README.md`
+  (SANS manifest — PDFs local-only / gitignored).
+- Agent memory: `production-readiness-batches`, `run-engineering-service-locally`,
+  `supabase-asymmetric-jwt-es256`, `verify-foundation-before-parallel-build`.

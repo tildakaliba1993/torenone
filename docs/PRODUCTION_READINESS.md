@@ -272,6 +272,11 @@ From `docs/TASKS.md` Phase 6.6 (shipped core, these sub-items deferred) — **al
 
 ## Recommended order of operations
 
+> **Execution runbooks:** the founder's step-by-step launch sequence is **`docs/GO_LIVE.md`**
+> (Phases A–I); the co-founder's engineering sign-off is **`docs/VALIDATION_GUIDE.md`** (Part 5
+> checklist). All **code/eng** items below are done — what's left is account/lawyer/co-founder work.
+
+
 1. **Co-founder validation session (#1)** — start now; nothing real ships without it. Parallelise:
    the engineer validates while eng does deploy/observability.
 2. **Legal + insurance (#2)** — long lead time; start in parallel with #1.
