@@ -12,8 +12,10 @@ Auth (4.2), /parse (4.3), /design (4.4) and error handling (4.5) build on this.
 from __future__ import annotations
 
 import os
+import threading
 import time
 from collections.abc import Awaitable, Callable
+from typing import TypeVar
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -72,6 +74,49 @@ MAX_REQUEST_BYTES: int = int(os.environ.get("MAX_REQUEST_BYTES", "").strip() or 
 PARSE_RATE_LIMIT: str = os.environ.get("PARSE_RATE_LIMIT", "").strip() or "30/minute"
 DESIGN_RATE_LIMIT: str = os.environ.get("DESIGN_RATE_LIMIT", "").strip() or "30/minute"
 
+# Per-request wall-clock budget for the CPU-bound kernel run on /design (§4.4). The kernel's
+# runtime is algorithmically bounded (≤5 sizing iterations over a fixed 64-section library +
+# a small FEA solve), so this is defense-in-depth against a pathological case rather than a
+# hot path — normal runs land in ~15-20 s, well under the default. On exceed, /design returns
+# 504. Override via env; <=0 disables.
+DESIGN_TIMEOUT_S: float = float(os.environ.get("DESIGN_TIMEOUT_S", "").strip() or "120")
+
+_T = TypeVar("_T")
+
+
+class DesignTimeoutError(Exception):
+    """The kernel run exceeded its per-request wall-clock budget (§4.4)."""
+
+
+def _run_with_timeout(fn: Callable[[], _T], timeout_s: float) -> _T:
+    """Run *fn* on a worker thread, returning its result or raising on timeout/error.
+
+    A non-positive ``timeout_s`` runs *fn* inline (no guard). On timeout a
+    :class:`DesignTimeoutError` is raised; the worker thread is a daemon and is left to
+    finish in the background (a sync CPU-bound Python call cannot be force-cancelled) —
+    acceptable because the kernel's runtime is bounded, so this only bounds the *client's*
+    wait. Any exception raised by *fn* is re-raised to the caller unchanged.
+    """
+    if timeout_s <= 0:
+        return fn()
+
+    box: dict[str, object] = {}
+
+    def _target() -> None:
+        try:
+            box["value"] = fn()
+        except BaseException as exc:  # noqa: BLE001 — re-raised on the calling thread
+            box["error"] = exc
+
+    worker = threading.Thread(target=_target, daemon=True)
+    worker.start()
+    worker.join(timeout_s)
+    if worker.is_alive():
+        raise DesignTimeoutError(f"design exceeded {timeout_s:.0f}s")
+    if "error" in box:
+        raise box["error"]  # type: ignore[misc]
+    return box["value"]  # type: ignore[return-value]
+
 
 def _init_sentry() -> bool:
     """Initialise Sentry error tracking iff ``SENTRY_DSN`` is set. No-op otherwise.
@@ -122,6 +167,7 @@ def create_app(
     ai_runtime: AIRuntime | None = None,
     report_builder: ReportBuilder | None = None,
     report_store: ReportStore | None = None,
+    design_timeout_s: float | None = None,
 ) -> FastAPI:
     """Build and return the FastAPI application.
 
@@ -136,7 +182,11 @@ def create_app(
     report_builder / report_store:
         Injected report PDF builder + persistence (tests). Default to WeasyPrint +
         an in-process store; a Supabase-backed store is wired in Phase 5.
+    design_timeout_s:
+        Per-request wall-clock budget for the CPU-bound kernel run on /design (§4.4).
+        Defaults to ``DESIGN_TIMEOUT_S`` (120 s); ``<= 0`` disables the guard.
     """
+    design_timeout = DESIGN_TIMEOUT_S if design_timeout_s is None else design_timeout_s
     configure_logging()
     logger = get_logger()
     _init_sentry()
@@ -281,7 +331,17 @@ def create_app(
         """
         started = time.perf_counter()
         try:
-            result = run_design(body)
+            # Bound the CPU-bound kernel run with a per-request wall-clock budget (§4.4).
+            result = _run_with_timeout(lambda: run_design(body), design_timeout)
+        except DesignTimeoutError as exc:
+            logger.warning(
+                "design_timeout",
+                extra={"user_id": user.user_id, "mode": body.mode, "timeout_s": design_timeout},
+            )
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                detail="the design run took too long and was aborted",
+            ) from exc
         except DesignError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message

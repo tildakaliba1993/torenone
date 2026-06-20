@@ -96,12 +96,14 @@ class _RecordingStore:
 def _client(
     builder: _FakeReportBuilder | None = None,
     store: _RecordingStore | None = None,
+    design_timeout_s: float | None = None,
 ) -> TestClient:
     return TestClient(
         create_app(
             auth_config=AUTH,
             report_builder=builder or _FakeReportBuilder(),
             report_store=store or _RecordingStore(),
+            design_timeout_s=design_timeout_s,
         )
     )
 
@@ -216,6 +218,44 @@ class TestGuards:
     def test_bad_mode_422(self):
         resp = _client().post("/design", json=_body(mode="bogus"), headers=_headers())
         assert resp.status_code == 422
+
+    def test_design_timeout_504(self):
+        # §4.4: a per-request wall-clock budget. A tiny budget the real (non-instant)
+        # kernel run cannot meet → 504 (not a 500). A separate fast run still succeeds.
+        resp = _client(design_timeout_s=0.0005).post(
+            "/design", json=_body(), headers=_headers()
+        )
+        assert resp.status_code == 504
+        assert "too long" in resp.json()["detail"]
+
+
+class TestTimeoutHelper:
+    def test_returns_value_when_fast(self):
+        from torenone_service.app import _run_with_timeout
+
+        assert _run_with_timeout(lambda: 7, 5.0) == 7
+
+    def test_raises_on_timeout(self):
+        import time as _t
+
+        from torenone_service.app import DesignTimeoutError, _run_with_timeout
+
+        with pytest.raises(DesignTimeoutError):
+            _run_with_timeout(lambda: _t.sleep(1.0), 0.01)
+
+    def test_reraises_inner_exception(self):
+        from torenone_service.app import _run_with_timeout
+
+        def boom() -> int:
+            raise ValueError("nope")
+
+        with pytest.raises(ValueError, match="nope"):
+            _run_with_timeout(boom, 5.0)
+
+    def test_zero_timeout_runs_inline(self):
+        from torenone_service.app import _run_with_timeout
+
+        assert _run_with_timeout(lambda: 42, 0) == 42
 
 
 # ---------------------------------------------------------------------------

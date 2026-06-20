@@ -131,8 +131,10 @@ actually deployed** — there is no running production service or web app.
 - [ ] **3.1 Deploy the engineering service to Fly.io** (`fly deploy`), region `jnb`, with prod
   secrets set (`fly secrets set …`), `/health` passing. *Note:* the recent wheel-packaging bug
   proves the image path was under-tested — keep the E2E job pointed at the deployed image path.
-- [ ] **3.2 Deploy the web app to Vercel** with prod env (`NEXT_PUBLIC_*`, service URL). There is
-  **no `vercel.json`** yet; wire the project + env + domain.
+- [ ] **3.2 Deploy the web app to Vercel** with prod env (`NEXT_PUBLIC_*`, service URL).
+  **Code prep done 2026-06-17:** `web/vercel.json` added (framework `nextjs`, region `fra1` — closest
+  Vercel region to ZA, change as preferred). *(Remaining = founder: import the project, set env, wire
+  the domain — accounts/credentials.)*
 - [ ] **3.3 Provision the production Supabase project** (separate from the E2E test project):
   `supabase db push` migrations, enable email auth, set a custom SMTP sender, lock down.
 - [ ] **3.4 Custom domain + HTTPS** for web and service; set `CORS_ALLOW_ORIGINS` to the real
@@ -162,10 +164,11 @@ actually deployed** — there is no running production service or web app.
 - [x] **4.3 Rate limiting** — done 2026-06-15: `slowapi` per-IP limits on `/parse` + `/design`
   (default 30/min each, env-overridable `PARSE_RATE_LIMIT`/`DESIGN_RATE_LIMIT`) → 429 on abuse.
   Per-app limiter instance (no cross-test state). *(Per-user keying is a possible refinement.)*
-- [~] **4.4 Request guards** — done 2026-06-15: a global **max-body-size** middleware (256 KB,
-  env `MAX_REQUEST_BYTES`) returns 413 on oversized payloads, on top of the existing 5000-char
-  `/parse` cap. *(Remaining: per-request server-side timeout for the CPU-bound `/design` — pairs
-  with 4.5 capacity.)*
+- [x] **4.4 Request guards** — **done.** 2026-06-15: a global **max-body-size** middleware (256 KB,
+  env `MAX_REQUEST_BYTES`) → 413 on oversized payloads, plus the 5000-char `/parse` cap. **2026-06-17:**
+  a per-request **wall-clock timeout** on the CPU-bound `/design` kernel run (`DESIGN_TIMEOUT_S`,
+  default 120 s; `<=0` disables) → **504** on exceed. (Bounds client latency for a pathological case;
+  the kernel's runtime is already algorithmically bounded. 5 tests.)
 - [ ] **4.5 Concurrency/capacity** — the service is single-instance and `/design` is CPU-bound
   (FEA + WeasyPrint). Decide min instances / autoscale on Fly; load-test the 60 s NFR under
   a few concurrent designs.

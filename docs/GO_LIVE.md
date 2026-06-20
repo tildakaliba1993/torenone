@@ -80,6 +80,7 @@ fly open /health                 # expect {"status":"ok",...}
 | `SENTRY_DSN` (+`SENTRY_ENVIRONMENT`,`SENTRY_TRACES_SAMPLE_RATE`) | ⬚ | error tracking (Phase E) |
 | `OPENAI_MAX_OUTPUT_TOKENS` | ⬚ | per-request cost cap (default 2048) |
 | `PARSE_RATE_LIMIT` / `DESIGN_RATE_LIMIT` | ⬚ | default `30/minute` each |
+| `DESIGN_TIMEOUT_S` | ⬚ | per-request `/design` budget → 504 (default 120 s) |
 | `SUPABASE_JWT_AUD` | ⬚ | default `authenticated` |
 | `SUPABASE_JWT_SECRET` | ⬚ | HS256 legacy only; not needed with JWKS |
 
@@ -89,7 +90,8 @@ fly open /health                 # expect {"status":"ok",...}
 
 ## Phase C — Deploy the web app to Vercel  ·  (§3.2)
 
-Import the repo into Vercel (root = `web/`). Set env (Project → Settings → Environment Variables):
+Import the repo into Vercel (root = `web/`; `web/vercel.json` already pins framework `nextjs` +
+region `fra1` — change the region if you prefer). Set env (Project → Settings → Environment Variables):
 
 | Variable | Scope | Notes |
 |---|---|---|
