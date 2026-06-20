@@ -95,8 +95,12 @@ primitives. Web 86 tests + kernel report disclaimer test; full suite 838 passed.
   a DSN; prod npm-audit clean. 5.1 now code-complete (service + web).
 `.env.example` documents the new knobs.
 
+**Batch 8 — final guards (2026-06-17, commit `1b05002`):** `/design` per-request wall-clock timeout
+(4.4 → done, `DESIGN_TIMEOUT_S`, 504 on exceed) + `web/vercel.json` (3.2 code prep). After this a
+fresh re-scan of `PRODUCTION_READINESS.md` confirms **no open item has any remaining code component.**
+
 **▶ PROGRAM STATUS:** every `PRODUCTION_READINESS.md` item that is **code/eng work** is now **DONE**
-(Batches 1–7). What remains is only: **co-founder (Pr.Eng)-gated** — §1 validation gate 1.1–1.6 +
+(Batches 1–8). What remains is only: **co-founder (Pr.Eng)-gated** — §1 validation gate 1.1–1.6 +
 method/clause/limitations sign-offs + the wind re-gating decision; and **founder-account/credential/
 money/lawyer-gated** (NOT co-founder) — deploy §3.1–3.4, OpenAI spend cap/alerting (4.2 dashboard),
 load-test 4.5, uptime 5.2, log aggregation 5.3, Supabase backups 6.1, prod secret vaults 7.1, Supabase
