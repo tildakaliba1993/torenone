@@ -11,12 +11,19 @@ vi.mock("@/lib/api/service", () => ({
   ServiceError,
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+// The row actions call server actions — stub the module so the test stays client-only.
+vi.mock("@/app/(app)/projects/[id]/actions", () => ({
+  renameRun: vi.fn(),
+  deleteRun: vi.fn(),
+}));
 
 import { type RunRow, RunHistory } from "./run-history";
 
 const RUNS: RunRow[] = [
   {
     id: "run-1",
+    label: "15 m × 5 m · 8°",
+    rawLabel: null,
     mode: "design",
     passed: true,
     governing_utilisation: 0.82,
@@ -25,6 +32,8 @@ const RUNS: RunRow[] = [
   },
   {
     id: "run-2",
+    label: "Woodstock — option B",
+    rawLabel: "Woodstock — option B",
     mode: "check",
     passed: false,
     governing_utilisation: 1.14,
@@ -41,11 +50,12 @@ describe("RunHistory", () => {
 
   it("shows an empty state when there are no runs", () => {
     render(<RunHistory runs={[]} projectId="p1" />);
-    expect(screen.getByText(/no design runs yet/i)).toBeTruthy();
+    expect(screen.getByText(/no designs match/i)).toBeTruthy();
   });
 
   it("renders a row per run with mode, result and governing utilisation", () => {
     render(<RunHistory runs={RUNS} projectId="p1" />);
+    expect(screen.getByText("15 m × 5 m · 8°")).toBeTruthy(); // derived label
     expect(screen.getByText("design")).toBeTruthy();
     expect(screen.getByText("check")).toBeTruthy();
     expect(screen.getByText("0.82")).toBeTruthy();

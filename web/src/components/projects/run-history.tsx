@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 
 import { ReportDownloadButton } from "@/components/projects/report-download-button";
+import { RunRowActions } from "@/components/projects/run-row-actions";
 import { StatusBadge } from "@/components/status-badge";
 import {
   Table,
@@ -15,6 +16,8 @@ import {
 
 export interface RunRow {
   id: string;
+  label: string;
+  rawLabel: string | null;
   mode: string;
   passed: boolean | null;
   governing_utilisation: number | null;
@@ -23,26 +26,31 @@ export interface RunRow {
 }
 
 /**
- * Per-project list of past design runs (Task 6.7). Each row is clickable and opens the
- * generated design page (`/projects/[id]/runs/[runId]`); the PDF download stays a
- * separate, propagation-stopped action.
+ * Per-project list of design runs. Each row is clickable and opens the generated design
+ * page; the report download + rename/delete are separate, propagation-stopped actions.
+ * Search / filter / sort / pagination are driven by the parent page (server-side).
  */
 export function RunHistory({ runs, projectId }: { runs: RunRow[]; projectId: string }) {
   const router = useRouter();
 
   if (runs.length === 0) {
-    return <p className="text-sm text-muted">No design runs yet — start one with “New design”.</p>;
+    return (
+      <p className="text-muted text-sm">
+        No designs match — adjust the filters, or start one with &ldquo;New design&rdquo;.
+      </p>
+    );
   }
 
   return (
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead>Design</TableHead>
           <TableHead>Date</TableHead>
           <TableHead>Mode</TableHead>
           <TableHead>Result</TableHead>
           <TableHead>Governing</TableHead>
-          <TableHead>Report</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -60,10 +68,11 @@ export function RunHistory({ runs, projectId }: { runs: RunRow[]; projectId: str
                   open();
                 }
               }}
-              className="cursor-pointer transition-colors hover:bg-surface-raised focus-visible:bg-surface-raised focus-visible:outline-none"
+              className="hover:bg-surface-raised focus-visible:bg-surface-raised cursor-pointer transition-colors focus-visible:outline-none"
             >
+              <TableCell className="text-foreground font-medium">{run.label}</TableCell>
               <TableCell className="text-muted">
-                {new Date(run.created_at).toLocaleString()}
+                {new Date(run.created_at).toLocaleDateString()}
               </TableCell>
               <TableCell className="capitalize">{run.mode}</TableCell>
               <TableCell>
@@ -78,9 +87,11 @@ export function RunHistory({ runs, projectId }: { runs: RunRow[]; projectId: str
               <TableCell className="font-mono">
                 {run.governing_utilisation != null ? run.governing_utilisation.toFixed(2) : "—"}
               </TableCell>
-              {/* Stop propagation so downloading the PDF doesn't also open the run page. */}
               <TableCell onClick={(e) => e.stopPropagation()}>
-                <ReportDownloadButton storagePath={run.storage_path} />
+                <div className="flex items-center justify-end gap-1">
+                  <ReportDownloadButton storagePath={run.storage_path} />
+                  <RunRowActions id={run.id} projectId={projectId} label={run.rawLabel ?? ""} />
+                </div>
               </TableCell>
             </TableRow>
           );
