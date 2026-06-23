@@ -294,10 +294,16 @@ Optional (add later if/when you set up Sentry — Phase 7): `NEXT_PUBLIC_SENTRY_
 - You should see the **TorenOne landing page** (not "Page not found").
 - Click **Start a design** → it should reach the **sign-up** screen.
 
-> Troubleshooting: if the deploy fails, open the failed deploy → read the log. The most common
-> causes are a missing env var or a Node version mismatch (we pin Node 22 in `netlify.toml`).
-> If the page loads but login does nothing, re-check the three `NEXT_PUBLIC_*` values and redeploy
-> (public vars are baked in at build time, so you must redeploy after changing them).
+> **Troubleshooting**
+> - **"Your publish directory cannot be the same as the base directory"** (plugin
+>   `@netlify/plugin-nextjs`): your site's UI has a stale **Publish directory = `web`**. Our
+>   `netlify.toml` sets `publish = ".next"` (→ `web/.next`) to override it, so a fresh deploy
+>   should pass. If it still fails, set it in the UI to be sure: **Site configuration → Build &
+>   deploy → Build settings → Edit settings → Publish directory → `web/.next` → Save**, then retry.
+> - **Build fails on a missing env var or Node version** — we pin Node 22 in `netlify.toml`;
+>   re-check the env vars in 4.2.
+> - **Page loads but login does nothing** — re-check the three `NEXT_PUBLIC_*` values and redeploy
+>   (public vars are baked in at build time, so you must redeploy after changing them).
 
 ✅ **Phase 4 done when:** the landing page loads at your Netlify URL and the sign-up screen opens.
 
