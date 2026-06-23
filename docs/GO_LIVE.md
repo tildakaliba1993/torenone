@@ -241,10 +241,19 @@ curl https://<your-fly-app-name>.fly.dev/health
 ```
 If you get that JSON, the service is live. **Write down your service URL** — Netlify needs it next.
 
-> Troubleshooting: `fly logs` shows live logs. `fly status` shows machine health. If `/health`
-> fails, check `fly logs` for a missing-secret or build error.
+> **"Suspended" / "machines stopped" in the Fly dashboard is NORMAL — not an error.** Our
+> `fly.toml` scales to **zero machines when idle** (`min_machines_running = 0`, `auto_stop_machines
+> = "stop"`) to keep your bill near zero. The machine **auto-starts on the first request** — the
+> `curl .../health` above wakes it (the first hit takes ~5 s, then it's fast while in use). Your
+> web app's `/parse` and `/design` calls wake it the same way. If you'd rather keep one machine
+> always warm (no cold start, but a few $/month), set `min_machines_running = 1` in `fly.toml` and
+> `fly deploy` again — not needed until you have real users.
+>
+> Other troubleshooting: `fly logs` shows live logs; `fly status` shows machine health. If `/health`
+> never responds, check `fly logs` for a missing-secret error and confirm a payment method is on file
+> (Fly → Account → Billing).
 
-✅ **Phase 3 done when:** `curl .../health` returns `{"status":"ok",...}`.
+✅ **Phase 3 done when:** `curl .../health` returns `{"status":"ok",...}` (a ~5 s first hit is fine).
 
 ---
 
