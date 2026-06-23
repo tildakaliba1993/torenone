@@ -2,8 +2,10 @@
 #
 # This file lives at the REPO ROOT. `base = "web"` tells Netlify the app is in the web/
 # subdirectory: it installs deps from web/package-lock.json and runs the build there.
-# The Next.js Runtime plugin auto-detects the .next output and wires up SSR / server
-# actions / route handlers — do NOT set `publish` manually (the plugin handles it).
+# In netlify.toml, paths are resolved relative to `base`, so `publish = ".next"` means
+# web/.next — the Next build output the @netlify/plugin-nextjs runtime needs. Setting it
+# here (config) overrides any stale "Publish directory" left in the Netlify UI, which
+# otherwise defaults to the base dir and breaks the build ("publish == base").
 #
 # The engineering service (FastAPI) is NOT deployed here — it runs on Fly.io. See
 # docs/GO_LIVE.md.
@@ -11,6 +13,7 @@
 [build]
   base = "web"
   command = "npm run build"
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "22"
