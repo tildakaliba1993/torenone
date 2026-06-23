@@ -101,7 +101,7 @@ def frame_geometry_png(spec: FrameSpec) -> bytes:
     nodes = _frame_nodes(spec)
     g = spec.geometry
 
-    fig, ax = plt.subplots(figsize=(8, 4))
+    fig, ax = plt.subplots(figsize=(9, 5))
     ax.set_aspect("equal")
     ax.set_facecolor("white")
     fig.patch.set_facecolor("white")
@@ -117,39 +117,40 @@ def frame_geometry_png(spec: FrameSpec) -> bytes:
         xn, yn = nodes[node_name]
         _draw_pin(ax, xn, yn)
 
-    # Node labels
-    offsets = {
-        "BL": (-0.25, -0.35),
-        "EL": (-0.50, +0.10),
-        "AP": (+0.00, +0.20),
-        "ER": (+0.25, +0.10),
-        "BR": (+0.10, -0.35),
+    # Node labels — placed clear of the frame line so nothing overlaps.
+    span = g.span_m
+    node_offsets = {
+        "BL": (-0.32, -0.40),
+        "EL": (-0.55, +0.18),
+        "AP": (+0.00, +0.40),
+        "ER": (+0.55, +0.18),
+        "BR": (+0.32, -0.40),
     }
     for name, (xn, yn) in nodes.items():
-        dx, dy = offsets[name]
-        ax.text(xn + dx, yn + dy, name, fontsize=_FONT_SIZE, color=_BRAND,
+        dx, dy = node_offsets[name]
+        ax.text(xn + dx, yn + dy, name, fontsize=_FONT_SIZE + 1, color=_BRAND,
                 ha="center", va="center", fontweight="bold")
 
-    # Dimension annotations
-    _dim_arrow(ax, 0, -0.6, g.span_m, -0.6,
-               f"Span = {g.span_m:.1f} m", color=_BRAND_LIGHT)
-    _dim_arrow(ax, -0.7, 0, -0.7, g.eaves_height_m,
-               f"Eaves\n{g.eaves_height_m:.1f} m", color=_BRAND_LIGHT, vertical=True)
-    _dim_arrow(ax, g.span_m / 2 + 0.1, g.eaves_height_m,
-               g.span_m / 2 + 0.1, g.apex_height_m,
-               f"Rise\n{(g.apex_height_m - g.eaves_height_m):.2f} m",
-               color=_BRAND_LIGHT, vertical=True)
+    # Dimension annotations — span (below) + eaves height (left). The roof rise is NOT
+    # dimensioned with an arrow (it collides with the apex on low-pitch frames); the pitch
+    # angle conveys the roof slope and the values are in the parameters table.
+    _dim_arrow(ax, 0, -0.7, span, -0.7,
+               f"Span = {span:.1f} m", color=_BRAND_LIGHT)
+    _dim_arrow(ax, -0.85, 0, -0.85, g.eaves_height_m,
+               f"Eaves {g.eaves_height_m:.1f} m", color=_BRAND_LIGHT, vertical=True)
 
-    # Pitch annotation
-    ax.text(g.span_m * 0.3, (g.eaves_height_m + g.apex_height_m) / 2 + 0.1,
-            f"{g.roof_pitch_deg:.1f}°",
-            fontsize=_FONT_SIZE, color=_BRAND_LIGHT, style="italic")
+    # Pitch angle — placed above the left rafter, clear of the apex node label.
+    raf_mid_x = span * 0.25
+    raf_mid_y = (g.eaves_height_m + g.apex_height_m) / 2.0
+    ax.text(raf_mid_x, raf_mid_y + 0.30, f"{g.roof_pitch_deg:.1f}° pitch",
+            fontsize=_FONT_SIZE, color=_BRAND_LIGHT, style="italic",
+            ha="center", va="bottom")
 
-    ax.set_xlim(-1.2, g.span_m + 1.2)
-    ax.set_ylim(-1.0, g.apex_height_m + 1.0)
+    ax.set_xlim(-1.4, span + 1.4)
+    ax.set_ylim(-1.2, g.apex_height_m + 1.5)
     ax.set_xlabel("X (m)", fontsize=_FONT_SIZE, color=_BRAND)
     ax.set_ylabel("Y (m)", fontsize=_FONT_SIZE, color=_BRAND)
-    ax.set_title("Portal Frame Geometry", fontsize=10, color=_BRAND, fontweight="bold", pad=8)
+    ax.set_title("Portal Frame Geometry", fontsize=12, color=_BRAND, fontweight="bold", pad=10)
     ax.tick_params(labelsize=_FONT_SIZE - 1, colors=_BRAND)
     for spine in ax.spines.values():
         spine.set_edgecolor(_GRID_GREY)
@@ -234,7 +235,7 @@ def bmd_sfd_png(result: DesignResult) -> bytes:
 
     # ---- Plot ----
     fig, (ax_bmd, ax_sfd) = plt.subplots(
-        2, 1, figsize=(10, 7),
+        2, 1, figsize=(10, 9),
         facecolor="white",
     )
     for ax in (ax_bmd, ax_sfd):
@@ -248,46 +249,36 @@ def bmd_sfd_png(result: DesignResult) -> bytes:
     # Scale: pick a common scale factor so diagrams look proportional
     max_m = max(np.max(np.abs(mc["moments"])) for mc in member_curves)
     max_v = max(np.max(np.abs(mc["shears"]))  for mc in member_curves)
+    # Ordinate length: the peak BMD/SFD value is drawn this many metres off the member.
+    # Axis limits below reserve this much room (+margin) so the diagram AND its value
+    # labels are always fully inside the frame — never clipped, never over the title.
     frame_height = g.apex_height_m
-    scale_m = frame_height * 0.4 / (max_m if max_m > 0 else 1.0)   # m per kN·m
-    scale_v = frame_height * 0.4 / (max_v if max_v > 0 else 1.0)   # m per kN
+    ord_len = frame_height * 0.4
+    scale_m = ord_len / (max_m if max_m > 0 else 1.0)   # m per kN·m
+    scale_v = ord_len / (max_v if max_v > 0 else 1.0)   # m per kN
 
+    # Each member's peak value is labelled at its diagram tip (with a white background so
+    # the number is fully legible over the fill) — see _draw_bmd_sfd.
     _draw_bmd_sfd(ax_bmd, member_curves, nodes_global, "moments", scale_m,
                   "BMD (kN·m)", _BMD_FILL, g)
     _draw_bmd_sfd(ax_sfd, member_curves, nodes_global, "shears",  scale_v,
                   "SFD (kN)",   _SFD_FILL, g)
 
-    # Key value annotations
-    for mc in member_curves:
-        idx_max = np.argmax(np.abs(mc["moments"]))
-        m_val = mc["moments"][idx_max]
-        pt = mc["global_pos"][idx_max]
-        ax_bmd.text(pt[0], pt[1] + m_val * scale_m * 0.5,
-                    f"{m_val:.1f}", fontsize=_FONT_SIZE - 2, color=_BRAND,
-                    ha="center", va="center", zorder=5)
-
-        idx_max_v = np.argmax(np.abs(mc["shears"]))
-        v_val = mc["shears"][idx_max_v]
-        pt_v = mc["global_pos"][idx_max_v]
-        ax_sfd.text(pt_v[0], pt_v[1] + v_val * scale_v * 0.5,
-                    f"{v_val:.1f}", fontsize=_FONT_SIZE - 2, color=_BRAND,
-                    ha="center", va="center", zorder=5)
-
     # Titles
     combo_label = diagram.combination
     ax_bmd.set_title(
-        f"Bending Moment Diagram — {combo_label}",
-        fontsize=10, color=_BRAND, fontweight="bold", pad=6,
+        f"Bending Moment Diagram (kN·m) — {combo_label}",
+        fontsize=11, color=_BRAND, fontweight="bold", pad=8,
     )
     ax_sfd.set_title(
-        f"Shear Force Diagram — {combo_label}",
-        fontsize=10, color=_BRAND, fontweight="bold", pad=6,
+        f"Shear Force Diagram (kN) — {combo_label}",
+        fontsize=11, color=_BRAND, fontweight="bold", pad=8,
     )
     for ax in (ax_bmd, ax_sfd):
         ax.set_xlabel("X (m)", fontsize=_FONT_SIZE, color=_BRAND)
         ax.set_ylabel("Y (m)", fontsize=_FONT_SIZE, color=_BRAND)
 
-    fig.tight_layout(h_pad=1.5)
+    fig.tight_layout(h_pad=2.5)
     return _png_bytes(fig)
 
 
@@ -344,11 +335,28 @@ def _draw_bmd_sfd(
                 color=_BRAND, linewidth=0.5, alpha=0.5, zorder=2,
             )
 
+        # Peak value label for this member — at the diagram tip, with a white background
+        # box so the number is fully legible over the coloured fill (no clipping/overlap).
+        idx = int(np.argmax(np.abs(vals)))
+        peak = float(vals[idx])
+        if abs(peak) >= 0.05:  # don't clutter with ~0 labels
+            tip = gpos[idx] + (vals[idx] * scale) * ni
+            ax.text(
+                float(tip[0]), float(tip[1]),
+                f"{peak:.1f}",
+                fontsize=_FONT_SIZE + 1, color=_BRAND, fontweight="bold",
+                ha="center", va="center", zorder=6,
+                bbox=dict(boxstyle="round,pad=0.18", fc="white", ec=_GRID_GREY, lw=0.4),
+            )
+
     # Pin supports
     for node_name in ("BL", "BR"):
         xn, yn = nodes_global[node_name]
         _draw_pin(ax, xn, yn, size=0.18)
 
-    # Axis limits with padding
-    ax.set_xlim(-1.0, g.span_m + 1.0)
-    ax.set_ylim(-0.8, g.apex_height_m + 1.2)
+    # Axis limits reserve a full ordinate-length (+margin) around the frame on every side,
+    # so the diagram fill AND the peak-value labels are always fully visible — never clipped
+    # at the frame edge and never spilling over the title.
+    ord_margin = g.apex_height_m * 0.4
+    ax.set_xlim(-ord_margin - 1.2, g.span_m + ord_margin + 1.2)
+    ax.set_ylim(-ord_margin - 1.2, g.apex_height_m + ord_margin + 1.4)

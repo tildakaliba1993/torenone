@@ -179,14 +179,16 @@
   {%- endif -%}
 {%- endmacro %}
 
-{# Macro: checks_table(checks) — a clause-referenced utilisation + status table #}
-{% macro checks_table(checks) -%}
+{# Macro: checks_table(checks, show_detail) — a clause-referenced utilisation + status table.
+   show_detail=false hides the per-row detail text (used for the advisory wind sub-table,
+   whose shared caveat is stated once above the table instead of on every row). #}
+{% macro checks_table(checks, show_detail=true) -%}
 <table>
   <tr>
-    <th style="width:34%">Check</th>
+    <th style="width:36%">Check</th>
     <th style="width:30%">Clause</th>
     <th style="width:14%" class="num">Utilisation</th>
-    <th style="width:22%">Status</th>
+    <th style="width:20%">Status</th>
   </tr>
   {% for c in checks %}
   <tr>
@@ -195,7 +197,7 @@
     <td class="num">{{ "%.4f"|format(c.utilisation) }}</td>
     <td>
       {{ status_badge(c.utilisation, c.passed, c.informational) }}
-      {% if c.detail %}<br><span style="font-size:7.5pt; color:var(--color-muted);">{{ c.detail }}</span>{% endif %}
+      {% if show_detail and c.detail %}<br><span style="font-size:7.5pt; color:var(--color-muted);">{{ c.detail }}</span>{% endif %}
     </td>
   </tr>
   {% endfor %}
@@ -365,7 +367,20 @@
   All clauses refer to SANS 10162-1:2011 unless otherwise stated.
   Connection, baseplate and footing checks are in sections 6&ndash;8.
 </p>
-{{ checks_table(member_checks) }}
+{{ checks_table(member_gating_checks) }}
+
+{% if member_advisory_checks %}
+<h3 style="margin-top:14pt;">5.1 Advisory wind-combination checks (non-gating)</h3>
+<div class="box box-prov" style="font-size:8.5pt; margin-bottom:6pt;">
+  The checks below apply the <strong>wind load combinations</strong> (ULS-2 / ULS-3, SANS 10160-1
+  eq.&nbsp;6) to gravity-sized members. They are <strong>advisory only</strong> and do
+  <strong>not</strong> gate the design&rsquo;s pass/fail above, because the wind-on-frame method is
+  <strong>PROVISIONAL</strong> pending registered-engineer validation. A utilisation &gt; 1.00 here
+  flags that the member would need checking (and possibly resizing) for wind once the method is
+  validated &mdash; it is surfaced honestly, not hidden. The case (ULS-2 / ULS-3) is named in each row.
+</div>
+{{ checks_table(member_advisory_checks, show_detail=false) }}
+{% endif %}
 
 <!-- ================================================================ -->
 <!-- 6. CONNECTION DESIGN — eaves + apex (PRD FR-28)                   -->

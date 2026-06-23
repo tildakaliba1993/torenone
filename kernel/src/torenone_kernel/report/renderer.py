@@ -343,6 +343,12 @@ def render_html(result: DesignResult) -> str:
     member_checks = [
         c for c in result.checks if not c.name.startswith(_DETAIL_CHECK_PREFIXES)
     ]
+    # Split gating (code-binding) checks from advisory (informational, non-gating) wind
+    # checks. The advisory checks share one boilerplate caveat, so they render in their own
+    # compact sub-table with the caveat stated ONCE — instead of repeating it on every row
+    # (which bloated the report). See template §5.
+    member_gating_checks = [c for c in member_checks if not c.informational]
+    member_advisory_checks = [c for c in member_checks if c.informational]
 
     ctx: dict[str, Any] = {
         "generated_at": generated_at,   # full ISO-8601 UTC datetime
@@ -357,6 +363,8 @@ def render_html(result: DesignResult) -> str:
         "sections": result.sections,
         "checks": result.checks,
         "member_checks": member_checks,
+        "member_gating_checks": member_gating_checks,
+        "member_advisory_checks": member_advisory_checks,
         "result_passed": result.passed,
         "governing_utilisation": result.governing_utilisation,
         # Last-mile structured results (Task 1.18) for dedicated report sections (Task 2.8)
