@@ -174,8 +174,8 @@ class SupabaseReportStore:
                 cur.execute(
                     "insert into public.runs "
                     "(id, project_id, firm_id, frame_spec, mode, status, rules_version, "
-                    " passed, governing_utilisation, created_by) "
-                    "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    " passed, governing_utilisation, created_by, result) "
+                    "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                     (
                         run_id,
                         project_id,
@@ -187,6 +187,8 @@ class SupabaseReportStore:
                         result.passed,
                         result.governing_utilisation,
                         user_id,
+                        # Full kernel output, so a past run renders on-screen (the design page).
+                        Jsonb(result.model_dump(mode="json")),
                     ),
                 )
                 cur.execute(

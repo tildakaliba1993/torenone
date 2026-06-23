@@ -52,7 +52,8 @@ export function ResultsStep({
   onRestart,
 }: {
   result: DesignResponse;
-  onRestart: () => void;
+  /** Wizard "start another design" handler. Omitted when viewing a past run (read-only). */
+  onRestart?: () => void;
 }) {
   const { result: design, report } = result;
   const [downloading, setDownloading] = useState(false);
@@ -308,11 +309,13 @@ export function ResultsStep({
         </Card>
       ) : null}
 
-      <div>
-        <Button variant="secondary" onClick={onRestart}>
-          Start another design
-        </Button>
-      </div>
+      {onRestart ? (
+        <div>
+          <Button variant="secondary" onClick={onRestart}>
+            Start another design
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

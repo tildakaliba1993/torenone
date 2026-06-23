@@ -63,7 +63,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <CardTitle>Design runs</CardTitle>
         </CardHeader>
         <CardContent>
-          <RunHistory runs={runs} />
+          <RunHistory runs={runs} projectId={project.id} />
         </CardContent>
       </Card>
     </main>

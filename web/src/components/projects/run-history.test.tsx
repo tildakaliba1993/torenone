@@ -2,14 +2,15 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getReportSignedUrl, ServiceError } = vi.hoisted(() => {
+const { getReportSignedUrl, ServiceError, push } = vi.hoisted(() => {
   class ServiceError extends Error {}
-  return { getReportSignedUrl: vi.fn(), ServiceError };
+  return { getReportSignedUrl: vi.fn(), ServiceError, push: vi.fn() };
 });
 vi.mock("@/lib/api/service", () => ({
   getReportSignedUrl: (path: string) => getReportSignedUrl(path),
   ServiceError,
 }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 import { type RunRow, RunHistory } from "./run-history";
 
@@ -39,12 +40,12 @@ describe("RunHistory", () => {
   });
 
   it("shows an empty state when there are no runs", () => {
-    render(<RunHistory runs={[]} />);
+    render(<RunHistory runs={[]} projectId="p1" />);
     expect(screen.getByText(/no design runs yet/i)).toBeTruthy();
   });
 
   it("renders a row per run with mode, result and governing utilisation", () => {
-    render(<RunHistory runs={RUNS} />);
+    render(<RunHistory runs={RUNS} projectId="p1" />);
     expect(screen.getByText("design")).toBeTruthy();
     expect(screen.getByText("check")).toBeTruthy();
     expect(screen.getByText("0.82")).toBeTruthy();
@@ -58,7 +59,7 @@ describe("RunHistory", () => {
 
   it("downloads a run's PDF via a signed URL", async () => {
     getReportSignedUrl.mockResolvedValue("https://signed.example/run-1.pdf");
-    render(<RunHistory runs={RUNS} />);
+    render(<RunHistory runs={RUNS} projectId="p1" />);
     const firstRow = screen.getByText("design").closest("tr")!;
     await userEvent.click(within(firstRow).getByRole("button", { name: /pdf/i }));
     await waitFor(() => expect(getReportSignedUrl).toHaveBeenCalledWith("firm-1/run-1.pdf"));
@@ -70,9 +71,24 @@ describe("RunHistory", () => {
   });
 
   it("shows a dash when a run has no stored report", () => {
-    render(<RunHistory runs={RUNS} />);
+    render(<RunHistory runs={RUNS} projectId="p1" />);
     const secondRow = screen.getByText("check").closest("tr")!;
     // no PDF button in the report cell — a dash instead
     expect(within(secondRow).queryByRole("button", { name: /pdf/i })).toBeNull();
+  });
+
+  it("opens the design page when a row is clicked", async () => {
+    render(<RunHistory runs={RUNS} projectId="p1" />);
+    const firstRow = screen.getByText("design").closest("tr")!;
+    await userEvent.click(firstRow);
+    expect(push).toHaveBeenCalledWith("/projects/p1/runs/run-1");
+  });
+
+  it("does not open the design page when the PDF download is clicked", async () => {
+    getReportSignedUrl.mockResolvedValue("https://signed.example/run-1.pdf");
+    render(<RunHistory runs={RUNS} projectId="p1" />);
+    const firstRow = screen.getByText("design").closest("tr")!;
+    await userEvent.click(within(firstRow).getByRole("button", { name: /pdf/i }));
+    expect(push).not.toHaveBeenCalled();
   });
 });

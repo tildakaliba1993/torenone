@@ -1,3 +1,7 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+
 import { ReportDownloadButton } from "@/components/projects/report-download-button";
 import { StatusBadge } from "@/components/status-badge";
 import {
@@ -18,8 +22,14 @@ export interface RunRow {
   storage_path: string | null;
 }
 
-/** Per-project list of past design runs with their stored PDFs (Task 6.7). */
-export function RunHistory({ runs }: { runs: RunRow[] }) {
+/**
+ * Per-project list of past design runs (Task 6.7). Each row is clickable and opens the
+ * generated design page (`/projects/[id]/runs/[runId]`); the PDF download stays a
+ * separate, propagation-stopped action.
+ */
+export function RunHistory({ runs, projectId }: { runs: RunRow[]; projectId: string }) {
+  const router = useRouter();
+
   if (runs.length === 0) {
     return <p className="text-sm text-muted">No design runs yet — start one with “New design”.</p>;
   }
@@ -36,29 +46,45 @@ export function RunHistory({ runs }: { runs: RunRow[] }) {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {runs.map((run) => (
-          <TableRow key={run.id}>
-            <TableCell className="text-muted">
-              {new Date(run.created_at).toLocaleString()}
-            </TableCell>
-            <TableCell className="capitalize">{run.mode}</TableCell>
-            <TableCell>
-              {run.passed === null ? (
-                <span className="text-subtle">—</span>
-              ) : (
-                <StatusBadge status={run.passed ? "pass" : "fail"}>
-                  {run.passed ? "pass" : "fail"}
-                </StatusBadge>
-              )}
-            </TableCell>
-            <TableCell className="font-mono">
-              {run.governing_utilisation != null ? run.governing_utilisation.toFixed(2) : "—"}
-            </TableCell>
-            <TableCell>
-              <ReportDownloadButton storagePath={run.storage_path} />
-            </TableCell>
-          </TableRow>
-        ))}
+        {runs.map((run) => {
+          const open = () => router.push(`/projects/${projectId}/runs/${run.id}`);
+          return (
+            <TableRow
+              key={run.id}
+              role="link"
+              tabIndex={0}
+              onClick={open}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  open();
+                }
+              }}
+              className="cursor-pointer transition-colors hover:bg-surface-raised focus-visible:bg-surface-raised focus-visible:outline-none"
+            >
+              <TableCell className="text-muted">
+                {new Date(run.created_at).toLocaleString()}
+              </TableCell>
+              <TableCell className="capitalize">{run.mode}</TableCell>
+              <TableCell>
+                {run.passed === null ? (
+                  <span className="text-subtle">—</span>
+                ) : (
+                  <StatusBadge status={run.passed ? "pass" : "fail"}>
+                    {run.passed ? "pass" : "fail"}
+                  </StatusBadge>
+                )}
+              </TableCell>
+              <TableCell className="font-mono">
+                {run.governing_utilisation != null ? run.governing_utilisation.toFixed(2) : "—"}
+              </TableCell>
+              {/* Stop propagation so downloading the PDF doesn't also open the run page. */}
+              <TableCell onClick={(e) => e.stopPropagation()}>
+                <ReportDownloadButton storagePath={run.storage_path} />
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );
