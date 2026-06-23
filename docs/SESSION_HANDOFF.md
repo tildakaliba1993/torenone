@@ -96,8 +96,17 @@ primitives. Web 86 tests + kernel report disclaimer test; full suite 838 passed.
 `.env.example` documents the new knobs.
 
 **Batch 8 — final guards (2026-06-17, commit `1b05002`):** `/design` per-request wall-clock timeout
-(4.4 → done, `DESIGN_TIMEOUT_S`, 504 on exceed) + `web/vercel.json` (3.2 code prep). After this a
-fresh re-scan of `PRODUCTION_READINESS.md` confirms **no open item has any remaining code component.**
+(4.4 → done, `DESIGN_TIMEOUT_S`, 504 on exceed). After this a fresh re-scan of
+`PRODUCTION_READINESS.md` confirms **no open item has any remaining code component.**
+
+**DEPLOY-TARGET DECISION (2026-06-17): web → Netlify, NOT Vercel** (founder's choice; the Netlify
+site `silver-begonia-0dc433` is already connected to GitHub). Code switched accordingly: `vercel.json`
+removed → `netlify.toml` added (base `web`, Node 22, `@netlify/plugin-nextjs`); `deploy.yml` Vercel
+job removed (Netlify auto-deploys web on push to `main`; the workflow now only deploys the Fly
+service). The engineering service stays on **Fly.io** (it can't run on Netlify). **`docs/GO_LIVE.md`
+was fully rewritten** into a detailed, self-contained, Netlify-based step-by-step launch runbook
+(Phases 1–12, with the working directory marked on every command) — it is the single doc the founder
+follows to go live.
 
 **▶ PROGRAM STATUS:** every `PRODUCTION_READINESS.md` item that is **code/eng work** is now **DONE**
 (Batches 1–8). What remains is only: **co-founder (Pr.Eng)-gated** — §1 validation gate 1.1–1.6 +

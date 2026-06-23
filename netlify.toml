@@ -1,0 +1,19 @@
+# Netlify build config for the TorenOne web app (Next.js 16, in web/).
+#
+# This file lives at the REPO ROOT. `base = "web"` tells Netlify the app is in the web/
+# subdirectory: it installs deps from web/package-lock.json and runs the build there.
+# The Next.js Runtime plugin auto-detects the .next output and wires up SSR / server
+# actions / route handlers — do NOT set `publish` manually (the plugin handles it).
+#
+# The engineering service (FastAPI) is NOT deployed here — it runs on Fly.io. See
+# docs/GO_LIVE.md.
+
+[build]
+  base = "web"
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

@@ -131,19 +131,19 @@ actually deployed** — there is no running production service or web app.
 - [ ] **3.1 Deploy the engineering service to Fly.io** (`fly deploy`), region `jnb`, with prod
   secrets set (`fly secrets set …`), `/health` passing. *Note:* the recent wheel-packaging bug
   proves the image path was under-tested — keep the E2E job pointed at the deployed image path.
-- [ ] **3.2 Deploy the web app to Vercel** with prod env (`NEXT_PUBLIC_*`, service URL).
-  **Code prep done 2026-06-17:** `web/vercel.json` added (framework `nextjs`, region `fra1` — closest
-  Vercel region to ZA, change as preferred). *(Remaining = founder: import the project, set env, wire
-  the domain — accounts/credentials.)*
+- [ ] **3.2 Deploy the web app to Netlify** with prod env (`NEXT_PUBLIC_*`, service URL).
+  **Code prep done 2026-06-17:** `netlify.toml` added (base `web`, Node 22, `@netlify/plugin-nextjs`);
+  Netlify auto-deploys on push to `main`. *(Remaining = founder: set the base dir/env in the Netlify
+  site + wire the domain — see `docs/GO_LIVE.md` Phase 3.)* **(Decision: Netlify, not Vercel.)**
 - [ ] **3.3 Provision the production Supabase project** (separate from the E2E test project):
   `supabase db push` migrations, enable email auth, set a custom SMTP sender, lock down.
 - [ ] **3.4 Custom domain + HTTPS** for web and service; set `CORS_ALLOW_ORIGINS` to the real
   origin (not localhost).
-- [x] **3.5 CI/CD deploy automation** — done 2026-06-16: `.github/workflows/deploy.yml` deploys
-  the service to Fly.io + the web app to Vercel on a `v*` tag or manual dispatch (with a
-  `target` input), and verifies the service `/health`. **Opt-in/inert** until the founder sets
-  `DEPLOY_ENABLED=true` + the `FLY_API_TOKEN`/`VERCEL_*` secrets (no app secrets in the workflow);
-  documented in `docs/DEPLOY.md` §CI/CD. *(Activation = the founder's accounts/tokens.)*
+- [x] **3.5 CI/CD deploy automation** — done 2026-06-16; **updated 2026-06-17 for Netlify.** Web
+  auto-deploys on push to `main` via Netlify's GitHub integration (no workflow needed).
+  `.github/workflows/deploy.yml` handles the **service** (Fly.io) on a `v*` tag / manual dispatch,
+  verifying `/health`. **Opt-in/inert** until `DEPLOY_ENABLED=true` + `FLY_API_TOKEN` (no app secrets
+  in the workflow). *(Activation = the founder's accounts/tokens; see `docs/GO_LIVE.md`.)*
 - [x] **3.6 Harden the `docker` CI job** — done 2026-06-15: a step now runs `design()` +
   `render_pdf()` inside the built image (asserts a real `%PDF`), so packaging regressions like
   the Jinja-template bug fail at build time. (No auth/Supabase needed — pure kernel + WeasyPrint.)

@@ -1,8 +1,11 @@
 # TorenOne — Deployment (engineering service)
 
 > Task 4.6. How to containerise and deploy the FastAPI engineering service
-> (`service/src/torenone_service`). The frontend (`web/`) deploys separately (Vercel,
-> Phase 6+). **No secret is ever committed** — all secrets are set at deploy time.
+> (`service/src/torenone_service`). The frontend (`web/`) deploys separately on **Netlify**
+> (`netlify.toml`). **No secret is ever committed** — all secrets are set at deploy time.
+>
+> 👉 **For the full step-by-step production launch (Supabase + Fly + Netlify), follow
+> `docs/GO_LIVE.md`.** This file is the service-image reference it builds on.
 
 ## What ships in the image
 
@@ -76,28 +79,23 @@ port 8000, and point the health check at `/health`. No code change required.
 
 ## CI/CD — automated deploys (§3.5)
 
-`.github/workflows/deploy.yml` makes releases **repeatable and auditable**: pushing a
-version tag (`vX.Y.Z`) — or running the workflow manually (Actions → Deploy → Run) —
-deploys the service to Fly.io and the web app to Vercel production, then verifies the
-service `/health`.
+**Web (Netlify):** deploys **automatically** on every push to `main` (Netlify's GitHub
+integration) — no workflow needed. See `docs/GO_LIVE.md` Phase 3.
 
-It is **opt-in and inert until activated** (so merging it changes nothing):
+**Service (Fly.io):** `.github/workflows/deploy.yml` makes service releases repeatable:
+pushing a version tag (`vX.Y.Z`) — or running it manually (Actions → "Deploy service" →
+Run) — builds the Dockerfile on Fly and verifies `/health`.
 
-1. Set the repo **variable** `DEPLOY_ENABLED=true`
-   (`gh variable set DEPLOY_ENABLED --body true`). Without it both jobs skip.
-2. Set the repo **secrets** (the founder's accounts):
-   - `FLY_API_TOKEN` — `fly tokens create deploy` (scoped to the app).
-   - `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` — from the Vercel project.
+It is **opt-in and inert until activated**:
+
+1. Set the repo **variable** `DEPLOY_ENABLED=true` (`gh variable set DEPLOY_ENABLED --body true`).
+2. Set the repo **secret** `FLY_API_TOKEN` (`fly tokens create deploy`).
 3. Tag a release: `git tag v0.1.0 && git push origin v0.1.0`.
 
-The workflow carries **no application secrets** — `OPENAI_API_KEY`, `SUPABASE_*`,
-`NEXT_PUBLIC_*` etc. live in Fly (`fly secrets set`) and the Vercel project env. The
-`workflow_dispatch` `target` input (`both` / `service` / `web`) lets you redeploy one
-side. A `production` GitHub environment is referenced so you can add a required
-reviewer / deployment protection rule later.
+The workflow carries **no application secrets** — they live on the Fly app
+(`fly secrets set`).
 
-> **Manual fallback** (before activation, or for a one-off): the `fly deploy` and
-> `vercel --prod` commands above still work from a laptop with the same tokens.
+> **Manual fallback:** `fly deploy` from the repo root deploys the service any time.
 
 Related ops runbooks: **`docs/MIGRATIONS.md`** (apply DB migrations to prod),
 **`docs/DB_OPS.md`** (connection-pool sizing), **`docs/DATA_RETENTION.md`** (report-PDF
