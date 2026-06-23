@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { signOut } from "@/app/auth/actions";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { APP_GUTTER } from "@/lib/layout";
 import { createClient } from "@/lib/supabase/server";
 
@@ -44,9 +44,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-3">
             <span className="hidden text-sm text-muted sm:inline">{firmName}</span>
             <form action={signOut}>
-              <Button type="submit" variant="ghost" size="sm">
+              <SubmitButton variant="ghost" size="sm">
                 Sign out
-              </Button>
+              </SubmitButton>
             </form>
           </div>
         </div>

@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { type RunRow, RunHistory } from "@/components/projects/run-history";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LinkButton } from "@/components/ui/link-button";
 import { createClient } from "@/lib/supabase/server";
 
 interface RawRunRow {
@@ -53,9 +53,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           </Link>
           <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
         </div>
-        <Button asChild>
-          <Link href={`/projects/${project.id}/design/new`}>New design</Link>
-        </Button>
+        <LinkButton href={`/projects/${project.id}/design/new`}>New design</LinkButton>
       </header>
 
       <Card>

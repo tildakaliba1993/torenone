@@ -2,8 +2,12 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Reveal } from "@/components/landing/reveal";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
 import { APP_GUTTER } from "@/lib/layout";
+
+/** Shared card surface + hover used by EVERY card on the landing page (consistent). */
+const LANDING_CARD =
+  "border-border bg-surface border transition-all duration-300 hover:-translate-y-1 hover:border-[var(--border-strong)] hover:shadow-[0_0_40px_-18px_var(--accent)]";
 
 /* ----------------------------------------------------------------- Trust bar */
 
@@ -106,7 +110,7 @@ export function Features() {
       <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {FEATURES.map((f, i) => (
           <Reveal key={f.title} delay={(i % 3) * 80}>
-            <div className="border-border bg-surface group h-full rounded-2xl border p-6 transition-all duration-300 hover:-translate-y-1 hover:border-[var(--border-strong)] hover:shadow-[0_0_40px_-18px_var(--accent)]">
+            <div className={`${LANDING_CARD} group h-full rounded-2xl p-6`}>
               <IconTile>{f.icon}</IconTile>
               <h3 className="text-foreground mt-5 text-lg font-medium">{f.title}</h3>
               <p className="text-muted mt-2 text-sm leading-6">{f.body}</p>
@@ -152,7 +156,7 @@ export function HowItWorks() {
         <div className="mt-14 grid gap-5 md:grid-cols-3">
           {STEPS.map((s, i) => (
             <Reveal key={s.n} delay={i * 110}>
-              <div className="border-border bg-surface h-full rounded-2xl border p-7">
+              <div className={`${LANDING_CARD} h-full rounded-2xl p-7`}>
                 <span className="border-accent/40 text-accent bg-accent/10 flex size-10 items-center justify-center rounded-full border font-mono text-sm font-semibold">
                   {s.n}
                 </span>
@@ -173,26 +177,35 @@ export function WhyDifferent() {
   return (
     <section id="why" className={`${APP_GUTTER} scroll-mt-20 py-20 sm:py-24`}>
       <Reveal>
-        <div className="border-border bg-surface relative overflow-hidden rounded-3xl border p-10 sm:p-14">
+        <div className={`${LANDING_CARD} relative overflow-hidden rounded-3xl p-10 sm:p-14`}>
           <div
             aria-hidden
             className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,var(--accent),transparent)] opacity-10 blur-2xl"
           />
-          <p className="text-accent text-xs tracking-widest uppercase">The moat is the engine</p>
+          <p className="text-accent text-xs tracking-widest uppercase">Why it&rsquo;s different</p>
           <h2 className="text-foreground mt-4 max-w-3xl text-2xl font-semibold tracking-tight sm:text-3xl">
-            TorenOne isn&rsquo;t an LLM wrapper.
+            You don&rsquo;t need another chatbot.
+            <br className="hidden sm:block" /> You need calcs you can stamp.
           </h2>
+          <p className="text-muted mt-5 max-w-3xl text-base leading-7">
+            Portal frames have been designed the same way for twenty years — by hand, in
+            spreadsheets and desktop software built in the 2000s. Slow, manual, impossible to scale.
+            And generic AI can&rsquo;t replace it: it guesses, and{" "}
+            <span className="text-foreground">you can&rsquo;t stamp a guess</span>.
+          </p>
           <p className="text-muted mt-4 max-w-3xl text-base leading-7">
-            The AI only reads your brief. Every load, force and code check comes from a
-            deterministic, version-pinned structural kernel — validated clause-by-clause against the
-            SANS standards. That&rsquo;s the part a competitor can&rsquo;t fake with a prompt, and
-            the part a registered engineer can trust enough to stamp. Accuracy is the product.
+            TorenOne is built <span className="text-foreground">AI-native from the ground up</span>,
+            not a chatbot bolted onto a legacy interface. Your plain-English brief goes to a
+            deterministic, version-pinned structural engine — validated clause-by-clause against the
+            SANS standards. Reproducible. Cited. Stamp-ready. It&rsquo;s the workflow the incumbents
+            can&rsquo;t retrofit onto twenty-year-old software, and the one your firm can finally
+            trust. <span className="text-foreground">Accuracy is the product.</span>
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             {[
-              "Reproducible — byte-identical output",
-              "Clause-referenced — every number",
-              "Honest — limits stated, never hidden",
+              "AI-native — not bolted onto a 2000s UI",
+              "Deterministic — you can stamp it",
+              "Replaces the spreadsheet, not your judgement",
             ].map((t) => (
               <span
                 key={t}
@@ -230,13 +243,13 @@ export function FinalCta() {
           </p>
         </Reveal>
         <Reveal delay={180}>
-          <Button
-            asChild
+          <LinkButton
+            href="/signup"
             size="lg"
             className="shadow-[0_0_44px_-8px_var(--accent)] transition-shadow hover:shadow-[0_0_56px_-6px_var(--accent)]"
           >
-            <Link href="/signup">Start a secured design</Link>
-          </Button>
+            Start designing — free
+          </LinkButton>
         </Reveal>
       </div>
     </section>

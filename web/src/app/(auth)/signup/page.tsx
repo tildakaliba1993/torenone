@@ -11,6 +11,12 @@ import {
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 
+const PERKS = [
+  "Describe a frame → stamp-ready SANS calc package in minutes",
+  "Deterministic engine — every number cited to a clause",
+  "Free to start · you stay the authoritative engineer",
+];
+
 export default async function SignupPage() {
   const supabase = await createClient();
   const {
@@ -21,13 +27,20 @@ export default async function SignupPage() {
   return (
     <Card>
       <CardHeader>
-        <span className="font-mono text-xs tracking-widest text-accent uppercase">TorenOne</span>
-        <CardTitle>Create your firm account</CardTitle>
-        <CardDescription>Start designing code-checked steel frames.</CardDescription>
+        <CardTitle className="text-2xl">Create your firm account</CardTitle>
+        <CardDescription>Start designing code-checked steel portal frames.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
+        <ul className="flex flex-col gap-2">
+          {PERKS.map((p) => (
+            <li key={p} className="text-muted flex items-start gap-2 text-sm">
+              <span className="text-accent mt-0.5 shrink-0">✓</span>
+              <span>{p}</span>
+            </li>
+          ))}
+        </ul>
         <SignupForm />
-        <p className="text-sm text-muted">
+        <p className="text-muted text-sm">
           Already have an account?{" "}
           <Link className="text-accent hover:underline" href="/login">
             Sign in

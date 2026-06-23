@@ -13,8 +13,7 @@ export default function ForgotPasswordPage() {
   return (
     <Card>
       <CardHeader>
-        <span className="font-mono text-xs tracking-widest text-accent uppercase">TorenOne</span>
-        <CardTitle>Reset your password</CardTitle>
+        <CardTitle className="text-2xl">Reset your password</CardTitle>
         <CardDescription>We’ll email you a secure link to set a new password.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">

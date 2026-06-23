@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
 import { APP_GUTTER } from "@/lib/layout";
 
 /** Sticky marketing nav: brand + section links + auth buttons (Sign in / Get started). */
@@ -27,16 +27,16 @@ export function LandingNav() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/login">Sign in</Link>
-          </Button>
-          <Button
-            asChild
+          <LinkButton href="/login" variant="ghost" size="sm">
+            Sign in
+          </LinkButton>
+          <LinkButton
+            href="/signup"
             size="sm"
             className="shadow-[0_0_28px_-6px_var(--accent)] transition-shadow hover:shadow-[0_0_36px_-4px_var(--accent)]"
           >
-            <Link href="/signup">Get started</Link>
-          </Button>
+            Get started
+          </LinkButton>
         </div>
       </div>
     </header>

@@ -1,8 +1,7 @@
-import Link from "next/link";
-
 import { ProductPreview } from "@/components/landing/product-preview";
 import { Reveal } from "@/components/landing/reveal";
 import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
 import { APP_GUTTER } from "@/lib/layout";
 
 export function Hero() {
@@ -47,15 +46,15 @@ export function Hero() {
 
           <Reveal delay={240}>
             <div className="flex flex-wrap items-center gap-4 pt-2">
-              <Button
-                asChild
+              <LinkButton
+                href="/signup"
                 size="lg"
                 className="shadow-[0_0_36px_-8px_var(--accent)] transition-shadow hover:shadow-[0_0_48px_-6px_var(--accent)]"
               >
-                <Link href="/signup">Start designing</Link>
-              </Button>
+                Start designing
+              </LinkButton>
               <Button asChild size="lg" variant="outline">
-                <Link href="#how">See how it works</Link>
+                <a href="#how">See how it works</a>
               </Button>
             </div>
           </Reveal>
