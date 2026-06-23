@@ -1,13 +1,15 @@
 import Link from "next/link";
 
+import { APP_GUTTER } from "@/lib/layout";
+
 /**
- * Shared shell for the legal pages (Terms §2.2, Privacy/PoPIA §2.3). Renders a
- * prominent DRAFT banner — these documents are drafts pending review by a qualified
- * attorney and are NOT yet legally binding.
+ * Shared shell for the legal pages (Terms §2.2, Privacy/PoPIA §2.3). Uses the same
+ * 120px app gutter as the rest of the site; renders a prominent DRAFT banner — these
+ * documents are drafts pending review by a qualified attorney and are NOT yet binding.
  */
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-16">
+    <main className={`${APP_GUTTER} flex flex-1 flex-col gap-8 py-16`}>
       <div className="flex items-center justify-between">
         <Link href="/" className="text-accent text-sm hover:underline">
           ← TorenOne
