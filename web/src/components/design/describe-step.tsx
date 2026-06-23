@@ -86,7 +86,7 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
       {feedback ? <ParseFeedback result={feedback} /> : null}
 
       <div>
-        <Button onClick={onParse} disabled={disabled}>
+        <Button onClick={onParse} loading={pending} disabled={disabled}>
           {pending ? "Parsing…" : "Parse description"}
         </Button>
       </div>

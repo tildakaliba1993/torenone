@@ -7,6 +7,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { FrameSketch } from "@/components/design/frame-sketch";
+import { KernelProgress } from "@/components/design/kernel-progress";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -397,8 +398,13 @@ export function ReviewStep({
               {error}
             </p>
           ) : null}
+          {form.formState.isSubmitting ? <KernelProgress /> : null}
           <div className="flex gap-3">
-            <Button type="submit" disabled={!confirmed || form.formState.isSubmitting}>
+            <Button
+              type="submit"
+              loading={form.formState.isSubmitting}
+              disabled={!confirmed || form.formState.isSubmitting}
+            >
               {form.formState.isSubmitting ? "Running design…" : "Run design"}
             </Button>
             <Button type="button" variant="ghost" onClick={onBack} disabled={form.formState.isSubmitting}>

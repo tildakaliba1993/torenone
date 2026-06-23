@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { signOut } from "@/app/auth/actions";
 import { Button } from "@/components/ui/button";
+import { APP_GUTTER } from "@/lib/layout";
 import { createClient } from "@/lib/supabase/server";
 
 /** Shared shell for authenticated app routes (Task 6.3): top nav + sign out. */
@@ -23,7 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="border-b border-border">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-6 py-3">
+        <div className={`${APP_GUTTER} flex items-center justify-between gap-4 py-3`}>
           <div className="flex items-center gap-6">
             <Link
               href="/projects"
@@ -50,7 +51,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       </header>
-      {children}
+      <div className={`${APP_GUTTER} flex-1 py-10`}>{children}</div>
     </div>
   );
 }

@@ -110,7 +110,7 @@ export function ResetPasswordForm() {
             {formError}
           </p>
         ) : null}
-        <Button type="submit" className="mt-2" disabled={form.formState.isSubmitting}>
+        <Button type="submit" className="mt-2" loading={form.formState.isSubmitting} disabled={form.formState.isSubmitting}>
           {form.formState.isSubmitting ? "Updating…" : "Update password"}
         </Button>
       </form>

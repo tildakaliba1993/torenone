@@ -45,7 +45,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   }));
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-10">
+    <main className="flex w-full flex-col gap-6">
       <header className="flex items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
           <Link href="/projects" className="text-xs text-accent hover:underline">

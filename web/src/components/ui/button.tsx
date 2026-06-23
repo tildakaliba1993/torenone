@@ -3,6 +3,7 @@ import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { type VariantProps, cva } from "class-variance-authority";
 
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
 /**
@@ -41,17 +42,33 @@ export interface ButtonProps
     VariantProps<typeof buttonVariants> {
   /** Render as the child element (Radix Slot) — e.g. wrap a Next `<Link>`. */
   asChild?: boolean;
+  /** Show a spinner and disable the button while an action is in flight. */
+  loading?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button";
+  ({ className, variant, size, asChild = false, loading = false, disabled, children, ...props }, ref) => {
+    const classes = cn(buttonVariants({ variant, size }), className);
+    // asChild (Radix Slot) requires exactly one child element, so `loading` is a no-op
+    // there — the Slotted element (e.g. a <Link>) is passed through unchanged.
+    if (asChild) {
+      return (
+        <Slot ref={ref} className={classes} {...props}>
+          {children}
+        </Slot>
+      );
+    }
     return (
-      <Comp
+      <button
         ref={ref}
-        className={cn(buttonVariants({ variant, size }), className)}
+        className={classes}
+        disabled={disabled || loading}
+        aria-busy={loading || undefined}
         {...props}
-      />
+      >
+        {loading ? <Spinner /> : null}
+        {children}
+      </button>
     );
   },
 );

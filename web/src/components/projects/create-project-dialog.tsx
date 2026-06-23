@@ -81,7 +81,7 @@ export function CreateProjectDialog({ triggerLabel = "New project" }: { triggerL
               </p>
             ) : null}
             <DialogFooter>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
+              <Button type="submit" loading={form.formState.isSubmitting} disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? "Creating…" : "Create project"}
               </Button>
             </DialogFooter>

@@ -20,7 +20,7 @@ export default function AppError({
   }, [error]);
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-6 py-10">
+    <main className="w-full">
       <ErrorState
         title="This page hit a snag"
         message="An unexpected error occurred while loading your data. Please try again."

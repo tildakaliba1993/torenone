@@ -35,8 +35,8 @@ export function ReportDownloadButton({
 
   return (
     <div className="flex flex-col items-start gap-1">
-      <Button type="button" variant="secondary" size="sm" onClick={onClick} disabled={pending}>
-        {pending ? "…" : label}
+      <Button type="button" variant="secondary" size="sm" onClick={onClick} loading={pending}>
+        {label}
       </Button>
       {error ? (
         <span role="alert" className="text-xs text-danger">

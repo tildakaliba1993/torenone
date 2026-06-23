@@ -133,7 +133,7 @@ export function ResultsStep({
             </div>
           ) : null}
           <div className="flex flex-col gap-2">
-            <Button onClick={onDownload} disabled={downloading} className="self-start">
+            <Button onClick={onDownload} loading={downloading} className="self-start">
               {downloading ? "Preparing…" : "Download calc package (PDF)"}
             </Button>
             {dlError ? (

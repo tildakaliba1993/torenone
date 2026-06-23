@@ -31,7 +31,7 @@ export default async function DashboardPage() {
   const role = (profile?.role as string | undefined) ?? "—";
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-10">
+    <main className="flex w-full flex-col gap-8">
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
         <p className="text-sm text-muted">Signed in as {user.email}</p>

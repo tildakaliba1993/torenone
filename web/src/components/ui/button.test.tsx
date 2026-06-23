@@ -37,4 +37,22 @@ describe("Button", () => {
     render(<Button disabled>X</Button>);
     expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(true);
   });
+
+  it("shows a spinner and disables itself while loading", () => {
+    render(<Button loading>Run design</Button>);
+    const btn = screen.getByRole("button", { name: /run design/i }) as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    expect(btn.getAttribute("aria-busy")).toBe("true");
+    expect(btn.querySelector("svg")).toBeTruthy(); // spinner
+  });
+
+  it("passes a Slotted link through unchanged when asChild + loading", () => {
+    // asChild must keep exactly one child (no injected spinner) — Radix Slot requires it.
+    render(
+      <Button asChild loading>
+        <a href="https://example.com">Go</a>
+      </Button>,
+    );
+    expect(screen.getByRole("link", { name: "Go" }).tagName).toBe("A");
+  });
 });

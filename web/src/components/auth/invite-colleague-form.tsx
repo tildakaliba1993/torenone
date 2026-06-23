@@ -76,7 +76,7 @@ export function InviteColleagueForm({
             Invitation sent to {invited}.
           </p>
         ) : null}
-        <Button type="submit" className="mt-1 self-start" disabled={form.formState.isSubmitting}>
+        <Button type="submit" className="mt-1 self-start" loading={form.formState.isSubmitting} disabled={form.formState.isSubmitting}>
           {form.formState.isSubmitting ? "Sending…" : "Send invite"}
         </Button>
       </form>
