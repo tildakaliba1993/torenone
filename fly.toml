@@ -14,9 +14,13 @@ primary_region = "jnb"   # Johannesburg — closest Fly region to our Cape Town 
 [http_service]
   internal_port = 8000
   force_https = true
+  # Zero cold start: always keep ONE machine warm so /parse and /design are instant
+  # (Fly never stops below `min_machines_running`). Extra machines still auto-start under
+  # load and auto-stop back down to this floor when idle, so we only pay for one always-on
+  # shared-cpu-1x machine (~a few $/month) plus bursts. Bump the floor to 2 later for HA.
   auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
 
   # Cap concurrent requests per machine. /design opens one short-lived DB connection
   # per request (then closes it), so peak DB connections per machine <= hard_limit.
