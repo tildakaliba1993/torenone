@@ -1,3 +1,5 @@
+import { LogoMark } from "@/components/brand/logo";
+
 /**
  * Animated hero graphic: a stylised TorenOne "design" window showing the product flow —
  * a plain-English brief → the deterministic SANS kernel → a stamp-ready calc package
@@ -28,7 +30,8 @@ export function ProductPreview() {
           <span className="bg-danger/70 size-3 rounded-full" />
           <span className="bg-warning/70 size-3 rounded-full" />
           <span className="bg-success/70 size-3 rounded-full" />
-          <span className="text-subtle ml-2 font-mono text-xs">
+          <span className="text-subtle ml-2 flex items-center gap-1.5 font-mono text-xs">
+            <LogoMark className="h-3.5 w-auto" aria-hidden />
             TorenOne · new design
           </span>
         </div>

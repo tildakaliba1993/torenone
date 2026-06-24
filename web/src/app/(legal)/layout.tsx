@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { Logo } from "@/components/brand/logo";
 import { APP_GUTTER } from "@/lib/layout";
 
 /**
@@ -11,8 +12,11 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
   return (
     <main className={`${APP_GUTTER} flex flex-1 flex-col gap-8 py-16`}>
       <div className="flex items-center justify-between">
-        <Link href="/" className="text-accent text-sm hover:underline">
-          ← TorenOne
+        <Link
+          href="/"
+          className="text-foreground flex items-center transition-opacity hover:opacity-80"
+        >
+          <Logo title="TorenOne — home" className="h-6 w-auto" />
         </Link>
         <div className="flex gap-4 text-sm">
           <Link href="/terms" className="text-muted hover:underline">

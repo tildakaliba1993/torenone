@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { Logo } from "@/components/brand/logo";
 import { Reveal } from "@/components/landing/reveal";
 import { LinkButton } from "@/components/ui/link-button";
 import { APP_GUTTER } from "@/lib/layout";
@@ -262,6 +263,9 @@ export function SiteFooter() {
   return (
     <footer className="border-border/60 border-t">
       <div className={`${APP_GUTTER} flex flex-col items-center gap-3 py-12 text-center`}>
+        <Link href="/" className="text-foreground transition-opacity hover:opacity-80">
+          <Logo title="TorenOne — home" className="mb-1 h-7 w-auto" />
+        </Link>
         <p className="text-muted text-sm">
           TorenOne — the AI structural engineer for SANS steel portal frames.
         </p>

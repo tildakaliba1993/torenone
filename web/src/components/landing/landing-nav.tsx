@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { Logo } from "@/components/brand/logo";
 import { LinkButton } from "@/components/ui/link-button";
 import { APP_GUTTER } from "@/lib/layout";
 
@@ -8,10 +9,11 @@ export function LandingNav() {
   return (
     <header className="border-border/60 bg-background/70 sticky top-0 z-50 border-b backdrop-blur-md">
       <div className={`${APP_GUTTER} flex h-16 items-center justify-between gap-4`}>
-        <Link href="/" className="flex items-center gap-2" aria-label="TorenOne home">
-          <span className="text-accent font-mono text-sm font-semibold tracking-[0.2em] uppercase">
-            TorenOne
-          </span>
+        <Link
+          href="/"
+          className="text-foreground flex items-center transition-opacity hover:opacity-80"
+        >
+          <Logo title="TorenOne — home" className="h-7 w-auto" />
         </Link>
 
         <nav className="text-muted hidden items-center gap-8 text-sm md:flex">

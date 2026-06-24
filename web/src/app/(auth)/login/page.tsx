@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -12,6 +13,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = {
+  title: "Sign in",
+  description: "Sign in to TorenOne to design and check SANS steel portal frames.",
+  alternates: { canonical: "/login" },
+};
 
 export default async function LoginPage({
   searchParams,

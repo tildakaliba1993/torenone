@@ -4,8 +4,9 @@ import Link from "next/link";
 import { H2, LegalTitle, P, UL } from "@/components/legal/prose";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy (Draft) — TorenOne",
+  title: "Privacy Policy (Draft)",
   description: "Draft Privacy Policy and PoPIA notice for TorenOne. Pending attorney review.",
+  alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {

@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 import {
   Card,
@@ -6,6 +8,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
+export const metadata: Metadata = {
+  title: "Set a new password",
+};
 
 export default function ResetPasswordPage() {
   return (

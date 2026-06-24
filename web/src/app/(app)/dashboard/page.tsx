@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { InviteColleagueForm } from "@/components/auth/invite-colleague-form";
@@ -11,6 +12,8 @@ import {
 import { createClient } from "@/lib/supabase/server";
 
 import { inviteColleague } from "./actions";
+
+export const metadata: Metadata = { title: "Account" };
 
 export default async function DashboardPage() {
   const supabase = await createClient();

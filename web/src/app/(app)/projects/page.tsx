@@ -1,7 +1,11 @@
+import type { Metadata } from "next";
+
 import { CreateProjectDialog } from "@/components/projects/create-project-dialog";
 import { type ProjectItem, ProjectsManager } from "@/components/projects/projects-manager";
 import { Card, CardContent } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = { title: "Projects" };
 
 export default async function ProjectsPage() {
   const supabase = await createClient();

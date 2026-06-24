@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
@@ -8,6 +9,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
+export const metadata: Metadata = {
+  title: "Reset your password",
+};
 
 export default function ForgotPasswordPage() {
   return (

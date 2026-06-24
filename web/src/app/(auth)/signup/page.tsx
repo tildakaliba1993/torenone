@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -16,6 +17,13 @@ const PERKS = [
   "Deterministic engine — every number cited to a clause",
   "Free to start · you stay the authoritative engineer",
 ];
+
+export const metadata: Metadata = {
+  title: "Create your account",
+  description:
+    "Create a free TorenOne firm account and start designing code-checked SANS steel portal frames in minutes.",
+  alternates: { canonical: "/signup" },
+};
 
 export default async function SignupPage() {
   const supabase = await createClient();

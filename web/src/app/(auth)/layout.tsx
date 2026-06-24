@@ -1,4 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+import { Logo } from "@/components/brand/logo";
+
+export const metadata: Metadata = {
+  title: { default: "Sign in", template: "%s · TorenOne" },
+  // Auth utility screens add no SEO value and shouldn't surface in search.
+  robots: { index: false, follow: false },
+};
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -10,9 +19,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       />
       <Link
         href="/"
-        className="text-accent mb-8 font-mono text-sm font-semibold tracking-[0.2em] uppercase transition-opacity hover:opacity-80"
+        className="text-foreground mb-8 flex items-center transition-opacity hover:opacity-80"
       >
-        TorenOne
+        <Logo title="TorenOne — home" className="h-8 w-auto" />
       </Link>
       <div className="w-full max-w-md">{children}</div>
       <p className="text-subtle mt-8 max-w-sm text-center text-xs leading-5">

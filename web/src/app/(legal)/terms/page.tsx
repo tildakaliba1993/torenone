@@ -4,8 +4,9 @@ import Link from "next/link";
 import { H2, LegalTitle, P, UL } from "@/components/legal/prose";
 
 export const metadata: Metadata = {
-  title: "Terms of Service (Draft) — TorenOne",
+  title: "Terms of Service (Draft)",
   description: "Draft Terms of Service for TorenOne. Pending attorney review.",
+  alternates: { canonical: "/terms" },
 };
 
 export default function TermsPage() {
