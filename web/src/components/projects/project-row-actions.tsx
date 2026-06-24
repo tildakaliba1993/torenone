@@ -60,8 +60,14 @@ export function ProjectRowActions({ id, name }: { id: string; name: string }) {
     }
   }
 
+  // Isolate the actions' click/keydown from any clickable row wrapper (the dialogs portal
+  // out but React still bubbles their events through this subtree).
   return (
-    <div className="flex items-center justify-end gap-1">
+    <div
+      className="flex items-center justify-end gap-1"
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
         <DialogTrigger asChild>
           <Button variant="ghost" size="sm">

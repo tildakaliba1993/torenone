@@ -63,6 +63,10 @@ export function RunHistory({ runs, projectId }: { runs: RunRow[]; projectId: str
               tabIndex={0}
               onClick={open}
               onKeyDown={(e) => {
+                // Only the row itself navigates on Enter/Space — never key events bubbling
+                // up from a child control (e.g. typing a space into the Rename dialog input,
+                // which React bubbles through the portal to this handler).
+                if (e.target !== e.currentTarget) return;
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   open();

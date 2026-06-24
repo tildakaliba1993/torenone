@@ -73,6 +73,50 @@ function serviceBaseUrl(): string {
   return base.replace(/\/$/, "");
 }
 
+const SERVICE_MAX_ATTEMPTS = 3;
+const SERVICE_RETRY_BASE_MS = 700;
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Fetch a service endpoint, transparently retrying ONLY connection-level failures.
+ *
+ * The engineering service runs scale-to-zero on Fly (`min_machines_running = 0`), so the
+ * first call after an idle period must boot the machine (~5–8s) and can briefly reset the
+ * connection — surfacing as a thrown `fetch`. A thrown `fetch` means the request never
+ * completed server-side, so retrying is safe and cannot double-run a design. Genuine HTTP
+ * error statuses are returned unchanged for the caller to interpret (never retried, to
+ * avoid duplicating a request the server already processed).
+ */
+async function serviceFetch(url: string, init: RequestInit): Promise<Response> {
+  for (let attempt = 1; attempt <= SERVICE_MAX_ATTEMPTS; attempt++) {
+    try {
+      return await fetch(url, init);
+    } catch {
+      if (attempt < SERVICE_MAX_ATTEMPTS) {
+        await sleep(SERVICE_RETRY_BASE_MS * attempt);
+        continue;
+      }
+    }
+  }
+  throw new ServiceError(
+    "Couldn’t reach the engineering service — please try again in a moment.",
+  );
+}
+
+/**
+ * Best-effort wake of the scale-to-zero service so the engineer's first real call
+ * (parse/design) doesn't pay the cold start. Safe to call on mount — it never throws and
+ * ignores the response; any genuine outage still surfaces on the real call.
+ */
+export async function warmService(): Promise<void> {
+  try {
+    await fetch(`${serviceBaseUrl()}/health`, { method: "GET", cache: "no-store" });
+  } catch {
+    // best-effort only
+  }
+}
+
 export async function parseDescription(description: string): Promise<ParseResponse> {
   const supabase = createClient();
   const {
@@ -82,19 +126,14 @@ export async function parseDescription(description: string): Promise<ParseRespon
     throw new ServiceError("Your session has expired — please sign in again.");
   }
 
-  let res: Response;
-  try {
-    res = await fetch(`${serviceBaseUrl()}/parse`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ description }),
-    });
-  } catch {
-    throw new ServiceError("Couldn’t reach the engineering service. Is it running?");
-  }
+  const res = await serviceFetch(`${serviceBaseUrl()}/parse`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ description }),
+  });
 
   if (!res.ok) {
     let detail = `Parsing failed (${res.status}).`;
@@ -276,19 +315,14 @@ export async function runDesign(request: DesignRequest): Promise<DesignResponse>
     throw new ServiceError("Your session has expired — please sign in again.");
   }
 
-  let res: Response;
-  try {
-    res = await fetch(`${serviceBaseUrl()}/design`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify(request),
-    });
-  } catch {
-    throw new ServiceError("Couldn’t reach the engineering service. Is it running?");
-  }
+  const res = await serviceFetch(`${serviceBaseUrl()}/design`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify(request),
+  });
 
   if (!res.ok) {
     let detail = `The design run failed (${res.status}).`;

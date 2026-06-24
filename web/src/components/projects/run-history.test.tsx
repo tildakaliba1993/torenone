@@ -101,4 +101,20 @@ describe("RunHistory", () => {
     await userEvent.click(within(firstRow).getByRole("button", { name: /pdf/i }));
     expect(push).not.toHaveBeenCalled();
   });
+
+  it("typing a space into the Rename dialog does not navigate or close the dialog", async () => {
+    render(<RunHistory runs={RUNS} projectId="p1" />);
+    const secondRow = screen.getByText("check").closest("tr")!;
+    await userEvent.click(within(secondRow).getByRole("button", { name: /rename/i }));
+
+    const input = await screen.findByLabelText(/design label/i);
+    await userEvent.clear(input);
+    await userEvent.type(input, "Woodstock Quarter");
+
+    // The space must land in the field — not trigger the row's Enter/Space navigation.
+    expect((input as HTMLInputElement).value).toBe("Woodstock Quarter");
+    expect(push).not.toHaveBeenCalled();
+    // Dialog is still open.
+    expect(screen.getByText("Rename design")).toBeTruthy();
+  });
 });

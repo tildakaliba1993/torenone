@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { DescribeStep } from "@/components/design/describe-step";
 import { ResultsStep } from "@/components/design/results-step";
 import { ReviewStep } from "@/components/design/review-step";
-import { type DesignResponse, type FrameSpec } from "@/lib/api/service";
+import { type DesignResponse, type FrameSpec, warmService } from "@/lib/api/service";
 
 /**
  * Multi-step design flow: Describe (6.4) → Review/Run (6.5) → Results (6.6).
@@ -29,6 +29,13 @@ export function DesignFlow({ projectId, projectName }: { projectId: string; proj
 
   const step: "describe" | "review" | "results" = result ? "results" : spec ? "review" : "describe";
   const stepLabel = step === "describe" ? "Describe" : step === "review" ? "Review & run" : "Results";
+
+  // The engineering service is scale-to-zero on Fly. Wake it as the engineer starts the flow
+  // and again on the Review step (in case it idled back to sleep while inputs were edited), so
+  // Parse / Run design never pays a cold start that surfaces as "couldn't reach the service".
+  useEffect(() => {
+    if (step === "describe" || step === "review") void warmService();
+  }, [step]);
 
   return (
     <main className="flex w-full flex-col gap-6">
