@@ -59,6 +59,19 @@ Fill in this worksheet together (these are the only numbers TorenOne needs):
 You type those inputs into the app and run the design. Out comes a **calc package
 PDF** with member sizes, every code check, and clause references.
 
+> **Faster for the session:** instead of (or alongside) the app, run the frame straight
+> from the terminal with the validation runner — it prints the kernel's auto-sized design
+> **and** a CHECK against his exact sections side by side, plus a ready-to-paste benchmark:
+>
+> ```
+> python tools/validate_frame.py \
+>     --span 24 --eaves 7 --pitch 7 --bay 6 --bays 8 \
+>     --roof-dead 0.20 --wind 36 --terrain B --bearing 200 \
+>     --rafter 457x191x67 --column 457x191x82 --name "Pretoria warehouse (2021)"
+> ```
+>
+> (`--rafter/--column` are his original sections; omit them to just see the auto-size.)
+
 ### Step 4 — He compares against his original
 The four things he checks:
 
