@@ -231,7 +231,7 @@ export function ReviewStep({
               eaves={Number(geometry?.eaves_height_m)}
               pitch={Number(geometry?.roof_pitch_deg)}
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <NumberField name="geometry.span_m" label="Span" unit="m" />
               <NumberField name="geometry.eaves_height_m" label="Eaves height" unit="m" />
               <NumberField name="geometry.roof_pitch_deg" label="Roof pitch" unit="°" />
@@ -246,7 +246,7 @@ export function ReviewStep({
             <CardTitle>Loads</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <NumberField name="dead.roof_kpa" label="Roof dead load" unit="kPa" />
               <NumberField name="dead.services_kpa" label="Services" unit="kPa" />
               <NumberField name="dead.wall_cladding_kpa" label="Wall cladding" unit="kPa" />
@@ -260,7 +260,7 @@ export function ReviewStep({
             <CardTitle>Wind</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <NumberField name="wind.basic_wind_speed_ms" label="Basic wind speed" unit="m/s" />
               <FormField
                 control={form.control}
@@ -294,7 +294,7 @@ export function ReviewStep({
           <CardHeader>
             <CardTitle>Foundation &amp; material</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
+          <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
               name="foundation.allowable_bearing_kpa"
@@ -356,7 +356,7 @@ export function ReviewStep({
                 : "Check mode verifies sections you've already chosen against every SANS clause — you stay the author of the design, TorenOne just checks your working."}
             </p>
             {mode === "check" ? (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="rafter_section"

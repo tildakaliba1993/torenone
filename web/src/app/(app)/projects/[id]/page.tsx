@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { DesignsManager } from "@/components/projects/designs-manager";
 import { type RunRow } from "@/components/projects/run-history";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState, EmptyStateIcon } from "@/components/ui/empty-state";
 import { LinkButton } from "@/components/ui/link-button";
 import { createClient } from "@/lib/supabase/server";
 
@@ -76,9 +77,15 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </CardHeader>
         <CardContent>
           {runs.length === 0 ? (
-            <p className="text-muted text-sm">
-              No designs yet — start one with &ldquo;New design&rdquo;.
-            </p>
+            <EmptyState
+              className="border-0 bg-transparent py-10"
+              icon={<EmptyStateIcon d="M4 6h16M4 12h10M4 18h7" />}
+              title="No designs yet"
+              description="Describe a frame and TorenOne sizes and checks it end-to-end — members, connections, baseplates and footings."
+              action={
+                <LinkButton href={`/projects/${project.id}/design/new`}>New design</LinkButton>
+              }
+            />
           ) : (
             <DesignsManager runs={runs} projectId={project.id} />
           )}
