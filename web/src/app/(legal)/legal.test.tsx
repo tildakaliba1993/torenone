@@ -23,11 +23,12 @@ describe("Legal pages", () => {
     );
   });
 
-  it("Refund policy covers cancellation, calc-package refunds and statutory rights", () => {
+  it("Refund policy: 14-day refund, cancel any time, via Paddle, statutory rights", () => {
     render(<RefundsPage />);
     expect(screen.getByText(/Refund & Cancellation Policy/i)).toBeTruthy();
-    expect(screen.getByText(/cancel anytime/i)).toBeTruthy();
-    expect(screen.getByText(/non-refundable once it has been generated/i)).toBeTruthy();
+    expect(screen.getByText(/14 days/i)).toBeTruthy();
+    expect(screen.getByText(/at any time/i)).toBeTruthy();
+    expect(screen.getAllByText(/Paddle/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Consumer Protection Act/i)).toBeTruthy();
   });
 

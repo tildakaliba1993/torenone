@@ -15,7 +15,7 @@ export default function PrivacyPage() {
       <LegalTitle title="Privacy Policy &amp; PoPIA Notice" updated="Last updated 2026-06-24" />
 
       <P>
-        This Policy explains how FinCrest (Pty) Ltd (registration number 2025/522652/07), which
+        This Policy explains how FINCREST PTY LTD (registration number 2025/522652/07), which
         operates TorenOne (&ldquo;TorenOne&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;), collects, uses
         and protects personal information when you use the Service, in line with the Protection of
         Personal Information Act 4 of 2013 (&ldquo;PoPIA&rdquo;). Our Information Officer is Tylda
@@ -101,7 +101,7 @@ export default function PrivacyPage() {
 
       <H2>10. Changes &amp; contact</H2>
       <P>
-        We may update this Policy; material changes will be notified. Questions: FinCrest (Pty) Ltd
+        We may update this Policy; material changes will be notified. Questions: FINCREST PTY LTD
         (TorenOne), Information Officer Tylda Wilondja, admin@torenone.com. See also our{" "}
         <Link href="/terms">Terms of Service</Link> and{" "}
         <Link href="/refunds">Refund &amp; Cancellation Policy</Link>.
