@@ -15,10 +15,11 @@ export default function PrivacyPage() {
       <LegalTitle title="Privacy Policy &amp; PoPIA Notice" updated="Last updated 2026-06-24" />
 
       <P>
-        This Policy explains how TorenOne (&ldquo;TorenOne&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;)
-        collects, uses and protects personal information when you use the Service, in line with the
-        Protection of Personal Information Act 4 of 2013 (&ldquo;PoPIA&rdquo;). You can reach our
-        Information Officer at <strong>privacy@torenone.com</strong>.
+        This Policy explains how FinCrest (Pty) Ltd (registration number 2025/522652/07), which
+        operates TorenOne (&ldquo;TorenOne&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;), collects, uses
+        and protects personal information when you use the Service, in line with the Protection of
+        Personal Information Act 4 of 2013 (&ldquo;PoPIA&rdquo;). Our Information Officer is Tylda
+        Wilondja, reachable at <strong>admin@torenone.com</strong>.
       </P>
 
       <H2>1. Information we process</H2>
@@ -93,15 +94,16 @@ export default function PrivacyPage() {
         <li>object to certain processing; and</li>
         <li>lodge a complaint with the Information Regulator (South Africa).</li>
       </UL>
-      <P>To exercise these rights, contact our Information Officer at privacy@torenone.com.</P>
+      <P>To exercise these rights, contact our Information Officer at admin@torenone.com.</P>
 
       <H2>9. Children</H2>
       <P>The Service is intended for professional use and is not directed at children.</P>
 
       <H2>10. Changes &amp; contact</H2>
       <P>
-        We may update this Policy; material changes will be notified. Questions: TorenOne, Information
-        Officer, privacy@torenone.com. See also our <Link href="/terms">Terms of Service</Link> and{" "}
+        We may update this Policy; material changes will be notified. Questions: FinCrest (Pty) Ltd
+        (TorenOne), Information Officer Tylda Wilondja, admin@torenone.com. See also our{" "}
+        <Link href="/terms">Terms of Service</Link> and{" "}
         <Link href="/refunds">Refund &amp; Cancellation Policy</Link>.
       </P>
     </>

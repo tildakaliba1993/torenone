@@ -183,14 +183,39 @@ export default function PricingPage() {
               </Reveal>
             ))}
           </div>
-          <Reveal className="mx-auto mt-12 flex max-w-xl flex-col items-center gap-5 text-center">
-            <h2 className="text-foreground text-2xl font-semibold tracking-tight">
-              Start designing — free
-            </h2>
-            <LinkButton href="/signup" size="lg">
-              Create your free account
-            </LinkButton>
-          </Reveal>
+        </section>
+
+        {/* Final CTA — mirrors the landing page's closing CTA */}
+        <section className="relative overflow-hidden">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 left-1/2 -z-10 h-[420px] w-[760px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,var(--accent),transparent)] opacity-[0.12] blur-2xl"
+          />
+          <div
+            className={`${APP_GUTTER} flex flex-col items-center gap-7 py-24 text-center sm:py-28`}
+          >
+            <Reveal>
+              <h2 className="text-foreground max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">
+                Run your next frame — free.
+              </h2>
+            </Reveal>
+            <Reveal delay={100}>
+              <p className="text-muted max-w-xl text-base leading-7">
+                Describe a frame, run the SANS kernel and see the sized sections and utilisations at no
+                cost. You only pay when you download the stamp-ready calc package — no seats, no
+                licences, no lock-in.
+              </p>
+            </Reveal>
+            <Reveal delay={180}>
+              <LinkButton
+                href="/signup"
+                size="lg"
+                className="shadow-[0_0_44px_-8px_var(--accent)] transition-shadow hover:shadow-[0_0_56px_-6px_var(--accent)]"
+              >
+                Create your free account
+              </LinkButton>
+            </Reveal>
+          </div>
         </section>
       </main>
       <SiteFooter />

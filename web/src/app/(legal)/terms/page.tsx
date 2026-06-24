@@ -15,10 +15,12 @@ export default function TermsPage() {
       <LegalTitle title="Terms of Service" updated="Last updated 2026-06-24" />
 
       <P>
-        These Terms govern your use of TorenOne (the &ldquo;Service&rdquo;), operated by TorenOne
-        (&ldquo;TorenOne&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;), based in the Republic of South
-        Africa. By creating an account or using the Service you agree to these Terms. If you do not
-        agree, do not use the Service.
+        These Terms govern your use of TorenOne (the &ldquo;Service&rdquo;), operated by FinCrest
+        (Pty) Ltd (registration number 2025/522652/07), a company incorporated in the Republic of
+        South Africa with its registered address at 187 Sir Lowry Road, C316, Woodstock Quarter,
+        Cape Town 7915 (&ldquo;TorenOne&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;). By creating an
+        account or using the Service you agree to these Terms. If you do not agree, do not use the
+        Service.
       </P>
 
       <H2>1. What TorenOne is — and is not</H2>
@@ -137,7 +139,8 @@ export default function TermsPage() {
 
       <H2>14. Contact</H2>
       <P>
-        Questions about these Terms: TorenOne · <strong>support@torenone.com</strong>. See also our{" "}
+        Questions about these Terms: FinCrest (Pty) Ltd (TorenOne), 187 Sir Lowry Road, C316,
+        Woodstock Quarter, Cape Town 7915 · <strong>admin@torenone.com</strong>. See also our{" "}
         <Link href="/privacy">Privacy Policy</Link> and{" "}
         <Link href="/refunds">Refund &amp; Cancellation Policy</Link>.
       </P>

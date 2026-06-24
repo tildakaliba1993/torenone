@@ -17,9 +17,9 @@ export default function RefundsPage() {
 
       <P>
         This policy explains how billing, cancellations and refunds work for TorenOne (the
-        &ldquo;Service&rdquo;). It forms part of, and should be read with, our{" "}
-        <Link href="/terms">Terms of Service</Link>. It applies to both pay-as-you-go calc-package
-        purchases and the firm subscription.
+        &ldquo;Service&rdquo;), operated by FinCrest (Pty) Ltd (registration number 2025/522652/07).
+        It forms part of, and should be read with, our <Link href="/terms">Terms of Service</Link>.
+        It applies to both pay-as-you-go calc-package purchases and the firm subscription.
       </P>
 
       <H2>1. What you are paying for</H2>
@@ -85,7 +85,7 @@ export default function RefundsPage() {
 
       <H2>6. How to request a refund or cancel</H2>
       <P>
-        Email us at <strong>support@torenone.com</strong> with your account email and the design or
+        Email us at <strong>admin@torenone.com</strong> with your account email and the design or
         invoice in question. We aim to respond within 5 business days. Approved refunds are returned to
         your original payment method via our Merchant of Record.
       </P>
