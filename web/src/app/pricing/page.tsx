@@ -7,6 +7,7 @@ import { Reveal } from "@/components/landing/reveal";
 import { SiteFooter } from "@/components/landing/sections";
 import { LinkButton } from "@/components/ui/link-button";
 import { APP_GUTTER } from "@/lib/layout";
+import { CARD_SURFACE } from "@/lib/styles";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -15,8 +16,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/pricing" },
 };
 
-const CARD =
-  "border-border bg-surface border rounded-2xl p-7 flex flex-col gap-5 h-full transition-all duration-300";
+const CARD = `${CARD_SURFACE} flex h-full flex-col gap-5 rounded-2xl p-7`;
 
 type Plan = {
   name: string;
@@ -93,13 +93,7 @@ export default function PricingPage() {
           <div className="mx-auto mt-14 grid max-w-5xl gap-5 lg:grid-cols-3">
             {PLANS.map((plan, i) => (
               <Reveal key={plan.name} delay={i * 90}>
-                <div
-                  className={`${CARD} ${
-                    plan.featured
-                      ? "border-accent/60 shadow-[0_0_50px_-20px_var(--accent)]"
-                      : "hover:border-[var(--border-strong)]"
-                  }`}
-                >
+                <div className={`${CARD} ${plan.featured ? "ring-accent/40 ring-1" : ""}`}>
                   <div className="flex items-center justify-between">
                     <h2 className="text-foreground text-lg font-medium">{plan.name}</h2>
                     {plan.featured ? (
@@ -176,7 +170,7 @@ export default function PricingPage() {
           <div className="mx-auto grid max-w-4xl gap-5 sm:grid-cols-2">
             {FAQ.map((item, i) => (
               <Reveal key={item.q} delay={(i % 2) * 80}>
-                <div className="border-border bg-surface h-full rounded-2xl border p-6">
+                <div className={`${CARD_SURFACE} h-full rounded-2xl p-6`}>
                   <h3 className="text-foreground text-base font-medium">{item.q}</h3>
                   <p className="text-muted mt-2 text-sm leading-6">{item.a}</p>
                 </div>

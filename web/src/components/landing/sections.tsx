@@ -5,10 +5,10 @@ import { Logo } from "@/components/brand/logo";
 import { Reveal } from "@/components/landing/reveal";
 import { LinkButton } from "@/components/ui/link-button";
 import { APP_GUTTER } from "@/lib/layout";
+import { CARD_SURFACE } from "@/lib/styles";
 
-/** Shared card surface + hover used by EVERY card on the landing page (consistent). */
-const LANDING_CARD =
-  "border-border bg-surface border transition-all duration-300 hover:-translate-y-1 hover:border-[var(--border-strong)] hover:shadow-[0_0_40px_-18px_var(--accent)]";
+/** Shared card surface + hover used by EVERY card on the site (landing + pricing). */
+const LANDING_CARD = CARD_SURFACE;
 
 /* ----------------------------------------------------------------- Trust bar */
 
