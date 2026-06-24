@@ -4,20 +4,21 @@ import Link from "next/link";
 import { H2, LegalTitle, P, UL } from "@/components/legal/prose";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy (Draft)",
-  description: "Draft Privacy Policy and PoPIA notice for TorenOne. Pending attorney review.",
+  title: "Privacy Policy",
+  description: "How TorenOne collects, uses and protects personal information (PoPIA notice).",
   alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {
   return (
     <>
-      <LegalTitle title="Privacy Policy &amp; PoPIA Notice" updated="Draft · last updated 2026-06-16" />
+      <LegalTitle title="Privacy Policy &amp; PoPIA Notice" updated="Last updated 2026-06-24" />
 
       <P>
-        This Policy explains how [Company legal name] (&ldquo;TorenOne&rdquo;) collects, uses and
-        protects personal information when you use the Service, in line with the Protection of Personal
-        Information Act 4 of 2013 (&ldquo;PoPIA&rdquo;). Our Information Officer is [name / contact].
+        This Policy explains how TorenOne (&ldquo;TorenOne&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;)
+        collects, uses and protects personal information when you use the Service, in line with the
+        Protection of Personal Information Act 4 of 2013 (&ldquo;PoPIA&rdquo;). You can reach our
+        Information Officer at <strong>privacy@torenone.com</strong>.
       </P>
 
       <H2>1. Information we process</H2>
@@ -42,17 +43,16 @@ export default function PrivacyPage() {
         (currently OpenAI) to extract a typed specification. The text may therefore be processed outside
         South Africa. <strong>The AI does not compute any engineering value</strong> — those come solely
         from TorenOne&rsquo;s deterministic kernel. Please avoid submitting personal or confidential
-        information you are not entitled to disclose. We are pursuing a no-training data-processing
-        arrangement with the provider; [status to be confirmed].
+        information you are not entitled to disclose. Data submitted through the provider&rsquo;s API
+        is not used to train its models.
       </P>
 
       <H2>4. Storage, location &amp; transfers</H2>
       <P>
-        Account and project data are stored with our infrastructure providers (database and object
-        storage) under access controls that scope each firm&rsquo;s data to that firm. Where personal
-        information is transferred across borders (e.g. the AI step, or hosting regions), we rely on the
-        PoPIA section 72 conditions for trans-border flows. [Hosting regions / sub-processors to be
-        listed.]
+        Account and project data are stored with our infrastructure providers under access controls
+        that scope each firm&rsquo;s data to that firm. Data is hosted in the European Union and South
+        Africa. Where personal information is transferred across borders (e.g. the AI step, or hosting
+        regions), we rely on the PoPIA section 72 conditions for trans-border flows.
       </P>
 
       <H2>5. Retention</H2>
@@ -62,12 +62,20 @@ export default function PrivacyPage() {
         information when it is no longer needed for the purposes above or as required by law.
       </P>
 
-      <H2>6. Sharing</H2>
+      <H2>6. Sharing &amp; sub-processors</H2>
       <P>
-        We share personal information only with operators (sub-processors) that help us run the Service
-        (hosting, database, storage, the AI provider, error/analytics tooling), each under appropriate
-        safeguards, and where required by law.
+        We share personal information only with operators (sub-processors) that help us run the
+        Service, each under appropriate safeguards, and where required by law. These currently include:
       </P>
+      <UL>
+        <li><strong>Supabase</strong> — database, authentication and report storage.</li>
+        <li><strong>Fly.io</strong> — hosting of the engineering service.</li>
+        <li><strong>Netlify</strong> — hosting of the web application.</li>
+        <li><strong>OpenAI</strong> — the AI parsing step (see section 3).</li>
+        <li><strong>Paddle</strong> — payment processing and invoicing (Merchant of Record).</li>
+        <li><strong>Sentry</strong> — error monitoring (when enabled).</li>
+      </UL>
+      <P>We do not sell your personal information.</P>
 
       <H2>7. Security</H2>
       <UL>
@@ -85,15 +93,16 @@ export default function PrivacyPage() {
         <li>object to certain processing; and</li>
         <li>lodge a complaint with the Information Regulator (South Africa).</li>
       </UL>
-      <P>To exercise these rights, contact our Information Officer at [contact email].</P>
+      <P>To exercise these rights, contact our Information Officer at privacy@torenone.com.</P>
 
       <H2>9. Children</H2>
       <P>The Service is intended for professional use and is not directed at children.</P>
 
       <H2>10. Changes &amp; contact</H2>
       <P>
-        We may update this Policy; material changes will be notified. Questions: [Company legal name],
-        Information Officer, [contact email]. See also our <Link href="/terms">Terms of Service</Link>.
+        We may update this Policy; material changes will be notified. Questions: TorenOne, Information
+        Officer, privacy@torenone.com. See also our <Link href="/terms">Terms of Service</Link> and{" "}
+        <Link href="/refunds">Refund &amp; Cancellation Policy</Link>.
       </P>
     </>
   );

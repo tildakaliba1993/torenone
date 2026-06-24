@@ -4,21 +4,21 @@ import Link from "next/link";
 import { H2, LegalTitle, P, UL } from "@/components/legal/prose";
 
 export const metadata: Metadata = {
-  title: "Terms of Service (Draft)",
-  description: "Draft Terms of Service for TorenOne. Pending attorney review.",
+  title: "Terms of Service",
+  description: "The terms governing your use of TorenOne.",
   alternates: { canonical: "/terms" },
 };
 
 export default function TermsPage() {
   return (
     <>
-      <LegalTitle title="Terms of Service" updated="Draft · last updated 2026-06-16" />
+      <LegalTitle title="Terms of Service" updated="Last updated 2026-06-24" />
 
       <P>
-        These Terms govern your use of TorenOne (the &ldquo;Service&rdquo;), operated by [Company
-        legal name] ([registration no.]), a company incorporated in the Republic of South Africa
-        (&ldquo;TorenOne&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;). By creating an account or using the
-        Service you agree to these Terms. If you do not agree, do not use the Service.
+        These Terms govern your use of TorenOne (the &ldquo;Service&rdquo;), operated by TorenOne
+        (&ldquo;TorenOne&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;), based in the Republic of South
+        Africa. By creating an account or using the Service you agree to these Terms. If you do not
+        agree, do not use the Service.
       </P>
 
       <H2>1. What TorenOne is — and is not</H2>
@@ -77,8 +77,17 @@ export default function TermsPage() {
         us a limited licence to process your inputs to provide the Service.
       </P>
 
-      <H2>7. Fees</H2>
-      <P>[Fees, billing, trials and refunds to be defined.]</P>
+      <H2>7. Fees, billing &amp; refunds</H2>
+      <P>
+        Creating an account, describing a frame, running the kernel, viewing on-screen results and
+        Check mode are free. We charge only for a <strong>calc package</strong> — the stamp-ready
+        calculation-package PDF for a finalised design — either pay-as-you-go or as part of a firm
+        subscription, at the prices on our <Link href="/pricing">pricing page</Link>. Subscriptions
+        renew automatically until cancelled. Payments are collected by our reseller and Merchant of
+        Record, who acts as seller of record, processes the payment and issues your invoice. Billing,
+        cancellation and refunds are governed by our{" "}
+        <Link href="/refunds">Refund &amp; Cancellation Policy</Link>.
+      </P>
 
       <H2>8. Disclaimer of warranties</H2>
       <P>
@@ -96,8 +105,9 @@ export default function TermsPage() {
         special or consequential loss, or for any loss arising from your reliance on an output that was
         not independently reviewed and stamped by a registered person. Because the engineer remains the
         responsible agent, you accept that professional responsibility for any design rests with the
-        reviewing registered person and not with TorenOne. [Any aggregate liability cap to be defined
-        with counsel and insurer.]
+        reviewing registered person and not with TorenOne. To the extent any liability cannot lawfully
+        be excluded, our total aggregate liability is limited to the fees you paid for the Service in
+        the three months preceding the event giving rise to the claim.
       </P>
 
       <H2>10. Indemnity</H2>
@@ -122,11 +132,15 @@ export default function TermsPage() {
       <H2>13. Governing law</H2>
       <P>
         These Terms are governed by the laws of the Republic of South Africa, and the South African
-        courts have jurisdiction. [Dispute-resolution mechanism to be confirmed.]
+        courts have jurisdiction.
       </P>
 
       <H2>14. Contact</H2>
-      <P>[Company legal name] · [contact email] · [registered address].</P>
+      <P>
+        Questions about these Terms: TorenOne · <strong>support@torenone.com</strong>. See also our{" "}
+        <Link href="/privacy">Privacy Policy</Link> and{" "}
+        <Link href="/refunds">Refund &amp; Cancellation Policy</Link>.
+      </P>
     </>
   );
 }

@@ -270,13 +270,21 @@ export function SiteFooter() {
           TorenOne — the AI structural engineer for SANS steel portal frames.
         </p>
         <p className="text-subtle text-xs">© 2026 TorenOne. All rights reserved.</p>
-        <div className="text-subtle mt-1 flex items-center gap-4 text-xs">
+        <div className="text-subtle mt-1 flex flex-wrap items-center justify-center gap-4 text-xs">
+          <Link href="/pricing" className="hover:text-foreground transition-colors">
+            Pricing
+          </Link>
+          <span aria-hidden>·</span>
           <Link href="/terms" className="hover:text-foreground transition-colors">
             Terms
           </Link>
           <span aria-hidden>·</span>
           <Link href="/privacy" className="hover:text-foreground transition-colors">
             Privacy
+          </Link>
+          <span aria-hidden>·</span>
+          <Link href="/refunds" className="hover:text-foreground transition-colors">
+            Refunds
           </Link>
         </div>
       </div>

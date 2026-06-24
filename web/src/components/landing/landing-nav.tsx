@@ -17,15 +17,15 @@ export function LandingNav() {
         </Link>
 
         <nav className="text-muted hidden items-center gap-8 text-sm md:flex">
-          <a href="#how" className="hover:text-foreground transition-colors">
+          <Link href="/#how" className="hover:text-foreground transition-colors">
             How it works
-          </a>
-          <a href="#features" className="hover:text-foreground transition-colors">
+          </Link>
+          <Link href="/#features" className="hover:text-foreground transition-colors">
             Features
-          </a>
-          <a href="#why" className="hover:text-foreground transition-colors">
-            Why it&rsquo;s different
-          </a>
+          </Link>
+          <Link href="/pricing" className="hover:text-foreground transition-colors">
+            Pricing
+          </Link>
         </nav>
 
         <div className="flex items-center gap-2">

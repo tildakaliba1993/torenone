@@ -1,18 +1,34 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import LegalLayout from "./layout";
 import PrivacyPage from "./privacy/page";
+import RefundsPage from "./refunds/page";
 import TermsPage from "./terms/page";
 
 describe("Legal pages", () => {
-  it("layout shows a prominent DRAFT / not-legal-advice banner", () => {
+  it("layout shows the legal sub-nav (Terms, Privacy, Refunds)", () => {
     render(
       <LegalLayout>
         <p>content</p>
       </LegalLayout>,
     );
-    expect(screen.getByRole("note").textContent).toMatch(/draft — not legal advice/i);
+    const nav = screen.getByRole("navigation", { name: /legal/i });
+    expect(within(nav).getByRole("link", { name: /terms/i }).getAttribute("href")).toBe("/terms");
+    expect(within(nav).getByRole("link", { name: /privacy/i }).getAttribute("href")).toBe(
+      "/privacy",
+    );
+    expect(within(nav).getByRole("link", { name: /refunds/i }).getAttribute("href")).toBe(
+      "/refunds",
+    );
+  });
+
+  it("Refund policy covers cancellation, calc-package refunds and statutory rights", () => {
+    render(<RefundsPage />);
+    expect(screen.getByText(/Refund & Cancellation Policy/i)).toBeTruthy();
+    expect(screen.getByText(/cancel anytime/i)).toBeTruthy();
+    expect(screen.getByText(/non-refundable once it has been generated/i)).toBeTruthy();
+    expect(screen.getByText(/Consumer Protection Act/i)).toBeTruthy();
   });
 
   it("Terms states TorenOne is a computational aid and the engineer is the responsible agent", () => {
