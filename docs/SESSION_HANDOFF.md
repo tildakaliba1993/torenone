@@ -5,6 +5,111 @@ Full context for continuing work in a new session. Everything below is committed
 
 ---
 
+## ⏩⏩ SESSION 3 CONTINUATION (2026-06-24) — **READ THIS FIRST**, then the Session 2 block, then `docs/PRODUCTION_READINESS.md`
+
+> Third long session (2026-06-16 → 2026-06-24). **`main` HEAD = `38d6844`**, branch pushes go
+> to `main`, working tree clean, **CI green**. This block is the freshest bridge; the Session 2
+> block below it and `docs/PRODUCTION_READINESS.md` (the live gap tracker) remain valid for
+> everything earlier. Project: **TorenOne — AI structural engineer for single-bay SANS steel
+> portal frames.** The product is **LIVE** (web on Netlify at **torenone.com**, service on Fly).
+
+### What this session did (all on `main`, CI-green)
+
+**A. Finished the production-readiness program — Batches 4–8 (all non-co-founder eng/code work):**
+- **Batch 4 (deploy/ops):** `deploy.yml` (Fly service deploy, opt-in), `docs/MIGRATIONS.md`,
+  `docs/DATA_RETENTION.md` + `tools/prune_reports.py` (PDF retention pruner), `docs/DB_OPS.md` +
+  bounded DB connect, `service/.../analytics.py` (one `event="design_run"` structured log/design).
+- **Batch 5 (product UI + a kernel data-exposure change):** new `kernel/.../analysis/diagram_data.py`
+  + `DesignResult.diagram` (sampled BMD/SFD/axial for the governing ULS-1; the PDF now renders from
+  it — one source of truth). Web: on-screen BMD/SFD + stick model, check-mode framing, "Deterministic
+  kernel — not AI" provenance badge + standards card, editable cost-per-tonne.
+- **Batch 6 (legal drafts):** `web/src/app/(legal)/terms` + `/privacy` (DRAFTS — attorney must
+  finalise) + liability disclaimer on the PDF cover and results screen.
+- **Batch 7:** OpenAI per-request output-token cap (`OPENAI_MAX_OUTPUT_TOKENS`), CSP **report-only**
+  (`web/src/lib/security/csp.ts`, `CSP_ENFORCE=true` to enforce), `@sentry/nextjs` wired no-op-without-DSN.
+- **Batch 8:** `/design` wall-clock timeout (`DESIGN_TIMEOUT_S` → 504). A full re-scan then confirmed
+  **no `PRODUCTION_READINESS.md` item has any remaining code component** — see that note below.
+
+**B. Went LIVE + wrote the launch runbook.**
+- **DEPLOY DECISION: web → Netlify (NOT Vercel); service → Fly.io; DB → Supabase.** See the
+  [[deploy-targets]] memory. `netlify.toml` at repo root (`base="web"`, `NODE_VERSION=22`,
+  `@netlify/plugin-nextjs`, **`publish=".next"`** — the publish-dir fix), `vercel.json` removed, the
+  `deploy.yml` Vercel job dropped (Netlify **auto-deploys web on every push to `main`**).
+- **`docs/GO_LIVE.md` is the single founder runbook** — rewritten, detailed, Netlify-based, Phases 1–12,
+  every command labelled with its working directory. **`docs/VALIDATION_GUIDE.md` Part 5** is the
+  co-founder's §1.1–1.6 sign-off checklist. The founder has deployed: prod Supabase, Fly service
+  (app `torenone-engineering-service`, scale-to-zero → "Suspended" badge is NORMAL), Netlify site
+  (`silver-begonia-0dc433` → torenone.com). Full sign-up → confirm → design → PDF worked live.
+
+**C. Major web/UX overhaul (most of the session):**
+- **Loading states on EVERY button, consistent** (the shared `Spinner`): form buttons use the Button
+  `loading` prop; **`LinkButton`** (Next 16 `useLinkStatus`) shows a spinner during navigation;
+  **`SubmitButton`** (`useFormStatus`) for form-action buttons (sign-out). The Run-design button shows
+  a live **`KernelProgress`** trace walking the real kernel pipeline (LLM-style).
+- **Uniform 120px gutters** across the whole authed app + landing + legal via `APP_GUTTER`
+  (`web/src/lib/layout.ts`); per-page `max-w` clamps removed.
+- **Unicorn landing page** (`web/src/components/landing/*`): sticky nav with auth buttons, hero with an
+  **animated product-preview graphic on the LEFT** (describe → kernel → calc-package), trust bar, stats,
+  feature cards, how-it-works, a user-centric **"the moat is the engine"** section that indirectly makes
+  the YC **SaaS-Challenger** case, final CTA, footer. Scroll-reveal + float + glow animations (respects
+  `prefers-reduced-motion`); all cards share ONE hover effect.
+- **Prettier auth** ((auth) layout brand + glow + trust line; Welcome-back login; signup value list).
+- **PDF revamp:** the ~22 advisory wind rows collapsed into a compact §5.1 sub-table (caveat stated
+  once); geometry diagram de-cluttered; BMD/SFD enlarged with white-boxed, fully-visible peak values.
+- **Clickable design runs → on-screen design page** (`/projects/[id]/runs/[runId]`): added the
+  `runs.result` jsonb column (full DesignResult persisted by the store) so a past run renders read-only
+  via `ResultsStep`.
+- **Full projects & designs management** — **real-time CLIENT-SIDE** search / filter / sort / pagination
+  (8/page) via `ProjectsManager` + `DesignsManager` (the page loads all rows once, RLS-scoped, and
+  filters in memory — instant, no debounce/round-trip). Designs search matches the **displayed** label
+  (geometry-derived when unnamed). Rename + delete server actions (`projects/actions.ts`,
+  `projects/[id]/actions.ts`) — **delete also removes the report PDFs from Storage** then cascades DB
+  rows; row actions wrapped in try/catch (no crashes). Themed `SearchInput`/`FilterSelect`/`Pager`.
+  Added the `runs.label` jsonb-adjacent **text** column (editable/searchable).
+
+**D. Bug fixes this session:**
+- **Proxy public routes:** `web/src/lib/supabase/proxy.ts` was bouncing `/forgot-password`,
+  `/reset-password`, `/terms`, `/privacy` to `/login` — added them to `PUBLIC_PREFIXES`.
+- **Forgot-password / email confirm:** `web/src/app/auth/confirm/route.ts` now handles BOTH the PKCE
+  `?code=` (Supabase's DEFAULT email format) **and** `token_hash` flows.
+
+### ⚠️ Carry-forward DECISIONS (do not regress)
+- **Wind checks stay ADVISORY / non-gating** (ULS-2/3 strength + SLS-2 sway) until the co-founder
+  validates the wind method — do NOT re-gate. ([[wind-analysis-provisional]])
+- **Deploy = Netlify (web) + Fly (service).** Do NOT reintroduce Vercel. ([[deploy-targets]])
+- The legal pages are **DRAFTS** — never represent them as legally sufficient.
+
+### 🔴 PENDING PROD ACTIONS the FOUNDER still owes (not code — they block features live)
+1. **Apply the new migrations to prod Supabase** (`supabase db push` from `/Users/cash/TorenOne`):
+   `runs.result` (clickable designs) + `runs.label` (designs management). **Until applied, the project
+   detail / designs pages read missing columns and break / show empty.** This is the most urgent item.
+2. **Forgot-password email delivery:** configure **custom SMTP** + add `https://torenone.com/**` to
+   Supabase **Redirect URLs** + Site URL. (Code path is correct; these are dashboard settings —
+   `GO_LIVE.md` Phase 2.4.) Also redeploy Fly (`fly deploy`) so the service writes `runs.result` + the
+   revamped PDF.
+3. Optional founder activations: `CSP_ENFORCE=true`, Sentry DSNs, OpenAI spend cap, uptime monitor,
+   backups tier — all in `GO_LIVE.md` Phases 5–7.
+
+### ▶ PROGRAM STATUS / what's left
+**Every code/eng item in `PRODUCTION_READINESS.md` is DONE.** Remaining is ONLY: **co-founder
+(Pr.Eng)** — §1 validation gate 1.1–1.6 + method/clause/limitations sign-offs + the wind re-gating
+decision (`VALIDATION_GUIDE.md`); and **founder accounts/lawyer** — the PENDING PROD ACTIONS above +
+finalising legal + insurance + the pilot (§10). **No autonomous coding batches remain** — next code
+work will be founder-requested UX/feature polish (this session was largely that). When the user reports
+a live bug or asks for a feature, just do it (web auto-deploys on push to `main`).
+
+### How to work (unchanged — see Session 2 block for full detail)
+- Work in the **git worktree** (`.claude/worktrees/...`); the engineering service + venv live in the
+  **MAIN checkout `/Users/cash/TorenOne`** (the user runs deploy/supabase/fly commands there).
+- Local checks: `PYTHONPATH=kernel/src:service/src:tools /Users/cash/TorenOne/.venv/bin/{pytest,ruff,mypy}`;
+  ALWAYS run the **full** `mypy kernel/src tools service/src`; pin `sqlglot>=27,<28`. Web: from `web/`,
+  `npm run typecheck|lint|test|build` (Node 22). Push to `main` (`git push origin HEAD:main`); watch CI
+  with `gh run watch`. Render a PDF to eyeball report changes via the venv (DYLD + worktree PYTHONPATH).
+- **Netlify auto-deploys web on push to `main`.** Service deploys are manual (`fly deploy`) or via the
+  opt-in `deploy.yml` tag workflow.
+
+---
+
 ## ⏩ SESSION 2 CONTINUATION (2026-06-15) — READ THIS FIRST, then `docs/PRODUCTION_READINESS.md`
 
 > A second long session ran on `2026-06-15`. **`main` HEAD = `c99d9ec`**, working tree clean,
