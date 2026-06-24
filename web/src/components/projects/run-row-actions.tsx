@@ -35,21 +35,37 @@ export function RunRowActions({
   async function onRename() {
     setPending(true);
     setError(null);
-    const res = await renameRun({ id, projectId, label: value });
-    setPending(false);
-    if (res.error) return setError(res.error);
-    setRenameOpen(false);
-    router.refresh();
+    try {
+      const res = await renameRun({ id, projectId, label: value });
+      if (res?.error) {
+        setError(res.error);
+        return;
+      }
+      setRenameOpen(false);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn’t rename this design.");
+    } finally {
+      setPending(false);
+    }
   }
 
   async function onDelete() {
     setPending(true);
     setError(null);
-    const res = await deleteRun({ id, projectId });
-    setPending(false);
-    if (res.error) return setError(res.error);
-    setDeleteOpen(false);
-    router.refresh();
+    try {
+      const res = await deleteRun({ id, projectId });
+      if (res?.error) {
+        setError(res.error);
+        return;
+      }
+      setDeleteOpen(false);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn’t delete this design.");
+    } finally {
+      setPending(false);
+    }
   }
 
   // Stop row-click navigation when interacting with the actions.

@@ -1,16 +1,11 @@
-import { Suspense } from "react";
-
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { type RunRow, RunHistory } from "@/components/projects/run-history";
+import { DesignsManager } from "@/components/projects/designs-manager";
+import { type RunRow } from "@/components/projects/run-history";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/link-button";
-import { ListToolbar } from "@/components/ui/list-toolbar";
-import { Pagination } from "@/components/ui/pagination";
 import { createClient } from "@/lib/supabase/server";
-
-const PAGE_SIZE = 8;
 
 interface RawRunRow {
   id: string;
@@ -23,8 +18,6 @@ interface RawRunRow {
   reports: Array<{ storage_path: string }> | { storage_path: string } | null;
 }
 
-type Search = { q?: string; mode?: string; result?: string; sort?: string; page?: string };
-
 /** A short human label derived from the frame geometry, used when none was set. */
 function derivedLabel(spec: RawRunRow["frame_spec"]): string {
   const g = spec?.geometry ?? {};
@@ -32,22 +25,8 @@ function derivedLabel(spec: RawRunRow["frame_spec"]): string {
   return `${g.span_m} m × ${g.eaves_height_m ?? "?"} m · ${g.roof_pitch_deg ?? "?"}°`;
 }
 
-export default async function ProjectDetailPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<Search>;
-}) {
+export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const sp = await searchParams;
-  const q = (sp.q ?? "").trim();
-  const mode = sp.mode ?? "all";
-  const result = sp.result ?? "all";
-  const sort = sp.sort ?? "newest";
-  const page = Math.max(1, Number(sp.page) || 1);
-  const from = (page - 1) * PAGE_SIZE;
-
   const supabase = await createClient();
   const {
     data: { user },
@@ -57,30 +36,14 @@ export default async function ProjectDetailPage({
   const { data: project } = await supabase.from("projects").select("id, name").eq("id", id).single();
   if (!project) notFound();
 
-  // RLS (Task 5.4) scopes both runs and the embedded reports to the caller's firm.
-  let query = supabase
+  // RLS (Task 5.4) scopes both runs and the embedded reports to the firm. Search / filter /
+  // sort / paginate happen client-side (real-time) over this set.
+  const { data: runsData } = await supabase
     .from("runs")
-    .select(
-      "id, label, mode, passed, governing_utilisation, created_at, frame_spec, reports(storage_path)",
-      { count: "exact" },
-    )
-    .eq("project_id", id);
-
-  if (q) query = query.ilike("label", `%${q}%`);
-  if (mode === "design" || mode === "check") query = query.eq("mode", mode);
-  if (result === "pass") query = query.eq("passed", true);
-  if (result === "fail") query = query.eq("passed", false);
-
-  query =
-    sort === "oldest"
-      ? query.order("created_at", { ascending: true })
-      : sort === "util-desc"
-        ? query.order("governing_utilisation", { ascending: false, nullsFirst: false })
-        : sort === "util-asc"
-          ? query.order("governing_utilisation", { ascending: true, nullsFirst: false })
-          : query.order("created_at", { ascending: false });
-
-  const { data: runsData, count } = await query.range(from, from + PAGE_SIZE - 1);
+    .select("id, label, mode, passed, governing_utilisation, created_at, frame_spec, reports(storage_path)")
+    .eq("project_id", id)
+    .order("created_at", { ascending: false })
+    .limit(1000);
 
   const runs: RunRow[] = ((runsData ?? []) as RawRunRow[]).map((r) => ({
     id: r.id,
@@ -94,11 +57,6 @@ export default async function ProjectDetailPage({
       ? (r.reports[0]?.storage_path ?? null)
       : (r.reports?.storage_path ?? null),
   }));
-
-  const total = count ?? 0;
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const filtersActive = q !== "" || mode !== "all" || result !== "all";
-  const hasAnyRuns = total > 0 || filtersActive;
 
   return (
     <main className="flex w-full flex-col gap-6">
@@ -116,54 +74,13 @@ export default async function ProjectDetailPage({
         <CardHeader>
           <CardTitle>Designs</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          {!hasAnyRuns ? (
+        <CardContent>
+          {runs.length === 0 ? (
             <p className="text-muted text-sm">
               No designs yet — start one with &ldquo;New design&rdquo;.
             </p>
           ) : (
-            <>
-              <Suspense>
-                <ListToolbar
-                  searchPlaceholder="Search designs…"
-                  selects={[
-                    {
-                      param: "mode",
-                      label: "Mode",
-                      defaultValue: "all",
-                      options: [
-                        { value: "all", label: "All modes" },
-                        { value: "design", label: "Design" },
-                        { value: "check", label: "Check" },
-                      ],
-                    },
-                    {
-                      param: "result",
-                      label: "Result",
-                      defaultValue: "all",
-                      options: [
-                        { value: "all", label: "All results" },
-                        { value: "pass", label: "Pass" },
-                        { value: "fail", label: "Fail" },
-                      ],
-                    },
-                    {
-                      param: "sort",
-                      label: "Sort",
-                      defaultValue: "newest",
-                      options: [
-                        { value: "newest", label: "Newest first" },
-                        { value: "oldest", label: "Oldest first" },
-                        { value: "util-desc", label: "Governing ↓" },
-                        { value: "util-asc", label: "Governing ↑" },
-                      ],
-                    },
-                  ]}
-                />
-              </Suspense>
-              <RunHistory runs={runs} projectId={project.id} />
-              <Pagination page={page} pageCount={pageCount} total={total} params={sp} />
-            </>
+            <DesignsManager runs={runs} projectId={project.id} />
           )}
         </CardContent>
       </Card>

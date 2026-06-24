@@ -27,21 +27,37 @@ export function ProjectRowActions({ id, name }: { id: string; name: string }) {
   async function onRename() {
     setPending(true);
     setError(null);
-    const res = await renameProject({ id, name: value });
-    setPending(false);
-    if (res.error) return setError(res.error);
-    setRenameOpen(false);
-    router.refresh();
+    try {
+      const res = await renameProject({ id, name: value });
+      if (res?.error) {
+        setError(res.error);
+        return;
+      }
+      setRenameOpen(false);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn’t rename this project.");
+    } finally {
+      setPending(false);
+    }
   }
 
   async function onDelete() {
     setPending(true);
     setError(null);
-    const res = await deleteProject({ id });
-    setPending(false);
-    if (res.error) return setError(res.error);
-    setDeleteOpen(false);
-    router.refresh();
+    try {
+      const res = await deleteProject({ id });
+      if (res?.error) {
+        setError(res.error);
+        return;
+      }
+      setDeleteOpen(false);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn’t delete this project.");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
