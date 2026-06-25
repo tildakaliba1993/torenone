@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { InviteColleagueForm } from "@/components/auth/invite-colleague-form";
+import { BillingCard } from "@/components/billing/billing-card";
 import {
   Card,
   CardContent,
@@ -14,6 +15,18 @@ import { createClient } from "@/lib/supabase/server";
 import { inviteColleague } from "./actions";
 
 export const metadata: Metadata = { title: "Account" };
+
+interface FirmBilling {
+  name?: string;
+  is_founding?: boolean;
+  subscription_status?: string | null;
+  complimentary_until?: string | null;
+}
+
+/** Is the no-card complimentary window still open? (Module-level: request-time, not render.) */
+function complimentaryActiveNow(until: string | null | undefined): boolean {
+  return until ? new Date(until).getTime() > Date.now() : false;
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -32,6 +45,19 @@ export default async function DashboardPage() {
 
   const firmName = (profile?.firms as { name?: string } | null)?.name ?? "—";
   const role = (profile?.role as string | undefined) ?? "—";
+  const firmId = (profile?.firm_id as string | undefined) ?? "";
+
+  // Billing columns are added by the Paddle migration; read them separately and tolerate a
+  // missing-column error so the page still works before that migration is applied.
+  let firm: FirmBilling | null = null;
+  if (firmId) {
+    const { data } = await supabase
+      .from("firms")
+      .select("is_founding, subscription_status, complimentary_until")
+      .eq("id", firmId)
+      .maybeSingle();
+    firm = (data as FirmBilling | null) ?? null;
+  }
 
   return (
     <main className="flex w-full flex-col gap-8">
@@ -56,6 +82,15 @@ export default async function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      <BillingCard
+        email={user.email ?? ""}
+        firmId={firmId}
+        isFounding={firm?.is_founding ?? false}
+        subscriptionStatus={firm?.subscription_status ?? null}
+        complimentaryActive={complimentaryActiveNow(firm?.complimentary_until)}
+        complimentaryUntil={firm?.complimentary_until ?? null}
+      />
 
       {role === "owner" ? (
         <Card>
