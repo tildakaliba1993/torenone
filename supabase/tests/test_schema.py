@@ -82,6 +82,8 @@ REQUIRED_COLUMNS = {
     "projects": {"id", "firm_id", "name", "created_by"},
     "runs": {"id", "project_id", "firm_id", "frame_spec", "status", "rules_version", "created_by", "created_at"},
     "reports": {"id", "run_id", "firm_id", "storage_path", "created_at"},
+    # Paddle PAYG: one paid calc package unlocks a run's PDF (20260625120000_paddle_billing).
+    "design_credits": {"id", "run_id", "firm_id", "created_at"},
 }
 
 # The tenant graph the RLS policies (5.4) rely on: column -> referenced table.
@@ -90,6 +92,7 @@ REQUIRED_FOREIGN_KEYS = {
     "projects": {"firm_id": "firms", "created_by": "profiles"},
     "runs": {"project_id": "projects", "firm_id": "firms"},
     "reports": {"run_id": "runs", "firm_id": "firms"},
+    "design_credits": {"run_id": "runs", "firm_id": "firms"},
 }
 
 
