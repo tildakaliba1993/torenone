@@ -28,7 +28,12 @@ function complimentaryActiveNow(until: string | null | undefined): boolean {
   return until ? new Date(until).getTime() > Date.now() : false;
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ subscribe?: string }>;
+}) {
+  const { subscribe } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -90,6 +95,7 @@ export default async function DashboardPage() {
         subscriptionStatus={firm?.subscription_status ?? null}
         complimentaryActive={complimentaryActiveNow(firm?.complimentary_until)}
         complimentaryUntil={firm?.complimentary_until ?? null}
+        autoSubscribe={subscribe === "firm"}
       />
 
       {role === "owner" ? (

@@ -67,8 +67,8 @@ const PLANS: Plan[] = [
       "Full project & design history",
       "Priority compute and support",
     ],
-    cta: { label: "Talk to us", href: "/signup" },
-    footnote: "Founding firms: R999/mo, locked for your first year.",
+    cta: { label: "Get the Firm plan", href: "/dashboard?subscribe=firm" },
+    footnote: "Founding firms: 1 month free (no card), then R999/mo for your first year.",
   },
 ];
 
@@ -139,8 +139,8 @@ export default function PricingPage() {
           <Reveal className="mx-auto mt-8 max-w-5xl">
             <p className="text-subtle text-center text-xs leading-5">
               Prices in South African Rand, excl. VAT where applicable. Payments are processed by our
-              reseller (Merchant of Record). Early access is currently free for founding pilot firms
-              while we complete engineering validation. See our{" "}
+              reseller (Merchant of Record). Founding pilot firms start with a free month — no card
+              needed — to validate against past projects. See our{" "}
               <Link href="/refunds" className="hover:text-foreground underline">
                 Refund &amp; Cancellation Policy
               </Link>

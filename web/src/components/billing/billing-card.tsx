@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { StatusBadge } from "@/components/status-badge";
 import {
@@ -23,6 +23,8 @@ export interface BillingState {
   complimentaryActive: boolean;
   /** ISO date the complimentary window ends (for display). */
   complimentaryUntil: string | null;
+  /** Deep-link from the pricing page (?subscribe=firm) — auto-opens the checkout once. */
+  autoSubscribe?: boolean;
 }
 
 export function BillingCard({
@@ -32,9 +34,11 @@ export function BillingCard({
   subscriptionStatus,
   complimentaryActive,
   complimentaryUntil,
+  autoSubscribe = false,
 }: BillingState) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const autoOpened = useRef(false);
 
   const configured = paddleConfigured();
   const subscribed = subscriptionStatus === "active" || subscriptionStatus === "trialing";
@@ -54,6 +58,17 @@ export function BillingCard({
       setBusy(false);
     }
   }
+
+  // Deep-linked from the pricing page (?subscribe=firm): open the checkout once, and strip the
+  // param so a refresh doesn't reopen it.
+  useEffect(() => {
+    if (autoOpened.current || !autoSubscribe || !configured || subscribed || !firmId) return;
+    autoOpened.current = true;
+    window.history.replaceState(null, "", window.location.pathname);
+    void openFirmSubscriptionCheckout({ email, firmId, founding: isFounding }).catch(() =>
+      setError("Couldn’t open the checkout. Please try again in a moment."),
+    );
+  }, [autoSubscribe, configured, subscribed, firmId, email, isFounding]);
 
   return (
     <Card>

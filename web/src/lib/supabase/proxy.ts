@@ -62,7 +62,10 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   if (!user && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("next", pathname);
+    url.search = "";
+    // Preserve the full intended path incl. query (e.g. /dashboard?subscribe=firm) so
+    // deep-links survive the login round-trip.
+    url.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(url);
   }
 
