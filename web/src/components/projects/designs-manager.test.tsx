@@ -4,10 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/app/(app)/projects/[id]/actions", () => ({ renameRun: vi.fn(), deleteRun: vi.fn() }));
-vi.mock("@/lib/api/service", () => ({
-  getReportSignedUrl: vi.fn(),
-  ServiceError: class extends Error {},
-}));
+vi.mock("@/lib/billing/actions", () => ({ getEntitledReportUrl: vi.fn() }));
+vi.mock("@/lib/paddle/checkout", () => ({ openCalcPackageCheckout: vi.fn() }));
 
 import { type RunRow } from "./run-history";
 

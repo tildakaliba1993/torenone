@@ -93,7 +93,7 @@ export function RunHistory({ runs, projectId }: { runs: RunRow[]; projectId: str
               </TableCell>
               <TableCell onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-end gap-1">
-                  <ReportDownloadButton storagePath={run.storage_path} />
+                  <ReportDownloadButton runId={run.id} storagePath={run.storage_path} />
                   <RunRowActions id={run.id} projectId={projectId} label={run.rawLabel ?? ""} />
                 </div>
               </TableCell>

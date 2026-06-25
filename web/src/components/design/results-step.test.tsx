@@ -4,13 +4,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DesignResponse } from "@/lib/api/service";
 
-const { getReportSignedUrl, ServiceError } = vi.hoisted(() => {
-  class ServiceError extends Error {}
-  return { getReportSignedUrl: vi.fn(), ServiceError };
-});
-vi.mock("@/lib/api/service", () => ({
-  getReportSignedUrl: (path: string) => getReportSignedUrl(path),
-  ServiceError,
+const { getEntitledReportUrl, openCalcPackageCheckout } = vi.hoisted(() => ({
+  getEntitledReportUrl: vi.fn(),
+  openCalcPackageCheckout: vi.fn(),
+}));
+vi.mock("@/lib/billing/actions", () => ({
+  getEntitledReportUrl: (runId: string) => getEntitledReportUrl(runId),
+}));
+vi.mock("@/lib/paddle/checkout", () => ({
+  openCalcPackageCheckout: (opts: unknown) => openCalcPackageCheckout(opts),
 }));
 
 import { ResultsStep } from "./results-step";
@@ -149,11 +151,11 @@ describe("ResultsStep", () => {
     expect(screen.getByText(/footing not designed/i)).toBeTruthy();
   });
 
-  it("downloads the PDF via a signed URL", async () => {
-    getReportSignedUrl.mockResolvedValue("https://signed.example/rep.pdf");
+  it("downloads the PDF via an entitled signed URL", async () => {
+    getEntitledReportUrl.mockResolvedValue({ url: "https://signed.example/rep.pdf" });
     render(<ResultsStep result={RESP} onRestart={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /download calc package/i }));
-    await waitFor(() => expect(getReportSignedUrl).toHaveBeenCalledWith("firm-1/rep_abc.pdf"));
+    await waitFor(() => expect(getEntitledReportUrl).toHaveBeenCalledWith("r"));
     expect(window.open).toHaveBeenCalledWith(
       "https://signed.example/rep.pdf",
       "_blank",
@@ -161,8 +163,25 @@ describe("ResultsStep", () => {
     );
   });
 
+  it("opens pay-as-you-go checkout when not entitled", async () => {
+    getEntitledReportUrl.mockResolvedValue({
+      needsPayment: true,
+      email: "eng@firm.test",
+      firmId: "firm-1",
+    });
+    render(<ResultsStep result={RESP} onRestart={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: /download calc package/i }));
+    await waitFor(() =>
+      expect(openCalcPackageCheckout).toHaveBeenCalledWith({
+        email: "eng@firm.test",
+        firmId: "firm-1",
+        runId: "r",
+      }),
+    );
+  });
+
   it("shows an error when the download link fails", async () => {
-    getReportSignedUrl.mockRejectedValue(new ServiceError("Could not generate a download link."));
+    getEntitledReportUrl.mockResolvedValue({ error: "Could not generate a download link." });
     render(<ResultsStep result={RESP} onRestart={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /download calc package/i }));
     expect(await screen.findByText("Could not generate a download link.")).toBeTruthy();

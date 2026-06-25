@@ -17,12 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  type CheckResult,
-  type DesignResponse,
-  ServiceError,
-  getReportSignedUrl,
-} from "@/lib/api/service";
+import { type CheckResult, type DesignResponse } from "@/lib/api/service";
+import { getEntitledReportUrl } from "@/lib/billing/actions";
+import { openCalcPackageCheckout } from "@/lib/paddle/checkout";
 
 type Status = "pass" | "review" | "fail" | "advisory";
 
@@ -79,10 +76,20 @@ export function ResultsStep({
     setDownloading(true);
     setDlError(null);
     try {
-      const url = await getReportSignedUrl(report.storage_path);
-      window.open(url, "_blank", "noopener,noreferrer");
-    } catch (e) {
-      setDlError(e instanceof ServiceError ? e.message : "Could not download the PDF.");
+      const res = await getEntitledReportUrl(report.run_id);
+      if ("url" in res) {
+        window.open(res.url, "_blank", "noopener,noreferrer");
+      } else if ("needsPayment" in res) {
+        await openCalcPackageCheckout({
+          email: res.email,
+          firmId: res.firmId,
+          runId: report.run_id,
+        });
+      } else {
+        setDlError(res.error);
+      }
+    } catch {
+      setDlError("Could not download the PDF.");
     } finally {
       setDownloading(false);
     }

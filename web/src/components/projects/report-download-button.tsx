@@ -3,13 +3,20 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { ServiceError, getReportSignedUrl } from "@/lib/api/service";
+import { getEntitledReportUrl } from "@/lib/billing/actions";
+import { openCalcPackageCheckout } from "@/lib/paddle/checkout";
 
-/** Downloads a stored calc-package PDF via a short-lived Supabase signed URL (Task 6.7). */
+/**
+ * Downloads a stored calc-package PDF — but only when the firm is entitled (subscription,
+ * complimentary trial, or a paid PAYG credit). When not entitled, opens the R250 pay-as-you-go
+ * checkout for that design; the webhook then unlocks it and the next click downloads.
+ */
 export function ReportDownloadButton({
+  runId,
   storagePath,
   label = "PDF",
 }: {
+  runId: string;
   storagePath: string | null;
   label?: string;
 }) {
@@ -24,10 +31,16 @@ export function ReportDownloadButton({
     setPending(true);
     setError(null);
     try {
-      const url = await getReportSignedUrl(storagePath!);
-      window.open(url, "_blank", "noopener,noreferrer");
-    } catch (e) {
-      setError(e instanceof ServiceError ? e.message : "Download failed.");
+      const res = await getEntitledReportUrl(runId);
+      if ("url" in res) {
+        window.open(res.url, "_blank", "noopener,noreferrer");
+      } else if ("needsPayment" in res) {
+        await openCalcPackageCheckout({ email: res.email, firmId: res.firmId, runId });
+      } else {
+        setError(res.error);
+      }
+    } catch {
+      setError("Download failed.");
     } finally {
       setPending(false);
     }

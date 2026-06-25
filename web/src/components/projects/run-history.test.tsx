@@ -2,13 +2,16 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getReportSignedUrl, ServiceError, push } = vi.hoisted(() => {
-  class ServiceError extends Error {}
-  return { getReportSignedUrl: vi.fn(), ServiceError, push: vi.fn() };
-});
-vi.mock("@/lib/api/service", () => ({
-  getReportSignedUrl: (path: string) => getReportSignedUrl(path),
-  ServiceError,
+const { getEntitledReportUrl, openCalcPackageCheckout, push } = vi.hoisted(() => ({
+  getEntitledReportUrl: vi.fn(),
+  openCalcPackageCheckout: vi.fn(),
+  push: vi.fn(),
+}));
+vi.mock("@/lib/billing/actions", () => ({
+  getEntitledReportUrl: (runId: string) => getEntitledReportUrl(runId),
+}));
+vi.mock("@/lib/paddle/checkout", () => ({
+  openCalcPackageCheckout: (opts: unknown) => openCalcPackageCheckout(opts),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 // The row actions call server actions — stub the module so the test stays client-only.
@@ -67,17 +70,37 @@ describe("RunHistory", () => {
     expect(failBadges.length).toBe(1);
   });
 
-  it("downloads a run's PDF via a signed URL", async () => {
-    getReportSignedUrl.mockResolvedValue("https://signed.example/run-1.pdf");
+  it("downloads an entitled run's PDF via a signed URL", async () => {
+    getEntitledReportUrl.mockResolvedValue({ url: "https://signed.example/run-1.pdf" });
     render(<RunHistory runs={RUNS} projectId="p1" />);
     const firstRow = screen.getByText("design").closest("tr")!;
     await userEvent.click(within(firstRow).getByRole("button", { name: /pdf/i }));
-    await waitFor(() => expect(getReportSignedUrl).toHaveBeenCalledWith("firm-1/run-1.pdf"));
+    await waitFor(() => expect(getEntitledReportUrl).toHaveBeenCalledWith("run-1"));
     expect(window.open).toHaveBeenCalledWith(
       "https://signed.example/run-1.pdf",
       "_blank",
       "noopener,noreferrer",
     );
+    expect(openCalcPackageCheckout).not.toHaveBeenCalled();
+  });
+
+  it("opens pay-as-you-go checkout when the firm is not entitled", async () => {
+    getEntitledReportUrl.mockResolvedValue({
+      needsPayment: true,
+      email: "eng@firm.test",
+      firmId: "firm-1",
+    });
+    render(<RunHistory runs={RUNS} projectId="p1" />);
+    const firstRow = screen.getByText("design").closest("tr")!;
+    await userEvent.click(within(firstRow).getByRole("button", { name: /pdf/i }));
+    await waitFor(() =>
+      expect(openCalcPackageCheckout).toHaveBeenCalledWith({
+        email: "eng@firm.test",
+        firmId: "firm-1",
+        runId: "run-1",
+      }),
+    );
+    expect(window.open).not.toHaveBeenCalled();
   });
 
   it("shows a dash when a run has no stored report", () => {
@@ -95,7 +118,7 @@ describe("RunHistory", () => {
   });
 
   it("does not open the design page when the PDF download is clicked", async () => {
-    getReportSignedUrl.mockResolvedValue("https://signed.example/run-1.pdf");
+    getEntitledReportUrl.mockResolvedValue({ url: "https://signed.example/run-1.pdf" });
     render(<RunHistory runs={RUNS} projectId="p1" />);
     const firstRow = screen.getByText("design").closest("tr")!;
     await userEvent.click(within(firstRow).getByRole("button", { name: /pdf/i }));

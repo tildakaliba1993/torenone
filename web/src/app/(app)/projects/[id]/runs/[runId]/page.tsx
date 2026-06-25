@@ -70,7 +70,11 @@ export default async function RunDetailPage({
               This run was created before on-screen results were saved. You can still download its
               calc package.
             </p>
-            <ReportDownloadButton storagePath={storagePath} label="Download calc package (PDF)" />
+            <ReportDownloadButton
+              runId={runId}
+              storagePath={storagePath}
+              label="Download calc package (PDF)"
+            />
           </CardContent>
         </Card>
       </main>
