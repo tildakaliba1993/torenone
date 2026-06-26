@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  PADDLE_CLIENT_TOKEN,
-  PADDLE_ENV,
-  PADDLE_FOUNDING_DISCOUNT_ID,
-  PADDLE_PRICES,
-} from "./config";
+import { PADDLE_CLIENT_TOKEN, PADDLE_ENV, PADDLE_PILOT_DISCOUNT_ID, PADDLE_PRICES } from "./config";
 
 /** Minimal typing of the Paddle.js v2 surface we use (no `any`). */
 interface CheckoutItem {
@@ -60,23 +55,21 @@ function loadPaddle(): Promise<Paddle> {
 
 /**
  * Open the Firm subscription checkout — always the standard R1,650/mo price (no Paddle trial:
- * founding firms get their free month as a no-card complimentary grant, not a card-upfront
- * trial). Founding firms get the recurring discount pre-applied (→ R999/mo for 12 cycles,
- * never a typed coupon). `firm_id` rides in customData so the webhook can map the subscription
- * to the firm.
+ * pilot firms get their free month as a no-credit-card complimentary grant, not a card-upfront
+ * trial). Pilot firms get the recurring discount pre-applied (→ R999/mo for 12 cycles, never a
+ * typed coupon). `firm_id` rides in customData so the webhook can map the subscription to the firm.
  */
 export async function openFirmSubscriptionCheckout(opts: {
   email: string;
   firmId: string;
-  founding: boolean;
+  pilot: boolean;
 }): Promise<void> {
   const paddle = await loadPaddle();
   paddle.Checkout.open({
     items: [{ priceId: PADDLE_PRICES.firmMonthly, quantity: 1 }],
     customer: { email: opts.email },
     customData: { firm_id: opts.firmId },
-    discountId:
-      opts.founding && PADDLE_FOUNDING_DISCOUNT_ID ? PADDLE_FOUNDING_DISCOUNT_ID : undefined,
+    discountId: opts.pilot && PADDLE_PILOT_DISCOUNT_ID ? PADDLE_PILOT_DISCOUNT_ID : undefined,
   });
 }
 

@@ -18,7 +18,7 @@ export const metadata: Metadata = { title: "Account" };
 
 interface FirmBilling {
   name?: string;
-  is_founding?: boolean;
+  is_pilot?: boolean;
   subscription_status?: string | null;
   complimentary_until?: string | null;
 }
@@ -58,7 +58,7 @@ export default async function DashboardPage({
   if (firmId) {
     const { data } = await supabase
       .from("firms")
-      .select("is_founding, subscription_status, complimentary_until")
+      .select("is_pilot, subscription_status, complimentary_until")
       .eq("id", firmId)
       .maybeSingle();
     firm = (data as FirmBilling | null) ?? null;
@@ -91,7 +91,7 @@ export default async function DashboardPage({
       <BillingCard
         email={user.email ?? ""}
         firmId={firmId}
-        isFounding={firm?.is_founding ?? false}
+        isPilot={firm?.is_pilot ?? false}
         subscriptionStatus={firm?.subscription_status ?? null}
         complimentaryActive={complimentaryActiveNow(firm?.complimentary_until)}
         complimentaryUntil={firm?.complimentary_until ?? null}

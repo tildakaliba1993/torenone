@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -27,27 +27,36 @@ const signupSchema = z.object({
   firmName: z.string().trim().min(1, "Firm name is required"),
   email: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
   password: passwordSchema,
+  pilotCode: z.string().trim().optional(),
 });
 type SignupValues = z.infer<typeof signupSchema>;
 
 export function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formError, setFormError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const form = useForm<SignupValues>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { firmName: "", email: "", password: "" },
+    defaultValues: {
+      firmName: "",
+      email: "",
+      password: "",
+      pilotCode: searchParams.get("pilot") ?? "",
+    },
   });
 
   async function onSubmit(values: SignupValues) {
     setFormError(null);
     const supabase = createClient();
+    const pilotCode = values.pilotCode?.trim();
     const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
       options: {
-        // Read by the handle_new_user() trigger (Task 5.2) to create the firm.
-        data: { firm_name: values.firmName },
+        // Read by the handle_new_user() trigger to create the firm (and auto-grant the pilot
+        // trial when a valid pilot_code is present).
+        data: { firm_name: values.firmName, ...(pilotCode ? { pilot_code: pilotCode } : {}) },
         emailRedirectTo: `${window.location.origin}/auth/confirm`,
       },
     });
@@ -118,6 +127,22 @@ export function SignupForm() {
               <FormControl>
                 <Input type="password" autoComplete="new-password" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="pilotCode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Pilot access code (optional)</FormLabel>
+              <FormControl>
+                <Input autoComplete="off" placeholder="Have one? Enter it here" {...field} />
+              </FormControl>
+              <FormDescription>
+                Pilot firms get a free month — no credit card — to validate against past projects.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

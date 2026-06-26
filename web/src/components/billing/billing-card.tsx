@@ -17,9 +17,9 @@ import { paddleConfigured } from "@/lib/paddle/config";
 export interface BillingState {
   email: string;
   firmId: string;
-  isFounding: boolean;
+  isPilot: boolean;
   subscriptionStatus: string | null;
-  /** Whether the no-card complimentary window is still open (computed server-side). */
+  /** Whether the no-credit-card complimentary window is still open (computed server-side). */
   complimentaryActive: boolean;
   /** ISO date the complimentary window ends (for display). */
   complimentaryUntil: string | null;
@@ -30,7 +30,7 @@ export interface BillingState {
 export function BillingCard({
   email,
   firmId,
-  isFounding,
+  isPilot,
   subscriptionStatus,
   complimentaryActive,
   complimentaryUntil,
@@ -42,16 +42,16 @@ export function BillingCard({
 
   const configured = paddleConfigured();
   const subscribed = subscriptionStatus === "active" || subscriptionStatus === "trialing";
-  const priceLabel = isFounding ? "R999/mo (founding rate)" : "R1,650/mo";
+  const priceLabel = isPilot ? "R999/mo (pilot rate)" : "R1,650/mo";
   const ctaLabel = complimentaryActive
-    ? `Continue at ${isFounding ? "R999" : "R1,650"}/mo`
+    ? `Continue at ${isPilot ? "R999" : "R1,650"}/mo`
     : `Subscribe — ${priceLabel}`;
 
   async function subscribe() {
     setBusy(true);
     setError(null);
     try {
-      await openFirmSubscriptionCheckout({ email, firmId, founding: isFounding });
+      await openFirmSubscriptionCheckout({ email, firmId, pilot: isPilot });
     } catch {
       setError("Couldn’t open the checkout. Please try again in a moment.");
     } finally {
@@ -65,10 +65,10 @@ export function BillingCard({
     if (autoOpened.current || !autoSubscribe || !configured || subscribed || !firmId) return;
     autoOpened.current = true;
     window.history.replaceState(null, "", window.location.pathname);
-    void openFirmSubscriptionCheckout({ email, firmId, founding: isFounding }).catch(() =>
+    void openFirmSubscriptionCheckout({ email, firmId, pilot: isPilot }).catch(() =>
       setError("Couldn’t open the checkout. Please try again in a moment."),
     );
-  }, [autoSubscribe, configured, subscribed, firmId, email, isFounding]);
+  }, [autoSubscribe, configured, subscribed, firmId, email, isPilot]);
 
   return (
     <Card>
@@ -86,7 +86,7 @@ export function BillingCard({
             {subscribed ? (
               <StatusBadge status="pass">Firm plan</StatusBadge>
             ) : complimentaryActive ? (
-              <StatusBadge status="review">Founding trial</StatusBadge>
+              <StatusBadge status="review">Pilot trial</StatusBadge>
             ) : (
               "Free"
             )}
@@ -95,11 +95,11 @@ export function BillingCard({
 
         {complimentaryActive && complimentaryUntil ? (
           <p className="text-muted">
-            Your founding trial is active until{" "}
+            Your pilot trial is active until{" "}
             <span className="text-foreground font-medium">
               {new Date(complimentaryUntil).toLocaleDateString()}
             </span>
-            . Test against your past projects — no card needed. Subscribe any time to keep
+            . Test against your past projects — no credit card needed. Subscribe any time to keep
             unlimited downloads after it ends.
           </p>
         ) : null}
@@ -111,10 +111,10 @@ export function BillingCard({
           </p>
         ) : (
           <div className="flex flex-col items-start gap-2">
-            {isFounding && !complimentaryActive ? (
+            {isPilot && !complimentaryActive ? (
               <p className="text-muted">
-                As a founding firm you keep the <span className="text-foreground">R999/mo</span>{" "}
-                founding rate, locked for your first year.
+                As a pilot firm you keep the <span className="text-foreground">R999/mo</span>{" "}
+                pilot rate, locked for your first year.
               </p>
             ) : null}
             <Button onClick={subscribe} loading={busy} disabled={!configured || busy}>

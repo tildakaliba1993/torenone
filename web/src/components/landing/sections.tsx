@@ -252,6 +252,14 @@ export function FinalCta() {
             Start designing — free
           </LinkButton>
         </Reveal>
+        <Reveal delay={260}>
+          <p className="text-subtle text-sm">
+            Now onboarding pilot firms — validate against your past projects free, no credit card.{" "}
+            <Link href="/pricing" className="text-accent hover:underline">
+              See pilot pricing →
+            </Link>
+          </p>
+        </Reveal>
       </div>
     </section>
   );

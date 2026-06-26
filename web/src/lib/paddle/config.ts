@@ -16,18 +16,18 @@ export const PADDLE_CLIENT_TOKEN = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN ?
 
 /** Paddle price IDs (pri_...). */
 export const PADDLE_PRICES = {
-  /** Firm subscription — R1,650/mo recurring, no trial. Founding firms get R999 via the discount. */
+  /** Firm subscription — R1,650/mo recurring, no trial. Pilot firms get R999 via the discount. */
   firmMonthly: process.env.NEXT_PUBLIC_PADDLE_PRICE_FIRM_MONTHLY ?? "",
   /** Pay-as-you-go — R250 one-off per calc package. */
   calcPackage: process.env.NEXT_PUBLIC_PADDLE_PRICE_CALC_PACKAGE ?? "",
 } as const;
 
 /**
- * Recurring discount (dsc_...) applied for founding firms — takes the Firm price
- * R1,650 → R999 for 12 billing cycles, then it auto-reverts. Pre-applied at checkout for
- * firms we've marked `is_founding`; never shown as a public coupon code.
+ * Recurring discount (dsc_...) applied for pilot firms — takes the Firm price R1,650 → R999
+ * for 12 billing cycles, then it auto-reverts. Pre-applied at checkout for firms we've marked
+ * `is_pilot`; never shown as a public coupon code.
  */
-export const PADDLE_FOUNDING_DISCOUNT_ID = process.env.NEXT_PUBLIC_PADDLE_DISCOUNT_FOUNDING ?? "";
+export const PADDLE_PILOT_DISCOUNT_ID = process.env.NEXT_PUBLIC_PADDLE_DISCOUNT_PILOT ?? "";
 
 /** True once the client-side Paddle config is present (token + both prices). */
 export function paddleConfigured(): boolean {

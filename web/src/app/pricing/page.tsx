@@ -136,24 +136,24 @@ export default function PricingPage() {
             ))}
           </div>
 
-          {/* Founding firms — invitation/pilot offer, no card */}
+          {/* Pilot firms — invitation offer, no credit card */}
           <Reveal className="mx-auto mt-10 max-w-3xl">
             <div className={`${CARD_SURFACE} ring-accent/30 rounded-2xl p-7 text-center ring-1 sm:p-9`}>
-              <p className="text-accent text-xs tracking-widest uppercase">Founding firms</p>
+              <p className="text-accent text-xs tracking-widest uppercase">Pilot firms</p>
               <h2 className="text-foreground mt-3 text-xl font-semibold tracking-tight sm:text-2xl">
-                Validate against your past projects — free, no card.
+                Validate against your past projects — free, no credit card.
               </h2>
               <p className="text-muted mx-auto mt-3 max-w-xl text-sm leading-7">
-                We’re onboarding a small group of South African firms as founding partners. Run your
+                We’re onboarding a small group of South African firms as pilot partners. Run your
                 finished projects through TorenOne <span className="text-foreground">free for a
-                month — no card needed</span>, then lock in{" "}
+                month — no credit card needed</span>, then lock in{" "}
                 <span className="text-foreground">R999/mo for your first year</span> (vs R1,650
-                standard). You only enter a card if and when you choose to continue.
+                standard). You only enter a credit card if and when you choose to continue.
               </p>
               <div className="mt-6">
                 <Button asChild variant="outline">
-                  <a href="mailto:admin@torenone.com?subject=TorenOne%20founding%20firm">
-                    Apply to be a founding firm
+                  <a href="mailto:admin@torenone.com?subject=TorenOne%20pilot%20firm">
+                    Apply to be a pilot firm
                   </a>
                 </Button>
               </div>
@@ -268,6 +268,6 @@ const FAQ: { q: string; a: ReactNode }[] = [
   },
   {
     q: "How do payments work?",
-    a: "Payments are handled by our Merchant of Record, who processes the transaction and issues your invoice. Your card statement will show their name.",
+    a: "Payments are handled by our Merchant of Record, who processes the transaction and issues your invoice. Your credit-card statement will show their name.",
   },
 ];

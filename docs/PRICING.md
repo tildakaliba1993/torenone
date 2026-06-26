@@ -15,7 +15,7 @@ per year) — that pricing is exactly what we're disrupting as a YC "SaaS Challe
 |---|---|---|
 | **Free — "calculate"** | Sign up, parse a frame, run the kernel, see on-screen results (sections, utilisations, tonnage, BMD/SFD), **unlimited Check mode** | **R0** |
 | **Toll gate — the calc package** | Download the 15-page, clause-referenced, stamp-ready PDF | **PAYG R250 (~$15) / design**, or a subscription |
-| **Firm subscription** | The whole firm (unlimited seats), effectively-unlimited calc packages | **R1,650 (~$99) / mo** standard · **R999 / mo** founding (pilots, locked year 1) |
+| **Firm subscription** | The whole firm (unlimited seats), effectively-unlimited calc packages | **R1,650 (~$99) / mo** standard · **R999 / mo** pilot (locked year 1) |
 
 **Why this model:** marginal cost per design ≈ cents (one OpenAI parse + a few CPU-seconds +
 a stored PDF) ⇒ **>95% gross margin**. So we compete on conversion + value capture, not cost.
@@ -39,7 +39,7 @@ see the math works; this model removes that wall.
    hits OpenAI ($). Add a **generous free quota** (~20 parses/designs per firm per month) to
    bound exposure. (Rate limits + the per-request output-token cap already exist; this is the
    account-level floor.) The on-screen result is the value; 20/mo is plenty to evaluate.
-4. **R250 is a founding/intro price** — deliberately cheap (~12–20× ROI vs ~R3–5k of junior
+4. **R250 is an intro price** — deliberately cheap (~12–20× ROI vs ~R3–5k of junior
    labour per frame) to maximise land + trust. Keep headroom to raise later.
 5. **Checkout liability copy.** State that the fee is for **generating the document / saving
    time, not certifying the design** — the engineer still reviews, verifies and stamps (the PDF
@@ -68,7 +68,7 @@ see the math works; this model removes that wall.
 |---|---|---|---|
 | **1 — Historical validation** | Now (Phase 8 + start of pilot) | **Free** | Firms run *past, finished* projects through TorenOne to confirm our math matches theirs. Build **trust**. Don't charge for a favour. |
 | **2 — LOI lock-in** | After a firm sees it works | **LOI, no checkout** | "We launch our public beta soon at R1,650/mo. Sign this non-binding LOI now and lock **R999/mo** for year 1." Secures commitment (YC traction) without checkout friction. |
-| **3 — First live stamp** | When a firm uses TorenOne on a **live, billable** project | **Flip Paddle live** — R250 PAYG / R1,650 (R999 founding) sub | The free ride ends the moment we save them billable hours on a real submission. |
+| **3 — First live stamp** | When a firm uses TorenOne on a **live, billable** project | **Flip Paddle live** — R250 PAYG / R1,650 (R999 pilot) sub | The free ride ends the moment we save them billable hours on a real submission. |
 
 ## 6. Build trigger & sequencing
 

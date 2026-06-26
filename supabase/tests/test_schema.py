@@ -84,6 +84,8 @@ REQUIRED_COLUMNS = {
     "reports": {"id", "run_id", "firm_id", "storage_path", "created_at"},
     # Paddle PAYG: one paid calc package unlocks a run's PDF (20260625120000_paddle_billing).
     "design_credits": {"id", "run_id", "firm_id", "created_at"},
+    # Pilot access codes — auto-grant the pilot trial at sign-up (20260626120000_pilot_firms).
+    "pilot_codes": {"id", "code", "complimentary_days", "active"},
 }
 
 # The tenant graph the RLS policies (5.4) rely on: column -> referenced table.
