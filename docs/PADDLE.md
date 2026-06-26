@@ -21,14 +21,13 @@ for an active/trialing subscription, a live complimentary window, or a PAYG cred
 ## One-time founder setup (Paddle sandbox dashboard)
 
 1. Create a **sandbox** account at `sandbox-vendors.paddle.com` (separate from live).
-2. **Catalog → Products**:
-   - "TorenOne Firm subscription" → add a **recurring** price **R1,650 / month** → note the
-     price ID `pri_…` → `NEXT_PUBLIC_PADDLE_PRICE_FIRM_MONTHLY`.
-   - "TorenOne calc package" → add a **one-time** price **R250** → note `pri_…` →
-     `NEXT_PUBLIC_PADDLE_PRICE_CALC_PACKAGE`.
+2. **Catalog → Products** — on the "TorenOne Firm subscription" product, add **two** recurring
+   prices, plus the calc package:
+   - **R1,650 / month, *no* trial** (standard) → `NEXT_PUBLIC_PADDLE_PRICE_FIRM_MONTHLY`.
+   - **R1,650 / month *with a 1-month trial*** (founding) → `NEXT_PUBLIC_PADDLE_PRICE_FIRM_FOUNDING`.
+   - "TorenOne calc package" → a **one-time** price **R250** → `NEXT_PUBLIC_PADDLE_PRICE_CALC_PACKAGE`.
 3. **Catalog → Discounts** → create a **recurring** discount, **amount R651 off** (R1,650 →
-   R999), **recurs for 12 billing periods**, restricted to the Firm price → note `dsc_…` →
-   `NEXT_PUBLIC_PADDLE_DISCOUNT_FOUNDING`.
+   R999), **recurs for 12 billing periods** → note `dsc_…` → `NEXT_PUBLIC_PADDLE_DISCOUNT_FOUNDING`.
 4. **Developer Tools → Authentication** → create a **client-side token** (`test_…`) →
    `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN`. (Optional: an API key for server calls → `PADDLE_API_KEY`.)
 5. **Developer Tools → Notifications** → add a destination at
@@ -42,7 +41,8 @@ for an active/trialing subscription, a live complimentary window, or a PAYG cred
 # Client (safe to expose)
 NEXT_PUBLIC_PADDLE_ENV=sandbox            # or "production"
 NEXT_PUBLIC_PADDLE_CLIENT_TOKEN=test_xxx
-NEXT_PUBLIC_PADDLE_PRICE_FIRM_MONTHLY=pri_xxx
+NEXT_PUBLIC_PADDLE_PRICE_FIRM_MONTHLY=pri_xxx     # standard, no trial
+NEXT_PUBLIC_PADDLE_PRICE_FIRM_FOUNDING=pri_xxx    # founding, 1-month trial
 NEXT_PUBLIC_PADDLE_PRICE_CALC_PACKAGE=pri_xxx
 NEXT_PUBLIC_PADDLE_DISCOUNT_FOUNDING=dsc_xxx
 # Server-only (webhook + admin DB writes)
@@ -67,18 +67,23 @@ configured yet" state and nothing breaks.
 
 | Env var | Where to find it in Paddle |
 |---|---|
-| `NEXT_PUBLIC_PADDLE_PRICE_FIRM_MONTHLY` | Catalog → the **Firm** product → the **R1,650/mo price with *no* trial** (`pri_…`). |
+| `NEXT_PUBLIC_PADDLE_PRICE_FIRM_MONTHLY` | Catalog → the Firm product → the **R1,650/mo price with *no* trial** (`pri_…`). |
+| `NEXT_PUBLIC_PADDLE_PRICE_FIRM_FOUNDING` | Catalog → the Firm product → the **R1,650/mo price *with a 1-month trial*** (`pri_…`). |
 | `NEXT_PUBLIC_PADDLE_PRICE_CALC_PACKAGE` | Catalog → the **R250 one-off** price (`pri_…`). |
 | `NEXT_PUBLIC_PADDLE_DISCOUNT_FOUNDING` | Discounts → open **"Founding Firm Discount"** → copy its `dsc_…` id. |
 | `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN` | Developer Tools → **Authentication → Client-side tokens** → your token. |
 | `PADDLE_WEBHOOK_SECRET` | Developer Tools → **Notifications** → open your destination → reveal the secret (`pdl_ntfset_…`). |
 | `SUPABASE_SERVICE_ROLE_KEY` | Already in the repo's root `.env`; the webhook reuses it. |
 
-> **Which Firm price?** Our founding flow gives pilots a **no-card complimentary month** that
-> *we* grant (see below) — so the subscription itself uses the **standard, no-trial** R1,650
-> price + the founding discount (→ R999/mo). Do **not** point `..._FIRM_MONTHLY` at a price that
-> *also* carries a Paddle trial, or a founding firm would get two free months. (A separate
-> trial-bearing price can stay in the catalog unused, or be archived.)
+> **Two Firm prices, by design.** Non-founding firms check out on `..._FIRM_MONTHLY` (no trial)
+> → R1,650/mo. Founding firms check out on `..._FIRM_FOUNDING` (1-month trial) + the founding
+> discount → **1 month free, then R999/mo for 12 cycles**, then R1,650. The code picks the price
+> from the firm's `is_founding` flag.
+>
+> **Avoiding a double free month.** If a founding firm *already* used a no-card complimentary
+> month (`grant_founding_firm`, below — for the pure validation phase), the checkout switches it
+> to the **standard** price + discount (R999 immediately, no second trial). So a firm gets the
+> free month exactly once, whichever path it came through.
 
 ## Granting a founding firm
 

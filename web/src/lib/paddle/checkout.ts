@@ -59,18 +59,24 @@ function loadPaddle(): Promise<Paddle> {
 }
 
 /**
- * Open the Firm subscription checkout (R1,650/mo). Founding firms get the recurring discount
- * pre-applied (→ R999/mo for 12 cycles) — never shown as a coupon to type. `firm_id` rides in
- * customData so the webhook can map the resulting subscription to the firm.
+ * Open the Firm subscription checkout. Non-founding firms get the standard R1,650/mo price.
+ * Founding firms get the founding price + the recurring discount pre-applied (→ R999/mo for
+ * 12 cycles, never a typed coupon). When `withTrial` (the firm hasn't already had a no-card
+ * complimentary month) the founding price carries Paddle's 1-month free trial; otherwise we
+ * use the standard price + discount so they aren't given a second free month. `firm_id` rides
+ * in customData so the webhook can map the subscription to the firm.
  */
 export async function openFirmSubscriptionCheckout(opts: {
   email: string;
   firmId: string;
   founding: boolean;
+  withTrial: boolean;
 }): Promise<void> {
   const paddle = await loadPaddle();
+  const useFoundingPrice = opts.founding && opts.withTrial && Boolean(PADDLE_PRICES.firmFounding);
+  const priceId = useFoundingPrice ? PADDLE_PRICES.firmFounding : PADDLE_PRICES.firmMonthly;
   paddle.Checkout.open({
-    items: [{ priceId: PADDLE_PRICES.firmMonthly, quantity: 1 }],
+    items: [{ priceId, quantity: 1 }],
     customer: { email: opts.email },
     customData: { firm_id: opts.firmId },
     discountId:
