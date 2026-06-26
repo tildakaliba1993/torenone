@@ -16,14 +16,8 @@ export const PADDLE_CLIENT_TOKEN = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN ?
 
 /** Paddle price IDs (pri_...). */
 export const PADDLE_PRICES = {
-  /** Standard Firm subscription — R1,650/mo recurring, no trial. */
+  /** Firm subscription — R1,650/mo recurring, no trial. Founding firms get R999 via the discount. */
   firmMonthly: process.env.NEXT_PUBLIC_PADDLE_PRICE_FIRM_MONTHLY ?? "",
-  /**
-   * Founding Firm subscription — R1,650/mo with a built-in 1-month trial. With the founding
-   * discount this is 1 month free → R999/mo for 12 cycles → R1,650. Optional: if unset, the
-   * founding checkout falls back to the standard price + discount (no Paddle trial).
-   */
-  firmFounding: process.env.NEXT_PUBLIC_PADDLE_PRICE_FIRM_FOUNDING ?? "",
   /** Pay-as-you-go — R250 one-off per calc package. */
   calcPackage: process.env.NEXT_PUBLIC_PADDLE_PRICE_CALC_PACKAGE ?? "",
 } as const;

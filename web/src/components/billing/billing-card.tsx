@@ -51,12 +51,7 @@ export function BillingCard({
     setBusy(true);
     setError(null);
     try {
-      await openFirmSubscriptionCheckout({
-        email,
-        firmId,
-        founding: isFounding,
-        withTrial: !complimentaryActive,
-      });
+      await openFirmSubscriptionCheckout({ email, firmId, founding: isFounding });
     } catch {
       setError("Couldn’t open the checkout. Please try again in a moment.");
     } finally {
@@ -70,13 +65,10 @@ export function BillingCard({
     if (autoOpened.current || !autoSubscribe || !configured || subscribed || !firmId) return;
     autoOpened.current = true;
     window.history.replaceState(null, "", window.location.pathname);
-    void openFirmSubscriptionCheckout({
-      email,
-      firmId,
-      founding: isFounding,
-      withTrial: !complimentaryActive,
-    }).catch(() => setError("Couldn’t open the checkout. Please try again in a moment."));
-  }, [autoSubscribe, configured, subscribed, firmId, email, isFounding, complimentaryActive]);
+    void openFirmSubscriptionCheckout({ email, firmId, founding: isFounding }).catch(() =>
+      setError("Couldn’t open the checkout. Please try again in a moment."),
+    );
+  }, [autoSubscribe, configured, subscribed, firmId, email, isFounding]);
 
   return (
     <Card>
@@ -121,8 +113,8 @@ export function BillingCard({
           <div className="flex flex-col items-start gap-2">
             {isFounding && !complimentaryActive ? (
               <p className="text-muted">
-                As a founding firm: <span className="text-foreground">1 month free</span>, then{" "}
-                <span className="text-foreground">R999/mo</span> for your first year.
+                As a founding firm you keep the <span className="text-foreground">R999/mo</span>{" "}
+                founding rate, locked for your first year.
               </p>
             ) : null}
             <Button onClick={subscribe} loading={busy} disabled={!configured || busy}>

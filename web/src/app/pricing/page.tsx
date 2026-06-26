@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { Reveal } from "@/components/landing/reveal";
 import { SiteFooter } from "@/components/landing/sections";
+import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { APP_GUTTER } from "@/lib/layout";
 import { CARD_SURFACE } from "@/lib/styles";
@@ -68,7 +69,6 @@ const PLANS: Plan[] = [
       "Priority compute and support",
     ],
     cta: { label: "Get the Firm plan", href: "/dashboard?subscribe=firm" },
-    footnote: "Founding firms: 1 month free (no card), then R999/mo for your first year.",
   },
 ];
 
@@ -136,11 +136,34 @@ export default function PricingPage() {
             ))}
           </div>
 
+          {/* Founding firms — invitation/pilot offer, no card */}
+          <Reveal className="mx-auto mt-10 max-w-3xl">
+            <div className={`${CARD_SURFACE} ring-accent/30 rounded-2xl p-7 text-center ring-1 sm:p-9`}>
+              <p className="text-accent text-xs tracking-widest uppercase">Founding firms</p>
+              <h2 className="text-foreground mt-3 text-xl font-semibold tracking-tight sm:text-2xl">
+                Validate against your past projects — free, no card.
+              </h2>
+              <p className="text-muted mx-auto mt-3 max-w-xl text-sm leading-7">
+                We’re onboarding a small group of South African firms as founding partners. Run your
+                finished projects through TorenOne <span className="text-foreground">free for a
+                month — no card needed</span>, then lock in{" "}
+                <span className="text-foreground">R999/mo for your first year</span> (vs R1,650
+                standard). You only enter a card if and when you choose to continue.
+              </p>
+              <div className="mt-6">
+                <Button asChild variant="outline">
+                  <a href="mailto:admin@torenone.com?subject=TorenOne%20founding%20firm">
+                    Apply to be a founding firm
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </Reveal>
+
           <Reveal className="mx-auto mt-8 max-w-5xl">
             <p className="text-subtle text-center text-xs leading-5">
               Prices in South African Rand, excl. VAT where applicable. Payments are processed by our
-              reseller (Merchant of Record). Founding pilot firms start with a free month — no card
-              needed — to validate against past projects. See our{" "}
+              reseller (Merchant of Record). See our{" "}
               <Link href="/refunds" className="hover:text-foreground underline">
                 Refund &amp; Cancellation Policy
               </Link>
