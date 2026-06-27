@@ -3,8 +3,8 @@
  * same code runs against sandbox now and production later (just swap the env values).
  *
  * Client-side values are NEXT_PUBLIC_ (the Paddle client token and price/discount IDs are
- * public by design — they only open a checkout). Secrets (webhook signing key, API key)
- * are server-only and live in lib/paddle/server.ts. See docs/PADDLE.md for setup.
+ * public by design — they only open a checkout). Secrets (webhook signing key) are server-only
+ * and live in ./server.ts. See docs/PAYMENTS.md for setup.
  */
 
 export type PaddleEnvironment = "sandbox" | "production";

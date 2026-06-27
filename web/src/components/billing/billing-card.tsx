@@ -11,8 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { openFirmSubscriptionCheckout } from "@/lib/paddle/checkout";
-import { paddleConfigured } from "@/lib/paddle/config";
+import { beginCheckout } from "@/lib/payments/client";
+import { createSubscriptionCheckout } from "@/lib/payments/actions";
 
 export interface BillingState {
   email: string;
@@ -23,6 +23,8 @@ export interface BillingState {
   complimentaryActive: boolean;
   /** ISO date the complimentary window ends (for display). */
   complimentaryUntil: string | null;
+  /** Whether the active payment provider is configured (computed server-side, provider-agnostic). */
+  configured: boolean;
   /** Deep-link from the pricing page (?subscribe=firm) — auto-opens the checkout once. */
   autoSubscribe?: boolean;
 }
@@ -34,13 +36,13 @@ export function BillingCard({
   subscriptionStatus,
   complimentaryActive,
   complimentaryUntil,
+  configured,
   autoSubscribe = false,
 }: BillingState) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const autoOpened = useRef(false);
 
-  const configured = paddleConfigured();
   const subscribed = subscriptionStatus === "active" || subscriptionStatus === "trialing";
   const priceLabel = isPilot ? "R999/mo (pilot rate)" : "R1,650/mo";
   const ctaLabel = complimentaryActive
@@ -51,7 +53,8 @@ export function BillingCard({
     setBusy(true);
     setError(null);
     try {
-      await openFirmSubscriptionCheckout({ email, firmId, pilot: isPilot });
+      const directive = await createSubscriptionCheckout({ email, firmId, pilot: isPilot });
+      await beginCheckout(directive);
     } catch {
       setError("Couldn’t open the checkout. Please try again in a moment.");
     } finally {
@@ -65,9 +68,9 @@ export function BillingCard({
     if (autoOpened.current || !autoSubscribe || !configured || subscribed || !firmId) return;
     autoOpened.current = true;
     window.history.replaceState(null, "", window.location.pathname);
-    void openFirmSubscriptionCheckout({ email, firmId, pilot: isPilot }).catch(() =>
-      setError("Couldn’t open the checkout. Please try again in a moment."),
-    );
+    void createSubscriptionCheckout({ email, firmId, pilot: isPilot })
+      .then(beginCheckout)
+      .catch(() => setError("Couldn’t open the checkout. Please try again in a moment."));
   }, [autoSubscribe, configured, subscribed, firmId, email, isPilot]);
 
   return (

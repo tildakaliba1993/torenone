@@ -5,7 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/app/(app)/projects/[id]/actions", () => ({ renameRun: vi.fn(), deleteRun: vi.fn() }));
 vi.mock("@/lib/billing/actions", () => ({ getEntitledReportUrl: vi.fn() }));
-vi.mock("@/lib/paddle/checkout", () => ({ openCalcPackageCheckout: vi.fn() }));
+vi.mock("@/lib/payments/actions", () => ({ createPackageCheckout: vi.fn() }));
+vi.mock("@/lib/payments/client", () => ({ beginCheckout: vi.fn() }));
 
 import { type RunRow } from "./run-history";
 

@@ -4,7 +4,8 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { getEntitledReportUrl } from "@/lib/billing/actions";
-import { openCalcPackageCheckout } from "@/lib/paddle/checkout";
+import { createPackageCheckout } from "@/lib/payments/actions";
+import { beginCheckout } from "@/lib/payments/client";
 
 /**
  * Downloads a stored calc-package PDF — but only when the firm is entitled (subscription,
@@ -35,7 +36,8 @@ export function ReportDownloadButton({
       if ("url" in res) {
         window.open(res.url, "_blank", "noopener,noreferrer");
       } else if ("needsPayment" in res) {
-        await openCalcPackageCheckout({ email: res.email, firmId: res.firmId, runId });
+        const directive = await createPackageCheckout({ email: res.email, firmId: res.firmId, runId });
+        await beginCheckout(directive);
       } else {
         setError(res.error);
       }

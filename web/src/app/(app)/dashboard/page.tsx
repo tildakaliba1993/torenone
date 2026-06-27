@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { isPaymentConfigured } from "@/lib/payments/actions";
 import { createClient } from "@/lib/supabase/server";
 
 import { inviteColleague } from "./actions";
@@ -64,6 +65,9 @@ export default async function DashboardPage({
     firm = (data as FirmBilling | null) ?? null;
   }
 
+  // Provider-agnostic: true when the active payment provider (PAYMENT_PROVIDER) is configured.
+  const paymentConfigured = await isPaymentConfigured();
+
   return (
     <main className="flex w-full flex-col gap-8">
       <header className="flex flex-col gap-2">
@@ -95,6 +99,7 @@ export default async function DashboardPage({
         subscriptionStatus={firm?.subscription_status ?? null}
         complimentaryActive={complimentaryActiveNow(firm?.complimentary_until)}
         complimentaryUntil={firm?.complimentary_until ?? null}
+        configured={paymentConfigured}
         autoSubscribe={subscribe === "firm"}
       />
 

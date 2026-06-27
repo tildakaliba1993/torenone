@@ -2,16 +2,20 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getEntitledReportUrl, openCalcPackageCheckout, push } = vi.hoisted(() => ({
+const { getEntitledReportUrl, createPackageCheckout, beginCheckout, push } = vi.hoisted(() => ({
   getEntitledReportUrl: vi.fn(),
-  openCalcPackageCheckout: vi.fn(),
+  createPackageCheckout: vi.fn(),
+  beginCheckout: vi.fn(),
   push: vi.fn(),
 }));
 vi.mock("@/lib/billing/actions", () => ({
   getEntitledReportUrl: (runId: string) => getEntitledReportUrl(runId),
 }));
-vi.mock("@/lib/paddle/checkout", () => ({
-  openCalcPackageCheckout: (opts: unknown) => openCalcPackageCheckout(opts),
+vi.mock("@/lib/payments/actions", () => ({
+  createPackageCheckout: (opts: unknown) => createPackageCheckout(opts),
+}));
+vi.mock("@/lib/payments/client", () => ({
+  beginCheckout: (directive: unknown) => beginCheckout(directive),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 // The row actions call server actions — stub the module so the test stays client-only.
@@ -81,7 +85,7 @@ describe("RunHistory", () => {
       "_blank",
       "noopener,noreferrer",
     );
-    expect(openCalcPackageCheckout).not.toHaveBeenCalled();
+    expect(createPackageCheckout).not.toHaveBeenCalled();
   });
 
   it("opens pay-as-you-go checkout when the firm is not entitled", async () => {
@@ -90,16 +94,19 @@ describe("RunHistory", () => {
       email: "eng@firm.test",
       firmId: "firm-1",
     });
+    const directive = { type: "redirect", url: "https://checkout.example/pay" };
+    createPackageCheckout.mockResolvedValue(directive);
     render(<RunHistory runs={RUNS} projectId="p1" />);
     const firstRow = screen.getByText("design").closest("tr")!;
     await userEvent.click(within(firstRow).getByRole("button", { name: /pdf/i }));
     await waitFor(() =>
-      expect(openCalcPackageCheckout).toHaveBeenCalledWith({
+      expect(createPackageCheckout).toHaveBeenCalledWith({
         email: "eng@firm.test",
         firmId: "firm-1",
         runId: "run-1",
       }),
     );
+    expect(beginCheckout).toHaveBeenCalledWith(directive);
     expect(window.open).not.toHaveBeenCalled();
   });
 

@@ -55,10 +55,13 @@ see the math works; this model removes that wall.
 
 ## 4. Payments
 
-- **Provider: Paddle (Merchant of Record).** It absorbs SA→EU VAT/sales-tax compliance, which
-  is impractical to handle directly from a SA entity at MVP.
-- **Diligence BEFORE building:** confirm Paddle **pays out to the SA entity** (historically the
-  sticking point for non-UK/EU sellers). **Fallbacks:** Lemon Squeezy (also MoR) or Stripe.
+- **Provider: pluggable Merchant of Record (Paddle + Dodo Payments).** An MoR absorbs SA→EU
+  VAT/sales-tax compliance, impractical to handle directly from a SA entity at MVP. Providers are
+  **switchable via `NEXT_PUBLIC_PAYMENT_PROVIDER`** (one active at a time) — see `docs/PAYMENTS.md`.
+- **Why two:** Paddle KYB for the SA entity dragged on, so we added **Dodo Payments** (MoR that
+  onboards SA sellers fast / same-day KYB, EU-ready). Flip to Dodo while/after Paddle clears.
+- **Diligence BEFORE going live:** confirm the active provider **pays out to the SA entity**
+  (historically the sticking point for non-UK/EU sellers). Not Stripe (no SA support).
 - Decide the credit/grandfathering rules: credits deplete on **finalise** (per §2.1); free-tier
   downloads made before launch remain accessible.
 

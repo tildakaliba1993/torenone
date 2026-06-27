@@ -1,5 +1,10 @@
 # Paddle integration — setup & how it works
 
+> **Provider-pluggable:** Paddle is **one** of the supported Merchant-of-Record providers, picked
+> by `NEXT_PUBLIC_PAYMENT_PROVIDER=paddle`. For the provider model, the switch, and the **Dodo
+> Payments** alternative (SA-fast KYB), see [`docs/PAYMENTS.md`](./PAYMENTS.md). This doc is the
+> Paddle-specific deep-dive.
+
 > **Status:** building in **sandbox** (live account pending KYB). Same code runs against
 > production later — you only swap the env values. Pricing model: `docs/PRICING.md`.
 

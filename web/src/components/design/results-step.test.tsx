@@ -4,15 +4,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DesignResponse } from "@/lib/api/service";
 
-const { getEntitledReportUrl, openCalcPackageCheckout } = vi.hoisted(() => ({
+const { getEntitledReportUrl, createPackageCheckout, beginCheckout } = vi.hoisted(() => ({
   getEntitledReportUrl: vi.fn(),
-  openCalcPackageCheckout: vi.fn(),
+  createPackageCheckout: vi.fn(),
+  beginCheckout: vi.fn(),
 }));
 vi.mock("@/lib/billing/actions", () => ({
   getEntitledReportUrl: (runId: string) => getEntitledReportUrl(runId),
 }));
-vi.mock("@/lib/paddle/checkout", () => ({
-  openCalcPackageCheckout: (opts: unknown) => openCalcPackageCheckout(opts),
+vi.mock("@/lib/payments/actions", () => ({
+  createPackageCheckout: (opts: unknown) => createPackageCheckout(opts),
+}));
+vi.mock("@/lib/payments/client", () => ({
+  beginCheckout: (directive: unknown) => beginCheckout(directive),
 }));
 
 import { ResultsStep } from "./results-step";
@@ -169,15 +173,18 @@ describe("ResultsStep", () => {
       email: "eng@firm.test",
       firmId: "firm-1",
     });
+    const directive = { type: "redirect", url: "https://checkout.example/pay" };
+    createPackageCheckout.mockResolvedValue(directive);
     render(<ResultsStep result={RESP} onRestart={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /download calc package/i }));
     await waitFor(() =>
-      expect(openCalcPackageCheckout).toHaveBeenCalledWith({
+      expect(createPackageCheckout).toHaveBeenCalledWith({
         email: "eng@firm.test",
         firmId: "firm-1",
         runId: "r",
       }),
     );
+    expect(beginCheckout).toHaveBeenCalledWith(directive);
   });
 
   it("shows an error when the download link fails", async () => {

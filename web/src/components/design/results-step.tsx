@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/table";
 import { type CheckResult, type DesignResponse } from "@/lib/api/service";
 import { getEntitledReportUrl } from "@/lib/billing/actions";
-import { openCalcPackageCheckout } from "@/lib/paddle/checkout";
+import { createPackageCheckout } from "@/lib/payments/actions";
+import { beginCheckout } from "@/lib/payments/client";
 
 type Status = "pass" | "review" | "fail" | "advisory";
 
@@ -80,11 +81,12 @@ export function ResultsStep({
       if ("url" in res) {
         window.open(res.url, "_blank", "noopener,noreferrer");
       } else if ("needsPayment" in res) {
-        await openCalcPackageCheckout({
+        const directive = await createPackageCheckout({
           email: res.email,
           firmId: res.firmId,
           runId: report.run_id,
         });
+        await beginCheckout(directive);
       } else {
         setDlError(res.error);
       }
