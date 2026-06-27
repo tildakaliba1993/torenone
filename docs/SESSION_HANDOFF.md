@@ -5,7 +5,124 @@ Full context for continuing work in a new session. Everything below is committed
 
 ---
 
-## ⏩⏩ SESSION 3 CONTINUATION (2026-06-24) — **READ THIS FIRST**, then the Session 2 block, then `docs/PRODUCTION_READINESS.md`
+## ⏩⏩⏩ SESSION 4 CONTINUATION (2026-06-27) — **READ THIS FIRST**, then the Session 3 block below, then `docs/PRODUCTION_READINESS.md`
+
+> Fourth long session. **`main` is CI-green**; branch pushes go to `main` (`git push origin HEAD:main`).
+> Working in the git worktree `/Users/cash/TorenOne/.claude/worktrees/ecstatic-kalam-d6bd36`; the
+> Python venv + engineering service live in the **MAIN checkout** `/Users/cash/TorenOne`. Project:
+> **TorenOne — AI structural engineer for single-bay SANS steel portal frames**, LIVE at
+> **torenone.com** (web=Netlify, service=Fly, DB=Supabase). The memory files (`MEMORY.md` + the
+> linked notes) are current — read them.
+
+### What this session did (all on `main`, CI-green)
+
+1. **Branding + full SEO.** New `web/src/components/brand/logo.tsx` (`<Logo>`/`<LogoMark>`, inline SVG;
+   mark = `--accent`, wordmark = `currentColor`) used in nav/app-shell/auth/legal/footer + the hero
+   mockup. Icon set (`app/icon.svg`, multi-res `favicon.ico`, `apple-icon.png`, `manifest.ts`,
+   `public/icon-192|512.png`). Rich root metadata via `web/src/lib/site.ts` (metadataBase
+   `https://torenone.com`, OG/Twitter, robots, canonical, viewport themeColor). Static
+   `app/opengraph-image.png` + `twitter-image.png` (1200×630, Pillow-generated). `robots.ts`,
+   `sitemap.ts`. Per-route titles; `(app)`/`(auth)` noindex; legal indexable. Removed default
+   create-next-app SVGs (incl. vercel.svg).
+2. **Two live bug fixes.** (a) **Rename dialog exited on space** — the clickable run row's
+   Enter/Space handler caught keys bubbling (via React portal tree) from the rename input; fixed in
+   `run-history.tsx` (`e.target !== e.currentTarget` guard) + key-propagation stop on the action
+   wrappers. (b) **"Couldn't reach the engineering service"** — app-side **retry on connection
+   errors + `warmService()` prewarm** on the design flow (`web/src/lib/api/service.ts`,
+   `design-flow.tsx`).
+3. **ZERO COLD START (deployed).** `fly.toml` `min_machines_running = 1` + `fly deploy` from the
+   worktree. `/health` now ~0.08s. (The app-side prewarm/retry stays as belt-and-suspenders.)
+4. **Branded, stamp-worthy PDF.** `kernel/.../report/template.html.jinja2`: TorenOne logo on the
+   cover (inline SVG, no new packaged asset) + an **"Engineer review & sign-off" block** (Reviewed
+   by / ECSA reg / Signature / Date). Golden-file test auto-rebootstraps.
+5. **First-run onboarding** (`web/src/components/ui/empty-state.tsx` + projects/project-detail empty
+   states) and **mobile**: review form `grid-cols-1 sm:grid-cols-2`; **mobile hamburger** on the
+   marketing nav (`landing-nav.tsx` now a client component).
+6. **Validation-session runner** `tools/validate_frame.py` — type a past frame's numbers, get the
+   kernel's auto-size + a CHECK of the engineer's sections side-by-side + a paste-ready `BenchmarkCase`.
+   (Harness still skips until a real case is added; co-founder gate unchanged.) Documented in
+   `VALIDATION_GUIDE.md` Step 3.
+7. **PRICING (decided + documented).** Outcome-based **"pay to print"**: Free (calculate + Check) ·
+   **R250** PAYG per calc package · **R1,650/mo** Firm (whole firm, unlimited) · **pilot** firms get
+   **R999/mo** + a **free no-credit-card month**. See `docs/PRICING.md` + the [[pricing-model]] memory.
+8. **Paddle-required public pages.** `/pricing` (plan cards + FAQ + **Pilot firms** callout + CTA),
+   `/refunds` (clean 14-day policy — rewritten to drop qualifiers Paddle rejected), operative
+   `/terms` + `/privacy` (draft banner removed). Operator **FINCREST PTY LTD** (reg
+   **2025/522652/07**, 187 Sir Lowry Road, C316, Woodstock Quarter, Cape Town 7915), single contact
+   **admin@torenone.com**, PoPIA Information Officer **Tylda Wilondja**. See [[legal-entity]].
+9. **FULL Paddle (sandbox) integration — code complete.**
+   - **Migration `supabase/migrations/20260625120000_paddle_billing.sql`** — `firms` billing cols
+     (`plan`, `is_pilot`*, `paddle_customer_id`, `paddle_subscription_id`, `subscription_status`,
+     `subscription_current_period_end`, `complimentary_until`); `design_credits` (PAYG unlock, unique
+     per run); `public.firm_can_download(run_id)` (the toll gate); grant fn. *(`is_founding` was
+     renamed to `is_pilot` in the next migration.)*
+   - **Migration `supabase/migrations/20260626120000_pilot_firms.sql`** — rename `is_founding`→
+     `is_pilot` + `grant_founding_firm`→`grant_pilot_firm`; **`pilot_codes` table** (RLS-locked);
+     extends `handle_new_user()` so a sign-up carrying a valid **`pilot_code`** auto-grants pilot
+     status + the no-credit-card month (controlled automation, NOT self-serve).
+   - **Webhook** `web/src/app/api/paddle/webhook/route.ts` + `web/src/lib/paddle/server.ts`
+     (HMAC-SHA256 signature verify) → updates subscription / inserts PAYG credit via the admin client.
+   - **Checkout** `web/src/lib/paddle/{config,checkout}.ts` (Paddle.js v2) + **Billing card**
+     `web/src/components/billing/billing-card.tsx` on the Account page; deep-link from the pricing
+     Firm CTA → `/dashboard?subscribe=firm` (proxy preserves the query in `next`).
+   - **Gate** `web/src/lib/billing/actions.ts` `getEntitledReportUrl(runId)` server action (subscription
+     OR complimentary OR PAYG credit; **fails OPEN if the migration isn't applied** so downloads keep
+     working); wired into every download button + a R250 PAYG checkout fallback.
+   - **Model = no credit card for pilots:** single Firm price + the pilot **discount** (R999); the free
+     month is the no-card grant, NOT a Paddle trial. Signup form has an optional **"Pilot access code"**
+     field (prefilled from `?pilot=CODE`). "Pilot" (not "Founding") + "credit card" (not "card") used
+     consistently across landing, pricing, app, and docs.
+
+### Current state / what's running
+
+- **Netlify FREE CREDITS ARE EXHAUSTED** → web is **NOT auto-deploying** right now. Everything above
+  is on `main` + CI-green but **not yet live on torenone.com** until the founder **upgrades Netlify
+  (planned "tomorrow" ≈ 2026-06-28)**. Local testing works.
+- **Fly service**: `min_machines_running = 1`, deployed, healthy (zero cold start).
+- **Local engineering service** was started on `:8000` from the worktree source (CORS allows
+  localhost:3000 + :3100) so local `/parse`+`/design` work; it may have been killed — restart per the
+  [[run-engineering-service-locally]] memory (swap PYTHONPATH to the worktree paths to include this
+  session's kernel/service changes).
+- **Paddle SANDBOX configured by the founder:** products — Firm R1,650/mo *no trial*
+  `pri_01kvzgjrzkfmk5nas8hax3vtxj` (this is `NEXT_PUBLIC_PADDLE_PRICE_FIRM_MONTHLY`); a "Founding Firm
+  Subscription" R1,650 *with 1-mo trial* `pri_01kvzh2vbsreap4mjy5se6ymqp` → **UNUSED/archive** (we use
+  the no-card grant, not a Paddle trial); calc package R250 `pri_01kvzgp1ss58phbv9m670vr8wj`; discount
+  R651×12 "Founding Firm Discount"; client token "TorenOne"; webhook destination created. Env in
+  `web/.env.local` (gitignored, both checkouts) is pre-filled EXCEPT 3 secrets the founder must paste:
+  `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN`, `NEXT_PUBLIC_PADDLE_DISCOUNT_PILOT`, `PADDLE_WEBHOOK_SECRET`
+  (then restart `npm run dev`). `SUPABASE_SERVICE_ROLE_KEY` was copied in. See `docs/PADDLE.md`.
+
+### Pending (founder-gated) — what we still owe
+
+1. **Paddle KYB business-registry screenshot.** Paddle wants a screenshot from the **official
+   government** registry. SA's registry is **CIPC** — use **eservices.cipc.co.za** or
+   **bizportal.gov.za** (NOT WinDeed/LexisNexis, a private reseller, which Paddle won't accept).
+   Screenshot the company page showing FINCREST PTY LTD + reg `K2025/522652/07` + the visible
+   gov URL + date, and reply to Paddle (sellers@paddle.com).
+2. Paste the **3 Paddle secrets** into `web/.env.local`; **`supabase db push`** (apply the
+   `20260625` + `20260626` migrations so billing/entitlement/pilot codes work); create a `pilot_codes`
+   row and share the `torenone.com/signup?pilot=<CODE>` link.
+3. **Upgrade Netlify** → then a push deploys everything (the SEO/branding/pricing/Paddle pages).
+4. **Co-founder validation gate (`PRODUCTION_READINESS.md` §1) — still the real blocker to revenue.**
+   `tools/validate_frame.py` makes his session fast.
+
+### Carry-forward decisions (do NOT regress)
+
+- **Wind-derived checks stay ADVISORY/non-gating** until the co-founder validates the wind method.
+- **Deploy = Netlify (web) + Fly (service) + Supabase (DB). No Vercel.**
+- **Payment integration is now BUILT in sandbox** (the founder chose to build it now, not defer) —
+  but it only *enforces* once the migrations are applied + env set; otherwise it degrades gracefully.
+- **"Pilot" not "Founding"; "credit card" not "card."** Pilots = **no credit card** (we grant the free
+  month via a pilot access code → `is_pilot` + `complimentary_until`); they pay R999 only when they
+  choose to subscribe. Non-pilot firms = standard R1,650.
+- Legal pages are **operative but NOT attorney-reviewed** (founder accepted for now).
+- **Going forward: when the founder reports a bug or asks for a feature, just build it** (web
+  auto-deploys on push once Netlify is back). Full mypy = `mypy kernel/src tools service/src`; pin
+  `sqlglot>=27,<28`; never commit secrets; `web/.env.local` + `.claude/launch.json` are gitignored.
+
+---
+
+## ⏩⏩ SESSION 3 CONTINUATION (2026-06-24) — then the Session 2 block, then `docs/PRODUCTION_READINESS.md`
 
 > Third long session (2026-06-16 → 2026-06-24). **`main` HEAD = `38d6844`**, branch pushes go
 > to `main`, working tree clean, **CI green**. This block is the freshest bridge; the Session 2
