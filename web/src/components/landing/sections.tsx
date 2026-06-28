@@ -35,6 +35,14 @@ export function TrustBar() {
             ))}
           </div>
         </Reveal>
+        <Reveal delay={140}>
+          <p className="text-subtle text-center text-sm">
+            Benchmarked against the SAISC Red Book —{" "}
+            <Link href="/validation" className="text-accent hover:underline">
+              see our kernel vs the Red Book →
+            </Link>
+          </p>
+        </Reveal>
       </div>
     </section>
   );
@@ -281,6 +289,10 @@ export function SiteFooter() {
         <div className="text-subtle mt-1 flex flex-wrap items-center justify-center gap-4 text-xs">
           <Link href="/pricing" className="hover:text-foreground transition-colors">
             Pricing
+          </Link>
+          <span aria-hidden>·</span>
+          <Link href="/validation" className="hover:text-foreground transition-colors">
+            Red Book validation
           </Link>
           <span aria-hidden>·</span>
           <Link href="/terms" className="hover:text-foreground transition-colors">
