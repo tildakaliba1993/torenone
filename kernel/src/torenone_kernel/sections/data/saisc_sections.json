@@ -254,7 +254,7 @@
       "area_mm2": 3220.0,
       "depth_mm": 203.2,
       "width_mm": 133.4,
-      "web_thickness_mm": 5.8,
+      "web_thickness_mm": 5.7,
       "flange_thickness_mm": 7.8,
       "second_moment_ix_mm4": 23500000.0,
       "second_moment_iy_mm4": 3090000.0,
@@ -262,7 +262,7 @@
       "plastic_modulus_zx_mm3": 259000.0,
       "radius_gyration_rx_mm": 85.4,
       "radius_gyration_ry_mm": 31.0,
-      "torsion_constant_j_mm4": 62100.0,
+      "torsion_constant_j_mm4": 59000.0,
       "warping_constant_cw_mm6": 29500000000.0
     },
     {
@@ -271,7 +271,7 @@
       "area_mm2": 3800.0,
       "depth_mm": 206.8,
       "width_mm": 133.8,
-      "web_thickness_mm": 6.3,
+      "web_thickness_mm": 6.4,
       "flange_thickness_mm": 9.6,
       "second_moment_ix_mm4": 28900000.0,
       "second_moment_iy_mm4": 3840000.0,

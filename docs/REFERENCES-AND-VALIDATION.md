@@ -80,6 +80,13 @@ the end:
 | Plane-frame analysis | Standard portal-frame statics worked examples (any reputable structures textbook) |
 | Member checks (SANS 10162-1) | CSA S16 worked examples (method-identical); SAISC 4th-edition examples |
 
+#### SAISC Red Book component validation (`docs/REDBOOK-VALIDATION.md`)
+A growing **must-pass** suite (`kernel/tests/validation/redbook/`) benchmarks the kernel's isolated,
+clause-tagged functions against published values in the SAISC Red Book (8th ed. 2013) — section
+properties, member resistances, connections, baseplate. It is **co-founder-independent** (reference
+values are authoritative + public), de-risks the gravity ULS-1 gating path, and already corrected
+three section-data values. Results + findings: `docs/REDBOOK-VALIDATION.md`.
+
 ## 4. Tolerances — the definition of "correct" (recommended)
 
 These tolerances are what `test_benchmark` and the regression suite assert. They balance "tight
