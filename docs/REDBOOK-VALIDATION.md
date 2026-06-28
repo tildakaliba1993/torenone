@@ -106,11 +106,33 @@ grade-independent (M24-8.8 = 22.7; 3·φbr·d·fu with d=24, fu=470 = 22.67). Th
 design pipeline uses 480 MPa (SANS Table 6). The benchmark feeds 470 to test the formula; the
 SANS-vs-EN plate-fu choice is the engineer's to confirm.
 
-### Still open
-- **Beam-column interaction** — the Red Book's only worked example (Ex 4.3) is *biaxial*; the kernel
-  check is *uniaxial* (in-plane portal). Components (Cr, Mr) are validated; a true interaction check
-  belongs at frame level (the whole-frame gate or a dedicated portal example).
-- **End-plate moment connection** (Ch 7.9) — the kernel uses a simplified T-stub/flange-couple
-  method flagged PROVISIONAL; validation needs the registered engineer's method sign-off.
-- **Baseplate** (Ch 4.2) — needs the Red Book's worked thickness answer extracted to benchmark
-  `check_baseplate`/`design_baseplate`.
+## Method items for the co-founder (not component-benchmarkable — method choices, need sign-off)
+
+These are **not** simple data/formula checks the suite can settle; each is a modelling-method choice
+where the kernel and the Red Book differ (or the kernel is explicitly PROVISIONAL). Listed with the
+specific divergence so the registered engineer can adjudicate quickly. Same posture as the wind and
+shear-Av-basis flags — do not change without sign-off.
+
+### Baseplate (`foundations/baseplate.py`) — kernel AISC-style vs Red Book §4.2.2 BS5950-style
+| Aspect | Kernel | Red Book §4.2.2 |
+|---|---|---|
+| Bearing strength | φc·0.85·f'c = 0.6·0.85·25 = **12.75 MPa** (cylinder f'c) | 0.6·fcu = **15 MPa** (cube fcu) |
+| Concrete strength basis | f'c (cylinder); default 25 labelled cylinder | fcu (cube) — note cube ≈ 1.25·cylinder |
+| Plate thickness | plastic `Mr = φ·fy·t²/4` on an AISC cantilever (overhang 0.95·d / 0.80·bf) | `t = √(3w/fy)·c`, c from the effective-area method |
+| Anchor tension | structural-bolt `0.75·φar·Ab(shank)·fu` (φar=0.67) | Table 4.6 / cl. 25.2.2.1: `φ·An(tensile-stress-area)·fu` + concrete bond/anchor-plate bearing (not modelled) |
+
+Anchor numbers are close (M20-8.8 ≈ 131 kernel vs ≈126 Red Book) but on a different clause basis.
+The Red Book does **not** work its baseplate example numerically (it points to the SAISC Green Book),
+so there is no published answer to benchmark against. Recommend reconciling the kernel's bearing model
+against SANS 10100-1 cl. 4.10 + the Green Book worked example.
+
+### End-plate moment connection (`connections/moment_endplate.py`) — Red Book Ch 7.9
+Kernel uses a simplified T-stub / flange-force-couple method, flagged PROVISIONAL in its docstring.
+The Red Book Ch 7.9 gives a tabulated design-check procedure. Benchmarking is only meaningful once the
+registered engineer signs off the *method*; the bolt primitives it relies on are already validated.
+
+### Beam-column interaction (`checks/interaction.py`) — validated at component level
+The kernel's `beam_column_check` is *uniaxial* (in-plane portal bending). The Red Book's only worked
+example (Ex 4.3) is a *biaxial* multi-storey column, so it is not a 1:1 source. The inputs that feed
+the interaction (Cr, Mr) are validated above; a true end-to-end interaction check belongs at the
+**frame level** — the whole-frame gate (`benchmarks.py`) or a dedicated single-bay portal example.
