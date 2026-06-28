@@ -21,12 +21,13 @@ older edition.
 | Area | Source | Suite | Status |
 |---|---|---|---|
 | Section properties (IPE-AA, IPE, UB, UC) | Tables 2.9, 2.10 | `test_redbook_sections.py` | ✅ 11 sections, ≤1% |
-| Compression resistance Cr | Ch 4 | `test_redbook_compression.py` | ⏳ planned |
-| Flexural resistance Mr (+ LTB) | Ch 5 | `test_redbook_flexure.py` | ⏳ planned |
-| Classification | Ch 11 / Table 4 | `test_redbook_classification.py` | ⏳ planned |
-| Beam-column interaction | Ch 4/5 | `test_redbook_interaction.py` | ⏳ planned |
+| Compression resistance Cr | Ch 4 (Ex 4.1, 4.3) | `test_redbook_compression.py` | ✅ 3 cases, ≤1.5% |
+| Flexural resistance Mr — supported + LTB | Ch 4/5 (Ex 4.3, 5.1, 5.2) | `test_redbook_flexure.py` | ✅ 5 cases, ≤1% |
+| Classification (flexure) | §5.1.3 / Table 5.3 | `test_redbook_classification.py` | ✅ 15 sections incl. Class 4 |
+| Shear resistance Vr (formula) | Ch 5 (Ex 5.3) | `test_redbook_shear.py` | ✅ 1 case (Av basis flagged) |
+| Beam-column interaction | Ch 4 (Ex 4.3) | `test_redbook_interaction.py` | ⏳ planned |
 | Bolts + end-plate (edition-aware) | Ch 6/7 | `test_redbook_connections.py` | ⏳ planned |
-| Baseplate | Ch 7/12 | `test_redbook_baseplate.py` | ⏳ planned |
+| Baseplate | Ch 4.2 / Ex | `test_redbook_baseplate.py` | ⏳ planned |
 
 ## Findings & fixes
 
@@ -52,3 +53,30 @@ self-consistent.
 differences vs the Red Book that fall inside ±1% and were left as-is — mass (25.3 vs 25.1; 29.8 vs
 30.0) and width (133.4 vs 133.2; 133.8 vs 133.9). Worth a full dataset reconciliation at section
 sign-off; this suite now guards every benchmarked value going forward.
+
+### Member resistances (Ch 4 + Ch 5) — 2026-06-28
+Benchmarked the kernel's isolated check functions against Red Book worked examples. **No logic
+bugs** — every value reproduced the Red Book within tolerance:
+
+| Check | Function | Red Book | Kernel | Δ |
+|---|---|---|---|---|
+| Compression Cr (Ex 4.1, 203×133×30, KL=2000) | `cr_flexural` | 834 kN | 842 | +1.0% |
+| Compression Crx/Cry (Ex 4.3, 305×305×118) | `cr_flexural` | 4510 / 3890 | 4506 / 3894 | <0.1% |
+| Moment Mrx/Mry supported (Ex 4.3) | `mr_laterally_supported` | 614 / 281 | 614 / 281 | exact |
+| LTB Mcr (Ex 5.2, 533×210×122, KL=5 m, ω2=1.75) | `mcr_elastic` | 1625 kN·m | 1626 | <0.1% |
+| LTB Mr (Ex 5.2 / Ex 5.1) | `mr_ltb` | 929 / 317 | 936 / 317 | ≤0.8% |
+| Classification, flexure (Table 5.3) | `classify_section` | 15 sections | all match | — |
+
+Classification highlight: the kernel reproduces every class in Table 5.3 exactly, including the
+two Class-3 sections (203×203×46, 305×305×97) and correctly **rejects 152×152×23 as Class 4**
+(out of MVP scope). Fed fy = 350 MPa to match the Red Book's Grade-350 basis.
+
+**⚠️ FLAG for the co-founder — shear area basis (not a bug; kernel is conservative).** Red Book
+Ex 5.3 computes the shear area as **overall depth × tw** (Vr = 1050 kN for 533×210×82). The kernel
+(`checks/shear.py`) uses the **clear web depth** hw = d − 2·tf, giving ≈1002 kN — about **4–5% more
+conservative**. The kernel docstring cites SANS 10162-1 cl. 13.4.1.1 ("tw·h"); whether *h* means
+overall or clear depth is a code-interpretation call. The Vr formula itself is correct (fed the
+overall-depth basis it returns 1040 kN, within 1% of the Red Book; the small residual is the
+kernel's inelastic web-buckling reduction just past the h/t limit, which the Red Book table omits).
+Decision deferred to the registered engineer — same posture as the wind-gating call. Changing it
+would make designs *less* conservative, so it must not be flipped without sign-off.
