@@ -38,10 +38,24 @@ PHI_AR: float = 0.67   # cl. 13.1(i) — holding-down (anchor) bolts
 _THREADS_IN_SHEAR_PLANE_FACTOR: float = 0.70
 
 # Bolt ultimate tensile strength by property class (MPa) — cl. 13.12.1.2 NOTE.
+# NB (ISO 898-1): Class 8.8 has fu = 800 MPa for d ≤ 16 mm and 830 MPa for d > 16 mm. The flat
+# value below is the d > 16 mm case; see _bolt_fu_mpa() for the small-diameter reduction (the
+# SAISC Red Book Table 7.2 reflects this — M16-8.8 uses 800, M20+ use 830).
 _GRADE_FU: dict[str, float] = {
     "8.8": 830.0,
     "10.9": 1040.0,
 }
+
+
+def _bolt_fu_mpa(grade: str, diameter_mm: float) -> float:
+    """Minimum tensile strength fu (MPa) per ISO 898-1, accounting for diameter.
+
+    Class 8.8: fu = 800 MPa for d ≤ 16 mm, 830 MPa for d > 16 mm. Class 10.9: 1040 MPa throughout.
+    Using a flat 830 for all 8.8 bolts overstates the resistance of M16 (and smaller) by ~3.8%.
+    """
+    if grade == "8.8" and diameter_mm <= 16.0:
+        return 800.0
+    return _GRADE_FU[grade]
 
 # ISO metric coarse-thread tensile stress area Aₛ (mm²) — standard geometric values.
 # Retained as a documented bolt property; the SANS resistance formulas use the nominal
@@ -89,7 +103,7 @@ def make_bolt(size: str, grade: str) -> BoltSpec:
         diameter_mm=_DIAMETER_MM[size],
         stress_area_mm2=_STRESS_AREA_MM2[size],
         grade=grade,
-        fu_mpa=_GRADE_FU[grade],
+        fu_mpa=_bolt_fu_mpa(grade, _DIAMETER_MM[size]),
     )
 
 

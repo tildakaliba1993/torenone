@@ -25,9 +25,10 @@ older edition.
 | Flexural resistance Mr — supported + LTB | Ch 4/5 (Ex 4.3, 5.1, 5.2) | `test_redbook_flexure.py` | ✅ 5 cases, ≤1% |
 | Classification (flexure) | §5.1.3 / Table 5.3 | `test_redbook_classification.py` | ✅ 15 sections incl. Class 4 |
 | Shear resistance Vr (formula) | Ch 5 (Ex 5.3) | `test_redbook_shear.py` | ✅ 1 case (Av basis flagged) |
-| Beam-column interaction | Ch 4 (Ex 4.3) | `test_redbook_interaction.py` | ⏳ planned |
-| Bolts + end-plate (edition-aware) | Ch 6/7 | `test_redbook_connections.py` | ⏳ planned |
-| Baseplate | Ch 4.2 / Ex | `test_redbook_baseplate.py` | ⏳ planned |
+| Bolt resistances (tension/shear/bearing) | Table 7.2 | `test_redbook_connections.py` | ✅ M16–M30 × 8.8/10.9 |
+| Beam-column interaction | Ch 4 (Ex 4.3) | `test_redbook_interaction.py` | ⚠️ deferred (biaxial example vs uniaxial kernel — best at frame level) |
+| End-plate moment connection | Ch 7.9 | — | ⏳ provisional method (engineer sign-off) |
+| Baseplate | Ch 4.2 | — | ⏳ needs worked answer extracted |
 
 ## Findings & fixes
 
@@ -80,3 +81,36 @@ overall-depth basis it returns 1040 kN, within 1% of the Red Book; the small res
 kernel's inelastic web-buckling reduction just past the h/t limit, which the Red Book table omits).
 Decision deferred to the registered engineer — same posture as the wind-gating call. Changing it
 would make designs *less* conservative, so it must not be flipped without sign-off.
+
+### Bolt resistances (Table 7.2) — 2026-06-28
+Benchmarked `connections/bolts.py` (tension, single/double shear with threads in the shear plane,
+bearing per mm) for Class 8.8 and 10.9, sizes M16–M30, against Red Book Table 7.2.
+
+**Edition concern resolved:** despite the Red Book being SANS 10162-1:2005-based, its bolt factors
+**match the kernel's 2011 values exactly** — no edition drift for bolts (the connection code was
+already corrected against the official SANS PDF in a prior session). All shear/tension/bearing
+values agree to <1%.
+
+**Kernel bug found + fixed — M16-8.8 tensile strength.** The kernel applied a flat fu = 830 MPa to
+all Class 8.8 bolts, but per **ISO 898-1**, Class 8.8 has fu = **800 MPa for d ≤ 16 mm** (830 only
+for d > 16 mm) — confirmed by Red Book Table 7.2 (M16-8.8 tension = 96.5 kN, not ~100). The kernel
+overstated M16-8.8 resistances by ~3.8% (unconservative). Fixed via `_bolt_fu_mpa()` in `bolts.py`
+(8.8 → 800 if d ≤ 16). Low practical impact (M16 is not in the auto-designer's `STANDARD_BOLTS`),
+but now correct and guarded. The fix is *more* conservative.
+
+**Red Book typo (kernel correct):** Table 7.2 prints M24-10.9 bearing = 27.7 kN/mm, but bearing is
+grade-independent (M24-8.8 = 22.7; 3·φbr·d·fu with d=24, fu=470 = 22.67). The 27.7 is an apparent
+2↔7 transposition; the suite asserts the correct 22.7.
+
+**Basis note (not a bug):** Table 7.2 bearing uses ply fu = 470 MPa (EN/S355JR min); the kernel's
+design pipeline uses 480 MPa (SANS Table 6). The benchmark feeds 470 to test the formula; the
+SANS-vs-EN plate-fu choice is the engineer's to confirm.
+
+### Still open
+- **Beam-column interaction** — the Red Book's only worked example (Ex 4.3) is *biaxial*; the kernel
+  check is *uniaxial* (in-plane portal). Components (Cr, Mr) are validated; a true interaction check
+  belongs at frame level (the whole-frame gate or a dedicated portal example).
+- **End-plate moment connection** (Ch 7.9) — the kernel uses a simplified T-stub/flange-couple
+  method flagged PROVISIONAL; validation needs the registered engineer's method sign-off.
+- **Baseplate** (Ch 4.2) — needs the Red Book's worked thickness answer extracted to benchmark
+  `check_baseplate`/`design_baseplate`.
