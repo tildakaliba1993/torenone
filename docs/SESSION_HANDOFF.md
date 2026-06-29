@@ -5,7 +5,43 @@ Full context for continuing work in a new session. Everything below is committed
 
 ---
 
-## ⏩⏩⏩⏩ SESSION 5 CONTINUATION (2026-06-29) — **READ THIS FIRST**, then the Session 4 block below
+## ⏩⏩⏩⏩⏩ SESSION 6 CONTINUATION (2026-06-29) — **READ THIS FIRST**, then Session 5 below
+
+> Sixth session — theme: **annihilate dependence on the co-founder** by extending the second-authority
+> validation to every remaining engineering area + packaging it for a fast sign-off. `main` is
+> CI-green; commits are **batched locally, NOT yet pushed** (web is unchanged → avoid a wasted Netlify
+> build; push when the founder says). Worktree `loving-blackwell-89a1e6`; venv + service in the MAIN
+> checkout. Founder is NON-technical ([[communicate-plainly]]).
+
+### What this session shipped (batched on the worktree branch, CI-green locally)
+1. **Column base validated + rebuilt** (`foundations/baseplate_sans.py`). Our live baseplate is
+   AISC-style; **both** SA authorities (Red Book §4.2.2 + Mahachi §7.9) use the SANS 10100/BS5950
+   effective-area method. New module reproduces Mahachi **E7.13 + E7.14 to the mm** (20 mm plate;
+   35 mm plate, 30 mm Grade-43 bolts, gussets, welds) — 7 must-pass tests. PROVISIONAL, **not wired
+   into the live path** (decision D2).
+2. **Connections validated** (`connections/textbook.py`). Reproduces Mahachi **E7.5–E7.9**: the
+   **Eurocode-3 T-stub prying** check our end-plate OMITS (Tu=68.6 kN, +14.3%) + the elastic
+   bolt-group method (E7.6/E7.7/E7.9). 5 must-pass tests. PROVISIONAL (decision D3).
+3. **Wind verification card** (`docs/WIND-VERIFICATION.md`). KEY FINDING: the Mahachi book computes
+   wind to the SUPERSEDED **SANS 10160:1989** (E2.3) and the Red Book has no wind chapter — neither
+   can validate our **SANS 10160-3:2019** engine. But our wind *pressures* are already validated vs
+   the **standard's own tables** (1/3/4/6/10). Card isolates the 4 real judgment items (D4–D7).
+4. **Sign-off pack** (`docs/SIGN-OFF-PACK.md`) — the capstone. One bounded review doc: authorities to
+   confirm + validation evidence + **decisions register D1–D10** + the whole-frame gate. This is the
+   artifact that shrinks the co-founder's job to a checklist. See [[sign-off-pack]].
+
+### Carry-forward (do NOT regress)
+- Validating against a published authority **strengthens confidence + gives a benchmark, but NEVER
+  promotes PROVISIONAL→VERIFIED** — that + the stamp are the engineer's (company law 🔴). New methods
+  (`baseplate_sans`, `textbook` prying/bolt-group) are PROVISIONAL + **not** in the live design path.
+- The Mahachi book is a 2nd authority for **members + column bases + connections**, **NOT wind**
+  (1989 code) — [[wind-analysis-provisional]]. Wind authority = the SANS 10160-3:2019 standard itself.
+- Remaining validation: **LTB beam E5.2** (last quick 2nd-source). Then the **whole-frame gate** still
+  needs one real past project (the live-revenue unlock).
+
+---
+
+## ⏩⏩⏩⏩ SESSION 5 CONTINUATION (2026-06-29) — then the Session 4 block below
 
 > Fifth long session. **`main` is CI-green**; push `git push origin HEAD:main`. Worktree
 > `/Users/cash/TorenOne/.claude/worktrees/competent-lovelace-426dc4`; venv + engineering service in
