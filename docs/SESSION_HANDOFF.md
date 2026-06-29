@@ -5,7 +5,87 @@ Full context for continuing work in a new session. Everything below is committed
 
 ---
 
-## ⏩⏩⏩ SESSION 4 CONTINUATION (2026-06-27) — **READ THIS FIRST**, then the Session 3 block below, then `docs/PRODUCTION_READINESS.md`
+## ⏩⏩⏩⏩ SESSION 5 CONTINUATION (2026-06-29) — **READ THIS FIRST**, then the Session 4 block below
+
+> Fifth long session. **`main` is CI-green**; push `git push origin HEAD:main`. Worktree
+> `/Users/cash/TorenOne/.claude/worktrees/competent-lovelace-426dc4`; venv + engineering service in
+> the **MAIN checkout** `/Users/cash/TorenOne`. **The memory files (`MEMORY.md` + linked notes) are
+> current — read them first.** Founder is **NON-technical** (Claude = CTO, founder = implementer):
+> explain plainly, no jargon, keep code rigour high ([[communicate-plainly]]).
+
+### What this session shipped (all on `main`, CI-green, pushed)
+1. **Pluggable payments + Dodo.** Provider-neutral `web/src/lib/payments/` (switch
+   `NEXT_PUBLIC_PAYMENT_PROVIDER=paddle|dodo`, one active; adapters `providers/{paddle,dodo}`;
+   per-provider webhook routes → one `entitlements` handler). DB cols → `payment_*` + `payment_provider`
+   (migration `20260627120000`). Founder chose **Dodo** (SA-fast KYB, EU-ready, NOT Stripe) as 2nd MoR.
+   `docs/PAYMENTS.md`, [[pricing-model]]. Enforces only once migrations applied + env set.
+2. **Red Book validation** `kernel/tests/validation/redbook/` — **43 must-pass** checks vs SAISC Red
+   Book (sections, compression, flexure/LTB, classification, shear, bolts). **Fixed 2 data bugs**
+   (203x133x25/30 web+J; M16-8.8 fu=800 per ISO 898-1). `docs/REDBOOK-VALIDATION.md`, [[redbook-validation]].
+3. **Public `/validation` page** (web) — honest "benchmarked against the Red Book" marketing + self-verify (Netlify).
+4. **Wide-span auto-designer fix** — per-axis axial buckling (rafter minor axis braced at purlin
+   spacing) + deflection upgrade deepens rafter **and** column. 24/30 m now design; 36 m = genuine
+   section-depth limit. Regression test added. ⚠️ minor-axis effective-length = **method change → on
+   co-founder's sign-off list**.
+5. **Code-agnostic architecture (Phase 1 + 1b)** — `kernel/src/torenone_kernel/codes/` `DesignCode`
+   interface + `SANS10162` adapter; `design.py`/`checks/autosize.py` route through `code` (default
+   SANS). **Pure refactor, byte-identical.** Whole design path behind the seam. AISC = planned 2nd
+   code (Phase 2). [[code-agnostic-architecture]].
+6. **Second-authority validation** `kernel/tests/validation/textbook/` — **11 tests** vs **Mahachi,
+   *Design of Structural Steelwork to SANS 10162*** (CSIR 2004, Pr.Eng): compression (E4.3), beam
+   (E5.1), and **beam-column interaction (E6.1, cl.13.8 all 3 modes)** — the case the Red Book
+   lacked. **Two accredited authorities now agree** across the member path.
+
+### Strategic frame (a consultant audited the public repo; synthesis)
+- TorenOne **already is** the "automated calc-package + code-compliance" product, executed unusually
+  well (deterministic SANS kernel + trust architecture = the moat). **Real risks = (1) the validation
+  gate (one real validated whole-frame), (2) pilots — NOT the product.**
+- Honest soft spot: the **"AI" is an on-ramp** (parse + narrate), not the engine. Design-agent gaps
+  (post-traction): plans-in (vision) → topology generation → agentic loop → multi-code.
+- **RC = Year-2**, not now (bigger TAM but harder; same data scarcity — SANS 10100 paywalled, ACI not
+  free; needs MORE engineer oversight; start from the existing pad footing). **EN 10025-2 fy is
+  correct for SA sections** (= SANS 50025-2) — not a placeholder to swap to SANS 1431.
+- **Standards already possessed** in the gitignored `standards/` (main checkout); much already
+  verified clause-by-clause. The "PROVISIONAL pile" is smaller than a public clone suggests.
+
+### Dependency-reduction strategy (co-founder busy with Master's exams = the bottleneck)
+Goal: shrink his job to **"confirm the authorities are appropriate + approve methods + stamp."** Lever
+pulled: **two authorities (Red Book + Mahachi) now agree** across the member path incl. interaction.
+**Correctness boundary (company law): 🟢 build anything not changing an engineering number; 🟡 write
+new engineering logic but mark PROVISIONAL + queue for sign-off; 🔴 NEVER flip PROVISIONAL→VERIFIED or
+invent a method yourself.** Irreducible floor: an accredited engineer approves methods + takes
+responsibility (the stamp) — cannot be removed (it's the moat).
+
+### Pending / next moves (priority)
+1. **Keep mining the Mahachi book** (`/Users/cash/Downloads/Design of Structural Steelwork to SANS
+   10162.pdf`; Red Book at `/Users/cash/Downloads/The SAISC Red Book.pdf`): **connections/column-bases
+   (E7.x)** + **LTB beam (E5.2)** — 2nd authority on weakest-validated areas.
+2. **Wind pre-digest** — candidate wind method validated vs the book's wind example (E2.3), so the
+   co-founder's biggest item becomes "confirm vs textbook" (🟡).
+3. **Sign-off pack** — verification card per PROVISIONAL item + engineering-decisions register.
+4. **Whole-frame validation gate** — still needs a firm's real past project OR a constructed case (book
+   has no portal worked example). `benchmarks.py` (dormant) + `tools/validate_frame.py` ready.
+5. **Agent evolution (🟢)**: drawings-in (vision → draft `FrameSpec` → existing confirm-gate); later an
+   agentic loop that **never lets the LLM skip a mandatory check**.
+6. **Phase 2**: AISC `DesignCode` adapter + benchmark vs free AISC Design Examples.
+
+### Carry-forward decisions (do NOT regress)
+- Communicate plainly; wind advisory until co-founder validates; deploy = Netlify+Fly+Supabase,
+  **deploy frugally**; payments pluggable; **every code needs a jurisdiction engineer** (AISC =
+  architecture/benchmark only until a US PE). Section-data fixes + M16 fu + wide-span minor-axis method
+  are **engineering-bearing → co-founder sign-off list** (in REDBOOK-VALIDATION.md).
+- **Kernel/engine fixes reach prod only on a manual `fly deploy`** from the main checkout — founder must
+  `git pull origin main` first (main checkout has been behind `origin/main`).
+
+### Working notes
+Tests via main-checkout venv: `PYTHONPATH=kernel/src:tools /Users/cash/TorenOne/.venv/bin/pytest kernel`
+(validation: `kernel/tests/validation/{redbook,textbook}`). Always full `mypy kernel/src tools service/src`
++ `ruff`. Watch CI with `gh run watch` using **`--event push`** (the nightly **scheduled** run executes
+the opt-in Playwright E2E, which is flaky/red and unrelated to pushes — not a push failure).
+
+---
+
+## ⏩⏩⏩ SESSION 4 CONTINUATION (2026-06-27) — then the Session 3 block below, then `docs/PRODUCTION_READINESS.md`
 
 > Fourth long session. **`main` is CI-green**; branch pushes go to `main` (`git push origin HEAD:main`).
 > Working in the git worktree `/Users/cash/TorenOne/.claude/worktrees/ecstatic-kalam-d6bd36`; the
