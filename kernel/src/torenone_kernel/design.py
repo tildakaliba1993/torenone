@@ -51,7 +51,7 @@ from torenone_kernel.checks.deflection import (
     horizontal_sway_check,
     vertical_deflection_check,
 )
-from torenone_kernel.checks.material import fy_mpa as _fy_mpa
+from torenone_kernel.codes import DEFAULT_CODE, DesignCode
 from torenone_kernel.connections.moment_endplate import design_moment_connection
 from torenone_kernel.foundations.baseplate import design_baseplate
 from torenone_kernel.foundations.pad_footing import design_pad_footing
@@ -76,7 +76,6 @@ from torenone_kernel.models.results import (
     PadFootingDesignResult,
     SectionChoice,
 )
-from torenone_kernel.rules_version import as_dict as _rules_version
 from torenone_kernel.sections.library import SectionLibrary
 from torenone_kernel.sections.properties import SectionProperties
 
@@ -320,6 +319,7 @@ def design(
     cost_rate_zar_per_kg: float = DEFAULT_COST_RATE_ZAR_PER_KG,
     *,
     autosize_for_wind: bool = False,
+    code: DesignCode = DEFAULT_CODE,
 ) -> DesignResult:
     """Run the full SANS 10162-1 portal-frame design pipeline for *spec*.
 
@@ -339,8 +339,8 @@ def design(
     DesignResult — sections chosen, all checks with utilisations, rules_version, warnings.
     The result is deterministic: identical inputs → identical outputs (same library).
     """
-    library = SectionLibrary.load_default()
-    combos = {c.name.split()[0]: c for c in load_combinations(spec)}
+    library = code.section_library()
+    combos = {c.name.split()[0]: c for c in code.load_combinations(spec)}
 
     # Identify combinations needed
     uls1 = _combo_starting_with(combos, "ULS-1")
@@ -390,8 +390,8 @@ def design(
     for _iteration in range(_MAX_ITERATIONS):
         dead = dead_loads(spec, rafter=raf_sec, column=col_sec)
 
-        fy_raf = _fy_mpa(spec.materials.steel_grade, raf_sec.flange_thickness_mm)
-        fy_col = _fy_mpa(spec.materials.steel_grade, col_sec.flange_thickness_mm)
+        fy_raf = code.material_fy(spec.materials.steel_grade, raf_sec.flange_thickness_mm)
+        fy_col = code.material_fy(spec.materials.steel_grade, col_sec.flange_thickness_mm)
 
         # ULS-1 combined UDLs (kN/m = N/mm numerically)
         uls_rafter_udl = gamma_G * dead.rafter_udl_kn_per_m + gamma_Q * imposed.roof_udl_kn_per_m
@@ -445,13 +445,13 @@ def design(
             library, fy_raf,
             cu_kn=raf_cu_kn, vu_kn=raf_vu_kn, mu_knm=raf_mu_kn_m,
             KL_mm=KL_raf_mm, LTB_mm=LTB_raf_mm,
-            member="rafter",
+            member="rafter", code=code,
         )
         col_result = autosize_member(
             library, fy_col,
             cu_kn=col_cu_kn, vu_kn=col_vu_kn, mu_knm=col_mu_kn_m,
             KL_mm=KL_col_mm, LTB_mm=LTB_col_mm,
-            member="column",
+            member="column", code=code,
         )
 
         new_raf_sec = library.get(raf_result.section.designation)
@@ -497,7 +497,7 @@ def design(
     # deflection limit and every strength check. Deepening the rafter is the bigger lever for sag,
     # so we try that first (cheap, handles most frames) and escalate the column only when even the
     # stiffest rafter can't get there with the strength-sized column.
-    deflection_limit_mm = span_mm / 240.0
+    deflection_limit_mm = span_mm / code.deflection_limit_fraction()
 
     def _apex_deflection_mm(raf: SectionProperties, col: SectionProperties) -> float:
         """Return abs(apex vertical deflection, mm) from first-order SLS-1 analysis for (raf, col)."""
@@ -517,8 +517,9 @@ def design(
         try:
             return autosize_member(
                 SectionLibrary([section]),
-                _fy_mpa(spec.materials.steel_grade, section.flange_thickness_mm),
-                cu_kn=cu_kn, vu_kn=vu_kn, mu_knm=mu_knm, KL_mm=kl_mm, LTB_mm=ltb_mm, member=member,
+                code.material_fy(spec.materials.steel_grade, section.flange_thickness_mm),
+                cu_kn=cu_kn, vu_kn=vu_kn, mu_knm=mu_knm, KL_mm=kl_mm, LTB_mm=ltb_mm,
+                member=member, code=code,
             )
         except NoSectionFoundError:
             return None
@@ -567,7 +568,7 @@ def design(
     vertical_deflection = vertical_deflection_check(
         delta_mm=apex_delta_mm,
         span_mm=span_mm,
-        limit_fraction=240,
+        limit_fraction=code.deflection_limit_fraction(),
     )
 
     # ------------------------------------------------------------------ #
@@ -658,7 +659,7 @@ def design(
         frame_spec=spec,
         sections=sections,
         checks=all_checks,
-        rules_version=_rules_version(),
+        rules_version=code.rules_version(),
         warnings=tuple(warnings),
         total_steel_mass_kg=mass_kg,
         indicative_cost_zar=mass_kg * cost_rate_zar_per_kg,
@@ -678,6 +679,8 @@ def check(
     spec: FrameSpec,
     sections: list[SectionChoice],
     cost_rate_zar_per_kg: float = DEFAULT_COST_RATE_ZAR_PER_KG,
+    *,
+    code: DesignCode = DEFAULT_CODE,
 ) -> DesignResult:
     """Check engineer-supplied sections against SANS 10162-1:2011 without auto-sizing.
 
@@ -703,7 +706,7 @@ def check(
     KeyError   : if a designation is not in the SAISC library.
     ValueError : if 'rafter' or 'column' member is not in sections.
     """
-    library = SectionLibrary.load_default()
+    library = code.section_library()
 
     # Resolve SectionChoice → SectionProperties
     sec_map: dict[str, SectionProperties] = {}
@@ -718,7 +721,7 @@ def check(
     raf_sec = sec_map["rafter"]
     col_sec = sec_map["column"]
 
-    combos = {c.name.split()[0]: c for c in load_combinations(spec)}
+    combos = {c.name.split()[0]: c for c in code.load_combinations(spec)}
     uls1 = _combo_starting_with(combos, "ULS-1")
     sls1 = _combo_starting_with(combos, "SLS-1")
 
@@ -748,8 +751,8 @@ def check(
 
     # ---- Analysis (ULS-1) ----
     dead = dead_loads(spec, rafter=raf_sec, column=col_sec)
-    fy_raf = _fy_mpa(spec.materials.steel_grade, raf_sec.flange_thickness_mm)
-    fy_col = _fy_mpa(spec.materials.steel_grade, col_sec.flange_thickness_mm)
+    fy_raf = code.material_fy(spec.materials.steel_grade, raf_sec.flange_thickness_mm)
+    fy_col = code.material_fy(spec.materials.steel_grade, col_sec.flange_thickness_mm)
 
     uls_rafter_udl = gamma_G * dead.rafter_udl_kn_per_m + gamma_Q * imposed.roof_udl_kn_per_m
     uls_col_axial_udl = gamma_G * (
@@ -771,9 +774,9 @@ def check(
 
     # ---- Member strength checks ----
     raf_checks = _run_checks_safe(raf_sec, fy_raf, raf_cu, raf_vu, raf_mu,
-                                   KL_raf_mm, LTB_raf_mm, member="rafter")
+                                   KL_raf_mm, LTB_raf_mm, member="rafter", code=code)
     col_checks = _run_checks_safe(col_sec, fy_col, col_cu, col_vu, col_mu,
-                                   KL_col_mm, LTB_col_mm, member="column")
+                                   KL_col_mm, LTB_col_mm, member="column", code=code)
 
     # ---- Sway sensitivity ----
     total_gravity_kn = (
@@ -814,7 +817,7 @@ def check(
     deflection_check = vertical_deflection_check(
         delta_mm=abs(sls_disp["AP"]["DY"]),
         span_mm=span_mm,
-        limit_fraction=240,
+        limit_fraction=code.deflection_limit_fraction(),
     )
 
     # ---- The "last mile" (connections, baseplate, footing) on supplied sections ----
@@ -879,7 +882,7 @@ def check(
         frame_spec=spec,
         sections=section_choices,
         checks=all_checks,
-        rules_version=_rules_version(),
+        rules_version=code.rules_version(),
         warnings=tuple(warnings),
         total_steel_mass_kg=mass_kg,
         indicative_cost_zar=mass_kg * cost_rate_zar_per_kg,
@@ -1045,11 +1048,12 @@ def _run_checks_safe(
     KL_mm: float,
     LTB_mm: float,
     member: str,
+    code: DesignCode = DEFAULT_CODE,
 ) -> list[CheckResult]:
     """Run member checks, converting SectionIneligibleError to a failed CheckResult."""
     try:
         return run_member_checks(section, fy_mpa, cu_kn, vu_kn, mu_knm,
-                                  KL_mm, LTB_mm, member=member)
+                                  KL_mm, LTB_mm, member=member, code=code)
     except SectionIneligibleError as exc:
         return [CheckResult(
             name=f"{member}: section ineligible",
