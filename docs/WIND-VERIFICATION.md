@@ -100,5 +100,6 @@ registered engineer may settle these (🔴 — do not change without sign-off).*
 - **Section B (4 items):** the real wind sign-off — sign conventions (B1), gate/auto-size decision
   (B2), sway limit (B3), scope assumptions (B4). Settling B1 unlocks B2.
 
-Related cards: baseplate method decision (`docs/REDBOOK-VALIDATION.md`), shear-area basis
-(`docs/REDBOOK-VALIDATION.md`). These will be collected into the sign-off pack.
+**Master document:** these wind items are D4–D7 in the engineer sign-off pack
+(`docs/SIGN-OFF-PACK.md`), alongside the baseplate (D2), end-plate connection (D3), and shear-area
+(D1) cards in `docs/REDBOOK-VALIDATION.md`.

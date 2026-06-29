@@ -181,6 +181,10 @@ Planned additions (next increment): LTB beam (E5.2) as a second LTB source.
 
 ## Method items for the co-founder (not component-benchmarkable — method choices, need sign-off)
 
+> These are collected, with the wind items, into the master **`docs/SIGN-OFF-PACK.md`** decisions
+> register (baseplate = D2, end-plate connection = D3, shear-area = D1, wide-span minor-axis = D8,
+> bolt ply fu = D9, section data = D10). Review there for the full checklist.
+
 These are **not** simple data/formula checks the suite can settle; each is a modelling-method choice
 where the kernel and the Red Book differ (or the kernel is explicitly PROVISIONAL). Listed with the
 specific divergence so the registered engineer can adjudicate quickly. Same posture as the wind and
