@@ -101,16 +101,27 @@ def run_member_checks(
     sec_class = cls_result.overall_class
 
     # ---- 2. Axial compressive resistance Cr (cl. 13.3.1) ----
+    # Flexural buckling resistance is the weaker of the two principal axes (cl. 13.3.1):
+    #   * major axis (x): buckles over the full member effective length KL_mm, using rx;
+    #   * minor axis (y): the lateral restraints that prevent LTB (purlins on the rafter, girts
+    #     on the column) ALSO prevent minor-axis flexural buckling, so the unbraced length is the
+    #     restraint spacing LTB_mm — falling back to the full length KL_mm when no lateral
+    #     restraint is provided (LTB_mm ≤ 1, the conservative case).
+    # Cr = min of the two. (Using the full length with ry — as if a purlin-braced rafter could
+    # buckle weak-axis over its whole span — is the modelling error this corrects.)
+    minor_KL_mm = LTB_mm if LTB_mm > 1.0 else KL_mm
     try:
-        cr_kn = cr_flexural(
-            area_mm2=section.area_mm2,
-            fy_mpa=fy_mpa,
-            KL_mm=KL_mm,
-            r_mm=section.radius_gyration_ry_mm,
-            n=n,
+        cr_major_kn = cr_flexural(
+            area_mm2=section.area_mm2, fy_mpa=fy_mpa, KL_mm=KL_mm,
+            r_mm=section.radius_gyration_rx_mm, n=n,
+        )
+        cr_minor_kn = cr_flexural(
+            area_mm2=section.area_mm2, fy_mpa=fy_mpa, KL_mm=minor_KL_mm,
+            r_mm=section.radius_gyration_ry_mm, n=n,
         )
     except SlendernessError as exc:
         raise SectionIneligibleError(str(exc)) from exc
+    cr_kn = min(cr_major_kn, cr_minor_kn)
     cu_eff = max(cu_kn, 0.0)
     axial_util = cu_eff / cr_kn if cr_kn > 0 else 0.0
     checks.append(CheckResult(

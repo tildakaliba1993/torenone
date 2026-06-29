@@ -17,11 +17,15 @@ from __future__ import annotations
 
 import pytest
 from torenone_kernel.design import design
-from torenone_kernel.models.enums import TerrainCategory
+from torenone_kernel.models.enums import SteelGrade, TerrainCategory
 from torenone_kernel.models.frame_spec import (
     DeadLoadInputs,
+    FoundationInputs,
     FrameGeometry,
     FrameSpec,
+    ImposedLoadInputs,
+    Materials,
+    Restraints,
     WindContext,
 )
 from torenone_kernel.models.results import CheckResult, DesignResult, SectionChoice
@@ -167,3 +171,46 @@ class TestDeterminism:
         assert r_a.model_dump() != r_b.model_dump(), (
             "design() returned identical results for different specs"
         )
+
+
+# ---------------------------------------------------------------------------
+# Wide-span regression — the auto-sizer must satisfy SLS deflection (L/240),
+# not just strength. Guards two fixes in design.py / checks/autosize.py:
+#   1. Axial buckling now uses per-axis effective lengths (a purlin-braced rafter's
+#      minor axis is braced at the restraint spacing, not unbraced over the full span),
+#      so deep narrow rafters are no longer wrongly rejected on slenderness.
+#   2. The deflection upgrade deepens the rafter AND escalates the column when needed,
+#      so wide spans (e.g. 30 m) auto-design to a passing result.
+# ---------------------------------------------------------------------------
+
+def _wide_spec(span_m: float, eaves_m: float, pitch_deg: float) -> FrameSpec:
+    return FrameSpec(
+        geometry=FrameGeometry(
+            span_m=span_m, eaves_height_m=eaves_m, roof_pitch_deg=pitch_deg,
+            bay_spacing_m=6.0, number_of_bays=8,
+        ),
+        materials=Materials(steel_grade=SteelGrade.S355JR),
+        restraints=Restraints(rafter_restraint_spacing_m=1.5, column_restraint_spacing_m=3.0),
+        dead=DeadLoadInputs(roof_kpa=0.15),
+        imposed=ImposedLoadInputs(roof_access=False),
+        wind=WindContext(
+            basic_wind_speed_ms=36.0, terrain_category=TerrainCategory.B,
+            site_altitude_m=0.0, has_dominant_opening=False,
+        ),
+        foundation=FoundationInputs(allowable_bearing_kpa=150.0, concrete_fcu_mpa=25.0),
+    )
+
+
+class TestWideSpanDeflection:
+    @pytest.mark.parametrize("span,eaves,pitch", [(24.0, 6.0, 7.0), (30.0, 7.5, 5.0)])
+    def test_wide_span_auto_designs_to_a_pass(self, span, eaves, pitch):
+        r = design(_wide_spec(span, eaves, pitch))
+        assert r.passed, (
+            f"{span:.0f} m frame should auto-design to a passing result "
+            f"(governing utilisation {r.governing_utilisation:.2f})"
+        )
+
+    def test_deflection_check_passes_for_wide_span(self):
+        r = design(_wide_spec(30.0, 7.5, 5.0))
+        defl = next(c for c in r.checks if "deflection" in c.name.lower())
+        assert defl.passed, f"SLS deflection should pass for a 30 m frame (util {defl.utilisation:.2f})"

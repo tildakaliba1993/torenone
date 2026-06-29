@@ -65,6 +65,7 @@ from torenone_kernel.loads.imposed import imposed_roof_loads
 from torenone_kernel.loads.wind_loads import wind_loads
 from torenone_kernel.models.frame_spec import FrameSpec
 from torenone_kernel.models.results import (
+    AutosizeResult,
     BaseplateDesignResult,
     CheckResult,
     ConnectionDesignResult,
@@ -490,63 +491,78 @@ def design(
     # ------------------------------------------------------------------ #
     # SLS vertical deflection (elastic FEA — Annex D L/240)             #
     # ------------------------------------------------------------------ #
-    # Dead loads are recomputed per-candidate inside _compute_sls_rafter_udl
-    # (the rafter section can change in the deflection-upgrade loop below).
-    def _compute_sls_rafter_udl(raf: SectionProperties) -> tuple[float, float]:
-        """Return (sls_rafter_udl, sls_col_axial_udl) for the given rafter."""
-        d = dead_loads(spec, rafter=raf, column=col_sec)
-        return (
-            GAMMA_G_SLS_UNFAVOURABLE * d.rafter_udl_kn_per_m + GAMMA_Q_SLS * imposed.roof_udl_kn_per_m,
-            GAMMA_G_SLS_UNFAVOURABLE * (d.column_self_weight_kn_per_m + d.wall_cladding_udl_kn_per_m),
-        )
-
-    def _apex_deflection_mm(raf: SectionProperties, sls_raf_udl: float, sls_col_udl: float) -> float:
-        """Return abs(apex DY) from first-order SLS-1 analysis."""
-        disp = PortalAnalysis(spec, col_sec, raf).node_displacements(
-            sls1.name, sls_raf_udl, sls_col_udl
-        )
-        return abs(disp["AP"]["DY"])
-
-    # If the strength-sized rafter fails deflection, advance through the library
-    # lightest-first until deflection passes (deflection governs over strength for stiff
-    # but relatively shallow sections). This ensures the lightest section satisfying BOTH
-    # strength AND deflection is returned.
-    sls_raf_udl, sls_col_udl = _compute_sls_rafter_udl(raf_sec)
-    apex_delta_mm = _apex_deflection_mm(raf_sec, sls_raf_udl, sls_col_udl)
+    # The strength search optimises for weight and ignores stiffness, so a wide-span roof can be
+    # strong enough yet sag past L/240. Apex deflection falls as EITHER the rafter OR the columns
+    # get stiffer, so we look for the lightest (rafter, column) pair that satisfies BOTH the
+    # deflection limit and every strength check. Deepening the rafter is the bigger lever for sag,
+    # so we try that first (cheap, handles most frames) and escalate the column only when even the
+    # stiffest rafter can't get there with the strength-sized column.
     deflection_limit_mm = span_mm / 240.0
 
+    def _apex_deflection_mm(raf: SectionProperties, col: SectionProperties) -> float:
+        """Return abs(apex vertical deflection, mm) from first-order SLS-1 analysis for (raf, col)."""
+        d = dead_loads(spec, rafter=raf, column=col)
+        sls_raf_udl = GAMMA_G_SLS_UNFAVOURABLE * d.rafter_udl_kn_per_m + GAMMA_Q_SLS * imposed.roof_udl_kn_per_m
+        sls_col_udl = GAMMA_G_SLS_UNFAVOURABLE * (
+            d.column_self_weight_kn_per_m + d.wall_cladding_udl_kn_per_m
+        )
+        disp = PortalAnalysis(spec, col, raf).node_displacements(sls1.name, sls_raf_udl, sls_col_udl)
+        return abs(disp["AP"]["DY"])
+
+    def _strength_result(
+        section: SectionProperties, member: str,
+        cu_kn: float, vu_kn: float, mu_knm: float, kl_mm: float, ltb_mm: float,
+    ) -> AutosizeResult | None:
+        """Strength check for a single section; None if it fails any strength check / slenderness."""
+        try:
+            return autosize_member(
+                SectionLibrary([section]),
+                _fy_mpa(spec.materials.steel_grade, section.flange_thickness_mm),
+                cu_kn=cu_kn, vu_kn=vu_kn, mu_knm=mu_knm, KL_mm=kl_mm, LTB_mm=ltb_mm, member=member,
+            )
+        except NoSectionFoundError:
+            return None
+
+    def _lightest_rafter_for(col: SectionProperties) -> tuple[SectionProperties, AutosizeResult] | None:
+        """Lightest rafter (≥ the strength-sized rafter) passing deflection (with `col`) + strength."""
+        for cand in library.by_increasing_mass():
+            if cand.mass_per_metre_kg_m < raf_sec.mass_per_metre_kg_m:
+                continue
+            if _apex_deflection_mm(cand, col) > deflection_limit_mm:
+                continue
+            res = _strength_result(
+                cand, "rafter", raf_cu_kn, raf_vu_kn, raf_mu_kn_m, KL_raf_mm, LTB_raf_mm
+            )
+            if res is not None:
+                return cand, res
+        return None
+
+    apex_delta_mm = _apex_deflection_mm(raf_sec, col_sec)
     if apex_delta_mm > deflection_limit_mm:
-        # Strength-sized rafter fails deflection — advance through heavier sections.
-        # Require the candidate to satisfy BOTH deflection AND strength (slenderness can
-        # cause a "heavier" section to still fail if its ry is too small for KL).
-        for candidate in library.by_increasing_mass():
-            if candidate.mass_per_metre_kg_m <= raf_sec.mass_per_metre_kg_m:
-                continue   # skip sections no heavier than the strength-chosen section
-            # Deflection check
-            sls_raf_udl_c, sls_col_udl_c = _compute_sls_rafter_udl(candidate)
-            delta_c = _apex_deflection_mm(candidate, sls_raf_udl_c, sls_col_udl_c)
-            if delta_c > deflection_limit_mm:
-                continue   # still fails deflection; try next
-            # Strength re-check (slenderness may exclude the candidate even if it's heavier)
-            fy_raf_final = _fy_mpa(spec.materials.steel_grade, candidate.flange_thickness_mm)
-            try:
-                new_raf_result = autosize_member(
-                    SectionLibrary([candidate]),
-                    fy_raf_final,
-                    cu_kn=raf_cu_kn, vu_kn=raf_vu_kn, mu_knm=raf_mu_kn_m,
-                    KL_mm=KL_raf_mm, LTB_mm=LTB_raf_mm,
-                    member="rafter",
-                )
-            except NoSectionFoundError:
-                continue   # candidate fails slenderness or a strength check — skip
-            # Both deflection AND strength pass — accept this section
-            raf_sec = candidate
-            raf_result = new_raf_result
-            sls_raf_udl = sls_raf_udl_c
-            apex_delta_mm = delta_c
-            break
-        # If no heavier section satisfies both constraints, deflection check will report
-        # passed=False (apex_delta_mm retains the failing value from the loop above).
+        pick = _lightest_rafter_for(col_sec)
+        if pick is not None:
+            raf_sec, raf_result = pick
+        else:
+            # Even the stiffest rafter can't satisfy deflection with this column — escalate the
+            # column (lightest-first) and re-search the rafter for each, taking the first feasible.
+            for col_cand in library.by_increasing_mass():
+                if col_cand.mass_per_metre_kg_m <= col_sec.mass_per_metre_kg_m:
+                    continue
+                if _strength_result(
+                    col_cand, "column", col_cu_kn, col_vu_kn, col_mu_kn_m, KL_col_mm, LTB_col_mm
+                ) is None:
+                    continue
+                pick = _lightest_rafter_for(col_cand)
+                if pick is not None:
+                    col_sec = col_cand
+                    col_result = _strength_result(
+                        col_cand, "column", col_cu_kn, col_vu_kn, col_mu_kn_m, KL_col_mm, LTB_col_mm
+                    )  # type: ignore[assignment]  # not None — checked above
+                    raf_sec, raf_result = pick
+                    break
+        # Recompute the final apex deflection for whatever (rafter, column) we settled on; if no
+        # feasible pair was found the sections are unchanged and the check below reports the failure.
+        apex_delta_mm = _apex_deflection_mm(raf_sec, col_sec)
 
     vertical_deflection = vertical_deflection_check(
         delta_mm=apex_delta_mm,
