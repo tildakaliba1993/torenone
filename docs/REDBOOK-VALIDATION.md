@@ -134,8 +134,31 @@ agree** the shear area uses the overall depth, while the kernel pipeline uses th
 clear web depth. This makes the co-founder's decision on that item near-trivial: adopt the
 overall-depth basis (both authorities) — recommended, pending his sign-off.
 
-Planned additions (next increments): LTB beam (E5.2) as a second LTB source, and bolts/welds (E7.x)
-as a second source for connections / column bases.
+### Column base — E7.13 (axial only) + E7.14 (axial + moment) — 2026-06-29
+
+The textbook works **both** column-base cases numerically (the Red Book §4.2.2 pointed to the Green
+Book and gave no worked answer, so this is the first published benchmark we have for the base). New
+module `foundations/baseplate_sans.py` implements the textbook's SANS 10100 / BS 5950 effective-area
+method and **reproduces every published output to the millimetre** (suite:
+`kernel/tests/validation/textbook/test_textbook_column_base.py`, 7 must-pass tests):
+
+| Check | Textbook (Mahachi) | Kernel | Δ |
+|---|---|---|---|
+| **E7.13** Bearing Br = 0.4·fcu (25 MPa) | 10 MPa | 10 | exact |
+| E7.13 Effective area required | 90 000 mm² | 90 000 | exact |
+| E7.13 Projection a (quadratic root) | 56.4 mm | 56.4 | exact |
+| E7.13 Plate thickness | 18.5 → **20 mm** | 18.8 → 20 | ≤2% |
+| **E7.14** Eccentricity e = M/N (> d/6 → tension) | 1333 mm | 1333 | exact |
+| E7.14 Stress-block depth d2 | 135 mm | 135 | exact |
+| E7.14 Concrete compression Cu | 497 kN | 497 | exact |
+| E7.14 Holding-down bolt tension Tu | 299 kN | 299 | exact |
+| E7.14 Bolt area required An → bolt | 519 mm² → **M30** | 519 → M30 | exact |
+| E7.14 Plate thickness (max of sides) | 33.7 → **35 mm** | 33.7 → 35 | ≤1% |
+| E7.14 Gusset Mr / Vr (2×16 mm) | 129.6 / 1710 | 129.6 / 1710 | exact |
+| E7.14 Welds (E80XX) | 14 mm / 8 mm fillet | 14 / 8 | exact |
+
+Planned additions (next increments): LTB beam (E5.2) as a second LTB source, and bolted/welded
+shear connections (E7.1–E7.12) as a second source for the end-plate connection.
 
 ## Method items for the co-founder (not component-benchmarkable — method choices, need sign-off)
 
@@ -144,18 +167,30 @@ where the kernel and the Red Book differ (or the kernel is explicitly PROVISIONA
 specific divergence so the registered engineer can adjudicate quickly. Same posture as the wind and
 shear-Av-basis flags — do not change without sign-off.
 
-### Baseplate (`foundations/baseplate.py`) — kernel AISC-style vs Red Book §4.2.2 BS5950-style
-| Aspect | Kernel | Red Book §4.2.2 |
-|---|---|---|
-| Bearing strength | φc·0.85·f'c = 0.6·0.85·25 = **12.75 MPa** (cylinder f'c) | 0.6·fcu = **15 MPa** (cube fcu) |
-| Concrete strength basis | f'c (cylinder); default 25 labelled cylinder | fcu (cube) — note cube ≈ 1.25·cylinder |
-| Plate thickness | plastic `Mr = φ·fy·t²/4` on an AISC cantilever (overhang 0.95·d / 0.80·bf) | `t = √(3w/fy)·c`, c from the effective-area method |
-| Anchor tension | structural-bolt `0.75·φar·Ab(shank)·fu` (φar=0.67) | Table 4.6 / cl. 25.2.2.1: `φ·An(tensile-stress-area)·fu` + concrete bond/anchor-plate bearing (not modelled) |
+### Baseplate / column base — VERIFICATION CARD (decision for the registered engineer)
 
-Anchor numbers are close (M20-8.8 ≈ 131 kernel vs ≈126 Red Book) but on a different clause basis.
-The Red Book does **not** work its baseplate example numerically (it points to the SAISC Green Book),
-so there is no published answer to benchmark against. Recommend reconciling the kernel's bearing model
-against SANS 10100-1 cl. 4.10 + the Green Book worked example.
+**The situation.** The kernel ships **two** column-base implementations:
+- `foundations/baseplate.py` — the **AISC-style** model currently in the live design path (elastic
+  pressure block, 0.85·f'c cylinder bearing, US cantilever-overhang plate sizing).
+- `foundations/baseplate_sans.py` (NEW, 2026-06-29) — the **SANS 10100 / BS 5950 effective-area**
+  method used by **both** SA authorities (Mahachi §7.9 *and* Red Book §4.2.2). It reproduces the
+  textbook's worked Examples E7.13 + E7.14 to the millimetre (table above). **PROVISIONAL; not yet
+  wired into the live path.**
+
+The two methods diverge at every step and give different numbers:
+
+| Aspect | Kernel (AISC-style, live) | Both SA authorities (`baseplate_sans`) |
+|---|---|---|
+| Bearing strength | φc·0.85·f'c = 0.6·0.85·25 = **12.75 MPa** (cylinder f'c) | **Br = 0.4·fcu** = 10 MPa @25, 8 MPa @20 (cube) |
+| Plate thickness | plastic `Mr=φ·fy·t²/4` on an AISC cantilever (0.95·d / 0.80·bf) | effective-area `t = a·√(3p/(φ·fy))` |
+| Base + moment | elastic peak pressure N/A + M/Z | rectangular concrete **stress block** (solve d2; Tu = Cu − Pu) |
+| Anchor tension | steel-code `0.75·φar·Ab(shank)·fu` (φar=0.67) | concrete-code `φar·An(stress-area)·fu` (SANS 10100 cl. 25.2.2.1) |
+
+**Decision needed (🔴 — only the registered engineer may settle this):** adopt the SANS/textbook
+method (`baseplate_sans`, now validated against a published SA authority) as the production column
+base, replacing the AISC-style model? Recommended — it makes our shipped method identical to two SA
+authorities, the easiest possible sign-off. On approval: wire `baseplate_sans` into the `DesignCode`
+seam (`codes/sans10162.py` `design_baseplate`) and retire/keep the AISC model as a cross-check.
 
 ### End-plate moment connection (`connections/moment_endplate.py`) — Red Book Ch 7.9
 Kernel uses a simplified T-stub / flange-force-couple method, flagged PROVISIONAL in its docstring.
