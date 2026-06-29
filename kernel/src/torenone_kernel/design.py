@@ -52,13 +52,9 @@ from torenone_kernel.checks.deflection import (
     vertical_deflection_check,
 )
 from torenone_kernel.codes import DEFAULT_CODE, DesignCode
-from torenone_kernel.connections.moment_endplate import design_moment_connection
-from torenone_kernel.foundations.baseplate import design_baseplate
-from torenone_kernel.foundations.pad_footing import design_pad_footing
 from torenone_kernel.loads.combinations import (
     GAMMA_G_SLS_UNFAVOURABLE,
     GAMMA_Q_SLS,
-    load_combinations,
 )
 from torenone_kernel.loads.dead import dead_loads
 from torenone_kernel.loads.imposed import imposed_roof_loads
@@ -574,7 +570,7 @@ def design(
     # ------------------------------------------------------------------ #
     # The "last mile" — connections, baseplate, footing (final sections)  #
     # ------------------------------------------------------------------ #
-    connections, baseplate, footing = _design_last_mile(spec, raf_sec, col_sec)
+    connections, baseplate, footing = _design_last_mile(spec, raf_sec, col_sec, code=code)
 
     # ------------------------------------------------------------------ #
     # Assemble result                                                      #
@@ -821,7 +817,7 @@ def check(
     )
 
     # ---- The "last mile" (connections, baseplate, footing) on supplied sections ----
-    connections, baseplate, footing = _design_last_mile(spec, raf_sec, col_sec)
+    connections, baseplate, footing = _design_last_mile(spec, raf_sec, col_sec, code=code)
 
     # ---- Assemble ----
     all_checks: list[CheckResult] = (
@@ -902,6 +898,7 @@ def _design_last_mile(
     spec: FrameSpec,
     raf_sec: SectionProperties,
     col_sec: SectionProperties,
+    code: DesignCode = DEFAULT_CODE,
 ) -> tuple[
     tuple[ConnectionDesignResult, ...],
     BaseplateDesignResult,
@@ -916,7 +913,7 @@ def _design_last_mile(
     is designed only when ``spec.foundation.allowable_bearing_kpa`` is provided (never
     assumed — PRD FR-2/FR-30).
     """
-    combos = {c.name.split()[0]: c for c in load_combinations(spec)}
+    combos = {c.name.split()[0]: c for c in code.load_combinations(spec)}
     uls1 = _combo_starting_with(combos, "ULS-1")
     sls1 = _combo_starting_with(combos, "SLS-1")
     imposed = imposed_roof_loads(spec)
@@ -943,7 +940,7 @@ def _design_last_mile(
     }
 
     # --- connections (eaves + apex) — axial passed negative (compression: no bolt tension) ---
-    eaves = design_moment_connection(
+    eaves = code.design_connection(
         location="eaves",
         moment_knm=abs(uls_forces["eaves_L"].moment_knm),
         shear_kn=abs(uls_forces["eaves_L"].shear_kn),
@@ -953,7 +950,7 @@ def _design_last_mile(
         member_flange_thickness_mm=raf_sec.flange_thickness_mm,
         steel_grade=grade,
     )
-    apex = design_moment_connection(
+    apex = code.design_connection(
         location="apex",
         moment_knm=abs(uls_forces["apex"].moment_knm),
         shear_kn=abs(uls_forces["apex"].shear_kn),
@@ -965,7 +962,7 @@ def _design_last_mile(
     )
 
     # --- baseplate (compression axial positive) ---
-    baseplate = design_baseplate(
+    baseplate = code.design_baseplate(
         base_fixity=spec.base_fixity.value,
         axial_kn=abs(uls_forces["col_base_L"].axial_kn),
         shear_kn=abs(uls_forces["col_base_L"].shear_kn),
@@ -979,7 +976,7 @@ def _design_last_mile(
     # --- pad footing (only if allowable bearing pressure supplied) ---
     footing: PadFootingDesignResult | None = None
     if spec.foundation.allowable_bearing_kpa is not None:
-        footing = design_pad_footing(
+        footing = code.design_footing(
             service_axial_kn=abs(sls_forces["col_base_L"].axial_kn),
             factored_axial_kn=abs(uls_forces["col_base_L"].axial_kn),
             allowable_bearing_kpa=spec.foundation.allowable_bearing_kpa,

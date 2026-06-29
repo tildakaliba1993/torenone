@@ -23,10 +23,21 @@ from torenone_kernel.checks.interaction import beam_column_check
 from torenone_kernel.checks.material import fy_mpa
 from torenone_kernel.checks.shear import vr_web
 from torenone_kernel.codes.base import DesignCode
+from torenone_kernel.connections.moment_endplate import (
+    design_moment_connection as _design_moment_connection,
+)
+from torenone_kernel.foundations.baseplate import design_baseplate as _design_baseplate
+from torenone_kernel.foundations.pad_footing import design_pad_footing as _design_pad_footing
 from torenone_kernel.loads.combinations import load_combinations
 from torenone_kernel.models.enums import SteelGrade
 from torenone_kernel.models.frame_spec import FrameSpec
-from torenone_kernel.models.results import CheckResult, LoadCombination
+from torenone_kernel.models.results import (
+    BaseplateDesignResult,
+    CheckResult,
+    ConnectionDesignResult,
+    LoadCombination,
+    PadFootingDesignResult,
+)
 from torenone_kernel.rules_version import as_dict as _rules_version
 from torenone_kernel.sections.library import SectionLibrary
 from torenone_kernel.sections.properties import SectionProperties
@@ -126,6 +137,70 @@ class SANS10162(DesignCode):
             U1=u1,
             section_class=section_class,
             check_name=check_name,
+        )
+
+    # --- Last-mile design: connections, baseplate, footing ------------------------------------
+    def design_connection(
+        self,
+        *,
+        location: str,
+        moment_knm: float,
+        shear_kn: float,
+        axial_kn: float,
+        member_depth_mm: float,
+        member_flange_width_mm: float,
+        member_flange_thickness_mm: float,
+        steel_grade: SteelGrade,
+    ) -> ConnectionDesignResult:
+        return _design_moment_connection(
+            location=location,
+            moment_knm=moment_knm,
+            shear_kn=shear_kn,
+            axial_kn=axial_kn,
+            member_depth_mm=member_depth_mm,
+            member_flange_width_mm=member_flange_width_mm,
+            member_flange_thickness_mm=member_flange_thickness_mm,
+            steel_grade=steel_grade,
+        )
+
+    def design_baseplate(
+        self,
+        *,
+        base_fixity: str,
+        axial_kn: float,
+        shear_kn: float,
+        moment_knm: float,
+        column_depth_mm: float,
+        column_flange_width_mm: float,
+        steel_grade: SteelGrade,
+        fc_mpa: float,
+    ) -> BaseplateDesignResult:
+        return _design_baseplate(
+            base_fixity=base_fixity,
+            axial_kn=axial_kn,
+            shear_kn=shear_kn,
+            moment_knm=moment_knm,
+            column_depth_mm=column_depth_mm,
+            column_flange_width_mm=column_flange_width_mm,
+            steel_grade=steel_grade,
+            fc_mpa=fc_mpa,
+        )
+
+    def design_footing(
+        self,
+        *,
+        service_axial_kn: float,
+        factored_axial_kn: float,
+        allowable_bearing_kpa: float,
+        column_size_mm: float,
+        fcu_mpa: float,
+    ) -> PadFootingDesignResult:
+        return _design_pad_footing(
+            service_axial_kn=service_axial_kn,
+            factored_axial_kn=factored_axial_kn,
+            allowable_bearing_kpa=allowable_bearing_kpa,
+            column_size_mm=column_size_mm,
+            fcu_mpa=fcu_mpa,
         )
 
     # --- Reference strings + limits -----------------------------------------------------------

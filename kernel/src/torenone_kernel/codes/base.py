@@ -23,7 +23,13 @@ from abc import ABC, abstractmethod
 from torenone_kernel.checks.classification import ClassificationResult, SectionClass
 from torenone_kernel.models.enums import SteelGrade
 from torenone_kernel.models.frame_spec import FrameSpec
-from torenone_kernel.models.results import CheckResult, LoadCombination
+from torenone_kernel.models.results import (
+    BaseplateDesignResult,
+    CheckResult,
+    ConnectionDesignResult,
+    LoadCombination,
+    PadFootingDesignResult,
+)
 from torenone_kernel.sections.library import SectionLibrary
 from torenone_kernel.sections.properties import SectionProperties
 
@@ -101,6 +107,49 @@ class DesignCode(ABC):
         check_name: str,
     ) -> CheckResult:
         """Combined axial + bending interaction check (returns a CheckResult with its clause)."""
+
+    # --- Last-mile design: connections, baseplate, footing ------------------------------------
+    @abstractmethod
+    def design_connection(
+        self,
+        *,
+        location: str,
+        moment_knm: float,
+        shear_kn: float,
+        axial_kn: float,
+        member_depth_mm: float,
+        member_flange_width_mm: float,
+        member_flange_thickness_mm: float,
+        steel_grade: SteelGrade,
+    ) -> ConnectionDesignResult:
+        """Design a moment connection (eaves or apex)."""
+
+    @abstractmethod
+    def design_baseplate(
+        self,
+        *,
+        base_fixity: str,
+        axial_kn: float,
+        shear_kn: float,
+        moment_knm: float,
+        column_depth_mm: float,
+        column_flange_width_mm: float,
+        steel_grade: SteelGrade,
+        fc_mpa: float,
+    ) -> BaseplateDesignResult:
+        """Design the column baseplate + holding-down bolts."""
+
+    @abstractmethod
+    def design_footing(
+        self,
+        *,
+        service_axial_kn: float,
+        factored_axial_kn: float,
+        allowable_bearing_kpa: float,
+        column_size_mm: float,
+        fcu_mpa: float,
+    ) -> PadFootingDesignResult:
+        """Design the reinforced-concrete pad footing."""
 
     # --- Reference strings + limits -----------------------------------------------------------
     @abstractmethod
