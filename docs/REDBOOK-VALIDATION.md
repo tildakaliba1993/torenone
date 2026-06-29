@@ -157,8 +157,27 @@ method and **reproduces every published output to the millimetre** (suite:
 | E7.14 Gusset Mr / Vr (2×16 mm) | 129.6 / 1710 | 129.6 / 1710 | exact |
 | E7.14 Welds (E80XX) | 14 mm / 8 mm fillet | 14 / 8 | exact |
 
-Planned additions (next increments): LTB beam (E5.2) as a second LTB source, and bolted/welded
-shear connections (E7.1–E7.12) as a second source for the end-plate connection.
+### Connections — E7.5 (T-stub prying) + E7.6/E7.7/E7.9 (bolt groups) — 2026-06-29
+
+New module `connections/textbook.py` reproduces the book's connection-mechanics examples (suite
+`kernel/tests/validation/textbook/test_textbook_connections.py`):
+
+| Check | Textbook (Mahachi) | Kernel | Δ |
+|---|---|---|---|
+| **E7.7** Eccentric bracket — moment force `V_M = M·r/J` | 30.8 kN | 30.8 | exact |
+| E7.7 Resultant bolt force `V_ub` (vector sum) | 34.6 kN | 34.6 | exact |
+| **E7.9** Side-plate shear+moment — resultant `V_R` | 62.5 kN | 62.5 | exact |
+| **E7.6** Web splice — `V_v` / `V_M` / `V_ub` | 75 / 40.5 / 85.2 | 75 / 40.5 / 85.2 | exact |
+| **E7.5** T-stub prying — geometry `m` / `n` / `Σl_eff` | 36.5 / 45.6 / 170 mm | 36.5 / 45.6 / 170 | exact |
+| E7.5 Flange moment resistance `Mr` (EC3) | 3.60×10⁶ N·mm | 3.60×10⁶ | exact |
+| E7.5 Bolt tension incl. prying `Tu` (+14.3% over no-prying) | 68.6 kN | 68.6 | exact |
+
+**Two distinct methods, both second-authority-validated:** the *elastic bolt-group* method (E7.6/
+E7.7/E7.9 — for in-plane bracket/splice connections) and the *Eurocode-3 T-stub prying* method
+(E7.5). The bolt **resistances** these rely on (Tr, Vr, Br, the Vu/Vr+Tu/Tr≤1.4 interaction) are
+already validated against Red Book Table 7.2; the book's E7.4/E7.5/E7.8 reconfirm the exact formulas.
+
+Planned additions (next increment): LTB beam (E5.2) as a second LTB source.
 
 ## Method items for the co-founder (not component-benchmarkable — method choices, need sign-off)
 
@@ -192,10 +211,26 @@ base, replacing the AISC-style model? Recommended — it makes our shipped metho
 authorities, the easiest possible sign-off. On approval: wire `baseplate_sans` into the `DesignCode`
 seam (`codes/sans10162.py` `design_baseplate`) and retire/keep the AISC model as a cross-check.
 
-### End-plate moment connection (`connections/moment_endplate.py`) — Red Book Ch 7.9
-Kernel uses a simplified T-stub / flange-force-couple method, flagged PROVISIONAL in its docstring.
-The Red Book Ch 7.9 gives a tabulated design-check procedure. Benchmarking is only meaningful once the
-registered engineer signs off the *method*; the bolt primitives it relies on are already validated.
+### End-plate moment connection (`connections/moment_endplate.py`) — VERIFICATION CARD
+The live eaves/apex connection uses a **flange-force-couple** method (T = Mu/z shared by the tension
+bolts) plus a **simplified T-stub** plate-bending check that **omits prying** (flagged PROVISIONAL in
+its docstring). Status of each piece:
+
+| Piece | Status |
+|---|---|
+| Bolt tension / shear / bearing resistances | ✅ validated (Red Book Table 7.2; book E7.4/E7.5/E7.8 reconfirm) |
+| Combined tension+shear interaction (Vu/Vr+Tu/Tr ≤ 1.4) | ✅ formula matches book E7.8 |
+| Flange-couple moment idealisation | ⏳ method choice — engineer sign-off |
+| **Prying action** | ⚠️ NOT modelled in the live check; the EC3 method is now **validated** in `connections/textbook.py` (E7.5) and ready to wire in |
+| End-plate yield-line modes 2/3 | ⏳ not modelled |
+
+**Decision needed (🔴):** (1) sign off the flange-couple end-plate method, and (2) adopt the
+validated EC3 prying check (`tstub_prying_bolt_tension`, reproduces E7.5 to the published values) into
+`moment_endplate.py`. The book has **no** bolted end-plate *moment-connection* worked example, so the
+closest published analog for the critical tension-bolt + plate-bending behaviour is the EC3 T-stub
+(E7.5) — now reproduced exactly. Note: the elastic **bolt-group** method (E7.6/E7.7/E7.9, also in
+`textbook.py`) is for *in-plane* bracket/splice connections, which the single-bay portal MVP does not
+design — included as a validated primitive for when those connection types are added.
 
 ### Beam-column interaction (`checks/interaction.py`) — validated at component level
 The kernel's `beam_column_check` is *uniaxial* (in-plane portal bending). The Red Book's only worked
