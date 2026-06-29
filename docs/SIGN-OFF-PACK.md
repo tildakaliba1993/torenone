@@ -71,6 +71,7 @@ your sign-off.** Full working is in the linked detailed cards.
 | **D8** | **Wide-span minor-axis effective length** — rafter minor axis braced at purlin spacing | in use | Confirm the effective-length assumption | ☐ |
 | **D9** | **Bolt bearing ply fu** — kernel 480 (SANS) vs 470 (EN) | 480 | Confirm basis (minor) | ☐ |
 | **D10** | **Section-data reconciliation** — 203×133 UB mass/width differ <1% vs Red Book | as packaged | Confirm at section sign-off | ☐ |
+| **D11** | **Prismatic frame model** — no haunch modelled; under-predicts the eaves moment ~6% vs a haunched frame (E13.1: 141 vs 150 kN·m) | prismatic | Confirm acceptable, or model the eaves/ridge haunch | ☐ |
 
 **Detailed cards:** D1/D2/D3/D8/D9/D10 → `docs/REDBOOK-VALIDATION.md`; D4–D7 → `docs/WIND-VERIFICATION.md`.
 
@@ -89,11 +90,13 @@ forces, and full member design.
   reproduces E13.1's column design (cross-section interaction 0.686 exact, overall 0.522 exact, LTB
   0.757 vs 0.743 — ≤2%, conservative). Suite: `kernel/tests/validation/textbook/test_textbook_whole_frame.py`.
   Our section library *is* the book's 305×165×46 (A, Zplx, rx, ry, Iy, J, Cw all match).
-- ⏳ **Analysis half (next step)** — does our frame model reproduce the book's member forces
-  (e.g. eaves moment 150.1 kN·m, axial 49.7 kN under the gravity ULS LC5 = 1.2D+1.6L, where the 1989
-  and 2011 load factors agree)? The book uses a **haunched** frame + **second-order** analysis, which
-  our prismatic model approximates — this comparison will quantify the haunch/2nd-order difference.
-  Buildable without the co-founder.
+- ✅ **Analysis half corroborated** — fed the book's gravity load (LC5 = 1.2D+1.6L), our PyNite frame
+  model reproduces the book's **eaves moment within ~6%** (141 vs 150.1 kN·m). The small difference is
+  the book's **haunch** (which stiffens the eaves and attracts the extra moment) + its second-order
+  analysis — both small for this stiff portal. Same suite. **Known simplification for the engineer:**
+  our model is *prismatic* (no haunch), so it under-predicts the eaves moment by ~6%; the haunch
+  region is locally much stronger, and modelling it is the standard refinement (decision for the
+  engineer if tighter eaves accuracy is required).
 
 A second, independent whole-frame check against **one of your past stamped projects** remains the
 ideal final confirmation (`tools/validate_frame.py` is ready for it), but E13.1 means the gate is no
