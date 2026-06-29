@@ -119,6 +119,14 @@ authorities now independently confirm the same kernel output.
 | Moment Mr, laterally supported (E5.1, 457×191×98) | `mr_laterally_supported` | 602 kN·m | 602 | exact |
 | Shear Vr (E5.1, 457×191×98) | `vr_web` | 950 kN | 950 | exact (overall-depth basis) |
 | Classification (E5.1 / E4.3) | `classify_section` | Class 1 / not Class 4 | match | — |
+| LTB critical moment Mcr (E6.1, 305×305×118) | `mcr_elastic` | 7 400 kN·m | 7 400 | exact |
+| Moment-gradient ω2 (E6.1, κ=0.75) | `omega2_factor` | 2.5 | 2.5 | exact |
+| **Beam-column interaction (E6.1)** — cl. 13.8.1, all 3 modes | `beam_column_check` | 0.930 / 0.72 / 0.994 | 0.931 / 0.719 / 0.995 | ≤0.2% |
+
+The beam-column interaction (E6.1) is the check the Red Book lacked — now validated end-to-end from
+an accredited source. (Note: the kernel floors the U1 amplification at 1.0, correct for our
+*unbraced* portals; the book's *braced* overall-member check uses the unfloored U1 — the raw U1
+formula matches the book at 0.417, and `beam_column_check` is validated with the book's U1 values.)
 
 **Strengthens the shear-area flag (below):** the textbook's E5.1 computes the shear area as
 **overall depth × tw** — the *same* basis as the Red Book Ex 5.3. **Two independent authorities now
@@ -126,8 +134,8 @@ agree** the shear area uses the overall depth, while the kernel pipeline uses th
 clear web depth. This makes the co-founder's decision on that item near-trivial: adopt the
 overall-depth basis (both authorities) — recommended, pending his sign-off.
 
-Planned additions (next increments): LTB beam (E5.2), **beam-column interaction (E6.1)** — the case
-the Red Book lacked — and bolts/welds (E7.x) as a second source for connections.
+Planned additions (next increments): LTB beam (E5.2) as a second LTB source, and bolts/welds (E7.x)
+as a second source for connections / column bases.
 
 ## Method items for the co-founder (not component-benchmarkable — method choices, need sign-off)
 
