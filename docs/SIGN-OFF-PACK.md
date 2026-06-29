@@ -76,14 +76,28 @@ your sign-off.** Full working is in the linked detailed cards.
 
 ---
 
-## Part 4 — The whole-frame validation gate (the one outstanding non-method item)
+## Part 4 — The whole-frame validation gate
 
-Beyond the component validation above, TorenOne should be validated **end-to-end against one real
-completed portal-frame design** before live commercial use. The harness is ready
-(`tools/validate_frame.py` — type the past frame's geometry/loads and it shows the kernel's auto-size
-plus a CHECK of your sections side-by-side). **We need one of your past stamped projects (or a
-constructed reference case) to close this gate.** This is the highest-value single thing that unlocks
-live revenue.
+TorenOne should be validated **end-to-end against a complete worked portal frame**. We now have a
+published one: **Mahachi Example E13.1, "Design of an industrial building"** — a full single-bay
+portal (24 m span, 6 m eaves, 10° pitch, 5 m bay, hinged bases, haunched eaves/ridge, 305×165×46
+columns + 305×102×33 rafters, Grade 300W) with geometry, loads, load combinations, analysis member
+forces, and full member design.
+
+**Progress:**
+- ✅ **Member-design half validated** — fed the book's analysis forces, our member-design path
+  reproduces E13.1's column design (cross-section interaction 0.686 exact, overall 0.522 exact, LTB
+  0.757 vs 0.743 — ≤2%, conservative). Suite: `kernel/tests/validation/textbook/test_textbook_whole_frame.py`.
+  Our section library *is* the book's 305×165×46 (A, Zplx, rx, ry, Iy, J, Cw all match).
+- ⏳ **Analysis half (next step)** — does our frame model reproduce the book's member forces
+  (e.g. eaves moment 150.1 kN·m, axial 49.7 kN under the gravity ULS LC5 = 1.2D+1.6L, where the 1989
+  and 2011 load factors agree)? The book uses a **haunched** frame + **second-order** analysis, which
+  our prismatic model approximates — this comparison will quantify the haunch/2nd-order difference.
+  Buildable without the co-founder.
+
+A second, independent whole-frame check against **one of your past stamped projects** remains the
+ideal final confirmation (`tools/validate_frame.py` is ready for it), but E13.1 means the gate is no
+longer *blocked* on the co-founder's time.
 
 ---
 
