@@ -106,6 +106,29 @@ grade-independent (M24-8.8 = 22.7; 3·φbr·d·fu with d=24, fu=470 = 22.67). Th
 design pipeline uses 480 MPa (SANS Table 6). The benchmark feeds 470 to test the formula; the
 SANS-vs-EN plate-fu choice is the engineer's to confirm.
 
+## Second authority — Mahachi, *Design of Structural Steelwork to SANS 10162* (CSIR, 2004)
+
+A second, independent accredited source: a Pr.Eng-authored, professor-reviewed textbook of fully
+worked SANS 10162 design examples. Suite: `kernel/tests/validation/textbook/`. Where the Red Book
+gives section data + capacity tables, this gives worked *design* answers — so two respected SA
+authorities now independently confirm the same kernel output.
+
+| Check | Function | Textbook (Mahachi) | Kernel | Δ |
+|---|---|---|---|---|
+| Compression Cr (E4.3, 356×171×67, 300W, KL=6 m) | `cr_flexural` | 589 kN | 589 | exact |
+| Moment Mr, laterally supported (E5.1, 457×191×98) | `mr_laterally_supported` | 602 kN·m | 602 | exact |
+| Shear Vr (E5.1, 457×191×98) | `vr_web` | 950 kN | 950 | exact (overall-depth basis) |
+| Classification (E5.1 / E4.3) | `classify_section` | Class 1 / not Class 4 | match | — |
+
+**Strengthens the shear-area flag (below):** the textbook's E5.1 computes the shear area as
+**overall depth × tw** — the *same* basis as the Red Book Ex 5.3. **Two independent authorities now
+agree** the shear area uses the overall depth, while the kernel pipeline uses the (more conservative)
+clear web depth. This makes the co-founder's decision on that item near-trivial: adopt the
+overall-depth basis (both authorities) — recommended, pending his sign-off.
+
+Planned additions (next increments): LTB beam (E5.2), **beam-column interaction (E6.1)** — the case
+the Red Book lacked — and bolts/welds (E7.x) as a second source for connections.
+
 ## Method items for the co-founder (not component-benchmarkable — method choices, need sign-off)
 
 These are **not** simple data/formula checks the suite can settle; each is a modelling-method choice
