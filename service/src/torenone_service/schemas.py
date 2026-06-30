@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
-from torenone_ai import ParseResult, clarifying_questions
+from torenone_ai import AgentConstraints, ParseResult, clarifying_questions
 from torenone_kernel.models.frame_spec import FrameGeometry, FrameSpec
 from torenone_kernel.models.results import DesignResult, SectionChoice
 
@@ -207,3 +207,32 @@ class DesignResponse(BaseModel):
 
     result: DesignResult
     report: StoredReport
+
+
+# ---------------------------------------------------------------------------
+# /design-agent  (agentic exploration — no PDF; the web replays the pick via /design)
+# ---------------------------------------------------------------------------
+
+
+class AgentDesignRequest(BaseModel):
+    """A confirmed FrameSpec to explore agentically, plus optional engineer constraints."""
+
+    spec: FrameSpec
+    constraints: AgentConstraints | None = Field(
+        default=None,
+        description="Optional limits (stock sections, max member depth) the search must honour.",
+    )
+    cost_rate_zar_per_kg: float | None = Field(
+        default=None, gt=0, description="Override the default fabricated-steel cost rate."
+    )
+
+    @field_validator("spec", mode="before")
+    @classmethod
+    def _drop_computed_geometry(cls, value: Any) -> Any:
+        """Strip read-only computed geometry fields so a serialised spec re-validates."""
+        if isinstance(value, dict):
+            geometry = value.get("geometry")
+            if isinstance(geometry, dict) and any(k in geometry for k in _GEOMETRY_COMPUTED):
+                cleaned = {k: v for k, v in geometry.items() if k not in _GEOMETRY_COMPUTED}
+                return {**value, "geometry": cleaned}
+        return value

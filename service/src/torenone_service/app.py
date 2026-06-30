@@ -25,11 +25,14 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.responses import JSONResponse, Response
 from torenone_ai import (
+    AgentDesignOutcome,
     DrawingDecodeError,
     FrameSpecExtraction,
+    OpenAIProposer,
     build_frame_spec,
     parse_description,
     parse_drawing,
+    run_design_agent,
 )
 
 from torenone_service.ai_runtime import (
@@ -56,6 +59,7 @@ from torenone_service.reports import (
     get_report_store,
 )
 from torenone_service.schemas import (
+    AgentDesignRequest,
     DesignRequest,
     DesignResponse,
     ParseDrawingRequest,
@@ -392,6 +396,57 @@ def create_app(
             extra={"user_id": user.user_id, "status": response.status},
         )
         return response
+
+    @app.post("/design-agent")
+    @limiter.limit(DESIGN_RATE_LIMIT)
+    def design_agent_route(
+        request: Request,
+        body: AgentDesignRequest,
+        user: AuthenticatedUser = Depends(require_user),
+    ) -> AgentDesignOutcome:
+        """Agentic design exploration over a confirmed FrameSpec — no PDF, exploration only.
+
+        The AI may ONLY call the deterministic kernel (design/check) and propose input levers
+        (restraint spacing, sections to verify); it never produces an engineering number — the
+        kernel computes every value and the plain deterministic design is always the baseline,
+        so the outcome can never be worse than ``/design`` (see torenone_ai.design_agent).
+
+        Degrades gracefully: if the AI is unconfigured/unavailable, returns the baseline only.
+        The web replays the chosen option through ``/design`` to get the stamped calc package.
+        """
+        runtime: AIRuntime | None = getattr(request.app.state, "ai_runtime", None)
+        proposer = (
+            OpenAIProposer(runtime.client, runtime.model) if runtime is not None else None
+        )
+        try:
+            outcome = _run_with_timeout(
+                lambda: run_design_agent(
+                    body.spec,
+                    cost_rate_zar_per_kg=body.cost_rate_zar_per_kg,
+                    constraints=body.constraints,
+                    proposer=proposer,
+                ),
+                design_timeout,
+            )
+        except DesignTimeoutError as exc:
+            logger.warning(
+                "design_agent_timeout",
+                extra={"user_id": user.user_id, "timeout_s": design_timeout},
+            )
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                detail="the design exploration took too long and was aborted",
+            ) from exc
+        logger.info(
+            "design_agent",
+            extra={
+                "user_id": user.user_id,
+                "used_llm": outcome.used_llm,
+                "alternatives": len(outcome.alternatives),
+                "baseline_passed": outcome.baseline.passed if outcome.baseline else None,
+            },
+        )
+        return outcome
 
     @app.post("/design")
     @limiter.limit(DESIGN_RATE_LIMIT)

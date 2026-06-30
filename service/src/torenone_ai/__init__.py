@@ -17,6 +17,14 @@ from torenone_ai.config import (
     AIConfig,
     MissingAPIKeyError,
 )
+from torenone_ai.design_agent import (
+    AgentAction,
+    AgentAlternative,
+    AgentConstraints,
+    AgentDesignOutcome,
+    OpenAIProposer,
+    run_design_agent,
+)
 from torenone_ai.narrative import (
     NarrativeError,
     NarrativeGuardError,
@@ -80,4 +88,11 @@ __all__ = [
     "generate_narrative",
     "render_narrative",
     "assert_prose_has_no_literal_numbers",
+    # Agentic design loop
+    "AgentAction",
+    "AgentAlternative",
+    "AgentConstraints",
+    "AgentDesignOutcome",
+    "OpenAIProposer",
+    "run_design_agent",
 ]
