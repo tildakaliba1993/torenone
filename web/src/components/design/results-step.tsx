@@ -165,7 +165,15 @@ export function ResultsStep({
       <LiabilityNotice />
 
       {projectId && onUseAlternative ? (
-        <DesignExplore design={design} projectId={projectId} onUse={onUseAlternative} />
+        // Re-key to the current run so the panel resets to a fresh state whenever the
+        // displayed design changes (e.g. after "Use this design") — its options are always
+        // relative to the design now on screen, so a better one can be chosen at any time.
+        <DesignExplore
+          key={report.run_id}
+          design={design}
+          projectId={projectId}
+          onUse={onUseAlternative}
+        />
       ) : null}
 
       {design.diagram ? (
