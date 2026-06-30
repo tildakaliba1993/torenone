@@ -521,6 +521,56 @@ def image_data_url(data: bytes, mime_type: str) -> str:
     return f"data:{mime_type};base64,{encoded}"
 
 
+class DrawingDecodeError(ValueError):
+    """Raised when an uploaded drawing/PDF cannot be decoded or rendered to an image."""
+
+
+def pdf_to_image_data_url(pdf_bytes: bytes, *, scale: float = 2.0) -> str:
+    """Render the FIRST page of a PDF to a PNG ``data:`` URL.
+
+    Lets a PDF *plan* feed the same vision path as an image: most general-arrangement plans put
+    the frame on page 1. The vision model still only transcribes the labelled dimensions — rendering
+    the page changes nothing about the safety contract. ``pypdfium2`` ships its own binary (no system
+    deps); Pillow encodes the page to PNG.
+    """
+    import io
+
+    import pypdfium2 as pdfium  # lazy: only imported when a PDF is actually uploaded
+    from PIL import Image
+
+    try:
+        doc = pdfium.PdfDocument(pdf_bytes)
+    except Exception as exc:  # noqa: BLE001 — any parse failure is a bad-input error
+        raise DrawingDecodeError("the PDF could not be read") from exc
+    try:
+        if len(doc) == 0:
+            raise DrawingDecodeError("the PDF has no pages")
+        pil_image: Image.Image = doc[0].render(scale=scale).to_pil()
+        buffer = io.BytesIO()
+        pil_image.convert("RGB").save(buffer, format="PNG")
+    finally:
+        doc.close()
+    return image_data_url(buffer.getvalue(), "image/png")
+
+
+def coerce_drawing_to_image_url(image_url: str) -> str:
+    """Pass an image/https URL through unchanged; render a PDF ``data:`` URL to a PNG image URL.
+
+    The single entry point that normalises any accepted upload (image or PDF) into something the
+    vision model can read. Raises :class:`DrawingDecodeError` on a malformed PDF (→ a 4xx upstream).
+    """
+    if image_url.startswith("data:application/pdf"):
+        import base64
+
+        payload = image_url.split(",", 1)[1] if "," in image_url else ""
+        try:
+            pdf_bytes = base64.b64decode(payload)
+        except Exception as exc:  # noqa: BLE001
+            raise DrawingDecodeError("the PDF data could not be decoded") from exc
+        return pdf_to_image_data_url(pdf_bytes)
+    return image_url
+
+
 def parse_drawing(
     image_url: str,
     *,
@@ -545,7 +595,11 @@ def parse_drawing(
         Injected vision-capable client (same OpenAI Responses API as text parsing) + model id.
     note:
         Optional accompanying text from the user (e.g. context not on the drawing).
+
+    A PDF ``data:`` URL is rendered to an image first (:func:`coerce_drawing_to_image_url`); a
+    malformed PDF raises :class:`DrawingDecodeError`.
     """
+    image_url = coerce_drawing_to_image_url(image_url)
     cap = _default_max_output_tokens() if max_output_tokens is None else max_output_tokens
     extra: dict[str, Any] = {"max_output_tokens": cap} if cap and cap > 0 else {}
 

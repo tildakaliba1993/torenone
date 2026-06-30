@@ -24,7 +24,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.responses import JSONResponse, Response
-from torenone_ai import parse_description, parse_drawing
+from torenone_ai import DrawingDecodeError, parse_description, parse_drawing
 
 from torenone_service.ai_runtime import (
     AIRuntime,
@@ -344,6 +344,12 @@ def create_app(
             result = parse_drawing(
                 body.image_data_url, client=ai.client, model=ai.model, note=body.note
             )
+        except DrawingDecodeError as exc:
+            # Malformed / unreadable image or PDF — a bad-input error, not an outage.
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="couldn't read that file — please upload a clear image or a valid PDF",
+            ) from exc
         except OpenAIError as exc:
             logger.warning(
                 "ai_upstream_error",

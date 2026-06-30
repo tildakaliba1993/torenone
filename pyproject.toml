@@ -29,6 +29,11 @@ service = [
     "slowapi>=0.1.9",
     # Error tracking — no-op unless SENTRY_DSN is set in the environment.
     "sentry-sdk>=2.0",
+    # Drawings/plans-in: render an uploaded PDF plan's first page to an image for the vision
+    # model. pypdfium2 bundles its own pdfium binary (no system deps, unlike weasyprint); Pillow
+    # encodes the rendered page to PNG.
+    "pypdfium2>=4.0",
+    "pillow>=10.0",
 ]
 # PDF rendering — needs system pango/cairo (not installed in CI; PDF tests skip there).
 pdf = [

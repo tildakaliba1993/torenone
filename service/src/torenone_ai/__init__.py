@@ -29,14 +29,17 @@ from torenone_ai.narrative import (
 )
 from torenone_ai.parsing import (
     Assumption,
+    DrawingDecodeError,
     FrameSpecExtraction,
     MissingField,
     ParseResult,
     build_frame_spec,
+    coerce_drawing_to_image_url,
     image_data_url,
     parse_description,
     parse_description_from_env,
     parse_drawing,
+    pdf_to_image_data_url,
 )
 
 __all__ = [
@@ -57,6 +60,9 @@ __all__ = [
     # Drawings/plans-in (vision)
     "parse_drawing",
     "image_data_url",
+    "pdf_to_image_data_url",
+    "coerce_drawing_to_image_url",
+    "DrawingDecodeError",
     # Clarifying questions (Task 3.3)
     "ClarifyingQuestion",
     "clarifying_questions",

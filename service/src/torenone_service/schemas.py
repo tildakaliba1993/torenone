@@ -34,8 +34,11 @@ class ParseDrawingRequest(BaseModel):
 
     image_data_url: str = Field(
         min_length=1,
-        max_length=16_000_000,  # ~12 MB image base64-encoded (~1.37× expansion)
-        description="The drawing as a data: URL (data:image/<type>;base64,...) or an https URL.",
+        max_length=16_000_000,  # ~12 MB image/PDF base64-encoded (~1.37× expansion)
+        description=(
+            "The drawing as a data: URL (data:image/<type>;base64,... or "
+            "data:application/pdf;base64,...) or an https URL."
+        ),
     )
     note: str | None = Field(
         default=None,
@@ -45,10 +48,13 @@ class ParseDrawingRequest(BaseModel):
 
     @field_validator("image_data_url")
     @classmethod
-    def _must_be_image(cls, value: str) -> str:
+    def _must_be_image_or_pdf(cls, value: str) -> str:
         v = value.strip()
-        if not (v.startswith("data:image/") or v.startswith("https://")):
-            raise ValueError("image_data_url must be a data:image/* URL or an https URL")
+        accepted = ("data:image/", "data:application/pdf", "https://")
+        if not v.startswith(accepted):
+            raise ValueError(
+                "image_data_url must be a data:image/* URL, a data:application/pdf URL, or an https URL"
+            )
         return v
 
 

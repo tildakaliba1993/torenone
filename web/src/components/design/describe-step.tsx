@@ -67,12 +67,14 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
     if (!file) return;
     setError(null);
     setFeedback(null);
-    if (!file.type.startsWith("image/")) {
-      setError("Please choose an image file (PNG, JPG, etc.).");
+    const isImage = file.type.startsWith("image/");
+    const isPdf = file.type === "application/pdf";
+    if (!isImage && !isPdf) {
+      setError("Please choose an image (PNG, JPG…) or a PDF.");
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      setError("That image is too large — please use one under 10 MB.");
+      setError("That file is too large — please use one under 10 MB.");
       return;
     }
     setPending(true);
@@ -163,7 +165,7 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,application/pdf"
           className="hidden"
           onChange={(e) => {
             void onDrawingSelected(e.target.files?.[0]);
@@ -176,17 +178,23 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
           disabled={pending}
           className="flex flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border-strong bg-surface px-3 py-6 text-sm text-muted transition-colors hover:border-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <span className="font-medium text-foreground">Choose a drawing…</span>
-          <span className="text-xs text-subtle">PNG, JPG or similar, up to 10 MB</span>
+          <span className="font-medium text-foreground">Choose a drawing or plan…</span>
+          <span className="text-xs text-subtle">PNG, JPG or PDF, up to 10 MB</span>
         </button>
         {drawingPreview ? (
           <div className="flex items-center gap-3 rounded-md border border-border bg-surface-raised p-2">
-            {/* eslint-disable-next-line @next/next/no-img-element -- local data-URL preview, not a remote asset */}
-            <img
-              src={drawingPreview}
-              alt="Uploaded drawing preview"
-              className="h-16 w-16 rounded object-cover"
-            />
+            {drawingPreview.startsWith("data:application/pdf") ? (
+              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-surface font-mono text-xs font-semibold text-accent">
+                PDF
+              </span>
+            ) : (
+              /* eslint-disable-next-line @next/next/no-img-element -- local data-URL preview, not a remote asset */
+              <img
+                src={drawingPreview}
+                alt="Uploaded drawing preview"
+                className="h-16 w-16 rounded object-cover"
+              />
+            )}
             <span className="flex-1 truncate text-sm text-muted">{drawingName}</span>
             <button
               type="button"
