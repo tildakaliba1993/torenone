@@ -69,16 +69,28 @@ class ScriptedProposer:
 # --------------------------------------------------------------------------- #
 
 
-def test_baseline_only_without_proposer() -> None:
-    """No model => the plain deterministic design, no alternatives, recommend baseline."""
+def test_baseline_present_without_proposer() -> None:
+    """No model => still a valid baseline; deterministic seeds may add passing options."""
     out = run_design_agent(SPEC, proposer=None)
     assert out.used_llm is False
     assert out.baseline is not None
     assert out.baseline.passed is True
-    assert out.alternatives == []
+    # Unconstrained, the baseline stays the recommended default (no auto-recommend).
     assert out.recommended_index is None
     # Mandatory checks always ran — the baseline carries the full kernel check set.
     assert len(out.baseline.checks) > 0
+    # Every surfaced alternative is a real, PASSING kernel design (never a dead end).
+    assert all(a.result.passed for a in out.alternatives)
+
+
+def test_seeds_produce_options_without_a_model() -> None:
+    """Deterministic seed exploration makes the panel useful even with no model."""
+    out = run_design_agent(SPEC, proposer=None)
+    assert out.used_llm is False
+    # The unconstrained restraint sweep tries tighter rafter bracing -> real options.
+    assert len(out.alternatives) > 0
+    assert all(a.rafter_restraint_spacing_m is not None for a in out.alternatives)
+    assert all(a.result.passed for a in out.alternatives)
 
 
 def test_proposer_failure_degrades_to_baseline() -> None:
@@ -111,9 +123,8 @@ def test_run_design_lever_produces_alternative() -> None:
     )
     out = run_design_agent(SPEC, proposer=proposer)
     assert out.used_llm is True
-    assert len(out.alternatives) == 1
-    alt = out.alternatives[0]
-    assert alt.rafter_restraint_spacing_m == 2.0
+    # The model's experiment is present (deduped with any identical seed).
+    alt = next(a for a in out.alternatives if a.rafter_restraint_spacing_m == 2.0)
     assert alt.mode == "design"
     assert isinstance(alt.mass_delta_kg, float)
     assert "rafter braced every 2 m" in alt.trade_off_note
@@ -126,16 +137,16 @@ def test_model_authored_numbers_are_stripped() -> None:
     proposer = ScriptedProposer(
         AgentAction(
             tool="run_design",
-            label="Try 1.5 m bracing",
+            label="Try 2.5 m bracing",
             rationale="this should save about 200 kg of steel",
-            rafter_restraint_spacing_m=3.0,
+            rafter_restraint_spacing_m=2.5,  # not a seed value -> the model's text is used
         ),
     )
     out = run_design_agent(SPEC, proposer=proposer)
-    assert len(out.alternatives) == 1
-    alt = out.alternatives[0]
-    assert not any(ch.isdigit() for ch in alt.label)
-    assert not any(ch.isdigit() for ch in alt.rationale)
+    # No alternative anywhere may carry a model-authored digit.
+    for alt in out.alternatives:
+        assert not any(ch.isdigit() for ch in alt.label)
+        assert not any(ch.isdigit() for ch in alt.rationale)
 
 
 def test_unknown_section_is_rejected() -> None:
@@ -151,7 +162,11 @@ def test_unknown_section_is_rejected() -> None:
     )
     out = run_design_agent(SPEC, proposer=proposer)
     assert out.baseline is not None
-    assert out.alternatives == []  # the bad section never became a candidate
+    # The bad section never became a candidate (seed restraint options may still appear).
+    assert all(
+        a.sections is None or all(s.designation != "UNOBTANIUM BEAM" for s in a.sections)
+        for a in out.alternatives
+    )
 
 
 def test_out_of_range_restraint_is_rejected() -> None:
@@ -165,7 +180,8 @@ def test_out_of_range_restraint_is_rejected() -> None:
         ),
     )
     out = run_design_agent(SPEC, proposer=proposer)
-    assert out.alternatives == []
+    # The absurd spacing was rejected; no alternative was built from it.
+    assert all(a.rafter_restraint_spacing_m != 0.01 for a in out.alternatives)
 
 
 # --------------------------------------------------------------------------- #
@@ -208,6 +224,25 @@ def test_constraint_rejects_out_of_stock_section() -> None:
         a.sections is None or all(s.designation == "IPE 200" for s in a.sections)
         for a in out.alternatives
     )
+
+
+def test_seed_constraint_search_finds_within_stock_without_model() -> None:
+    """The deterministic constraint search finds a passing stock pair with no model.
+
+    Also covers the baseline-invalid case: the unconstrained baseline uses a rafter NOT in
+    the stock list, so the recommendation must be a constraint-valid option, not the baseline.
+    """
+    raf_des = next(s.designation for s in design(SPEC).sections if s.member == "rafter")
+    out = run_design_agent(
+        SPEC,
+        proposer=None,
+        constraints=AgentConstraints(allowed_sections=[raf_des]),
+    )
+    assert out.recommended_index is not None
+    rec = out.alternatives[out.recommended_index]
+    assert rec.result.passed is True
+    assert rec.sections is not None
+    assert all(s.designation == raf_des for s in rec.sections)
 
 
 # --------------------------------------------------------------------------- #

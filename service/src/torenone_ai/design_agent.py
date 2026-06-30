@@ -61,6 +61,14 @@ MAX_RESTRAINT_SPACING_M: float = 12.0
 MAX_ACTIONS: int = 14
 MAX_CANDIDATES: int = 8
 
+# Deterministic seed exploration — runs BEFORE the model so the panel is reliably useful
+# even if the model is weak or unavailable (the model then refines on top).
+# Common purlin/girt spacings (m) to try as tighter rafter restraint (unconstrained sweep).
+_SEED_RAFTER_SPACINGS_M: tuple[float, ...] = (3.0, 2.0, 1.5)
+# Bounds for the constrained deterministic search (stock/depth) over the allowed catalogue.
+_SEED_MAX_CONSTRAINED_CHECKS: int = 8
+_SEED_MAX_CONSTRAINED_PASSES: int = 3
+
 
 class AgentBudgetError(RuntimeError):
     """Internal sentinel — the action/candidate budget was exhausted."""
@@ -424,6 +432,13 @@ class KernelDesignTools:
         return _observe(result)
 
     def _record(self, **kw: Any) -> None:
+        result: DesignResult = kw["result"]
+        # Only surface USABLE designs: a failing option is not something the engineer can
+        # "use", so it never becomes an alternative (the model still sees the failing
+        # observation via the tool return, so it can refine). This also keeps the candidate
+        # budget spent on real options, not dead ends.
+        if not result.passed:
+            return
         cand = _Candidate(
             label=_safe_prose(kw["label"], kw["mode"]),
             rationale=_safe_prose(kw["rationale"], ""),
@@ -431,7 +446,7 @@ class KernelDesignTools:
             rafter_restraint_spacing_m=kw["rafter_restraint_spacing_m"],
             column_restraint_spacing_m=kw["column_restraint_spacing_m"],
             sections=kw["sections"],
-            result=kw["result"],
+            result=result,
         )
         key = cand.key()
         if any(c.key() == key for c in self.candidates):
@@ -457,6 +472,61 @@ def _observe(result: DesignResult) -> dict[str, Any]:
     if result.total_steel_mass_kg is not None:
         obs["total_steel_mass_kg"] = round(result.total_steel_mass_kg, 1)
     return obs
+
+
+# --------------------------------------------------------------------------- #
+# Deterministic seed exploration (runs before, and independently of, the model)
+# --------------------------------------------------------------------------- #
+
+
+def _seed_experiments(tools: KernelDesignTools, constraints: AgentConstraints) -> None:
+    """Try a small, bounded set of sensible options deterministically.
+
+    Makes the exploration reliably useful even with no model (the model then refines).
+    All numbers come from the kernel; only passing options are recorded (see ``_record``).
+    """
+    try:
+        if constraints.is_active():
+            _seed_constraint_search(tools, constraints)
+        else:
+            _seed_restraint_sweep(tools)
+    except AgentBudgetError:
+        return  # candidate budget filled — assemble what we have
+
+
+def _seed_restraint_sweep(tools: KernelDesignTools) -> None:
+    """Cost a few tighter rafter-restraint options (lighter member, more purlins)."""
+    current = tools._spec.restraints.rafter_restraint_spacing_m
+    for spacing in _SEED_RAFTER_SPACINGS_M:
+        if current is not None and spacing >= current:
+            continue  # only worth trying restraint TIGHTER than what's already set
+        tools.run_design(
+            label="Closer rafter bracing",
+            rationale="tighter rafter restraint to allow a lighter beam",
+            rafter_restraint_spacing_m=spacing,
+        )
+
+
+def _seed_constraint_search(tools: KernelDesignTools, constraints: AgentConstraints) -> None:
+    """Find the lightest passing section pair within the engineer's constraints.
+
+    Deterministic lightest-first search over the allowed (stock / within-depth) catalogue —
+    so "use my stock sections" works reliably without relying on the model. Bounded.
+    """
+    listing = tools.list_sections()
+    designations = [str(row["designation"]) for row in listing["sections"]]
+    passes = 0
+    for idx, des in enumerate(designations):
+        if idx >= _SEED_MAX_CONSTRAINED_CHECKS or passes >= _SEED_MAX_CONSTRAINED_PASSES:
+            break
+        obs = tools.run_check(
+            label="Within your sections",
+            rationale="lightest stock pair the kernel passes",
+            rafter_designation=des,
+            column_designation=des,
+        )
+        if obs.get("passed"):
+            passes += 1
 
 
 # --------------------------------------------------------------------------- #
@@ -551,12 +621,13 @@ def run_design_agent(
             )
         )
 
-    # --- Model-driven exploration ---------------------------------------- #
+    # --- Deterministic seed exploration (always; works without a model) --- #
+    _seed_experiments(tools, constraints)
+
+    # --- Model-driven exploration (refines on top of the seeds) ----------- #
     used_llm = False
     if proposer is not None:
         used_llm = _drive_loop(tools, proposer, constraints, notes, max_actions)
-    else:
-        notes.append("AI exploration unavailable — showing the standard design only.")
 
     if constraints.is_active():
         notes.append("Constraints applied: only options satisfying them are shown.")
@@ -716,7 +787,10 @@ def _assemble(
             )
         )
 
-    recommended_index = _recommend(baseline, alternatives, constraints)
+    baseline_valid = baseline is not None and _result_satisfies(baseline, constraints, tools)
+    recommended_index = _recommend(
+        baseline, alternatives, constraints, baseline_valid=baseline_valid
+    )
     narrative = _narrative(baseline, baseline_note, alternatives, recommended_index, constraints)
 
     return AgentDesignOutcome(
@@ -757,16 +831,21 @@ def _recommend(
     baseline: DesignResult | None,
     alternatives: list[AgentAlternative],
     constraints: AgentConstraints,
+    *,
+    baseline_valid: bool = True,
 ) -> int | None:
     """Pick the recommended option deterministically (None => recommend the baseline).
 
     - If the baseline could not close, recommend the lightest passing alternative (the
       agent rescued a dead-end — a genuine, trade-off-free win).
-    - If constraints are active, recommend the lightest passing option (within the
-      engineer's own constraint, lightest-valid is the right pick).
-    - Otherwise recommend the BASELINE: tighter-restraint options save member steel but
-      add purlins/girts, so we never silently claim that as a free optimisation — we
-      present the options and let the engineer choose.
+    - If constraints are active AND the baseline itself does not satisfy them (its
+      auto-sized sections aren't in the stock list), the baseline is not a usable option,
+      so recommend the lightest passing CONSTRAINT-VALID alternative outright.
+    - If constraints are active and the baseline IS valid, recommend a constraint option
+      only if it is strictly lighter than the baseline (else keep the baseline).
+    - Otherwise (unconstrained) recommend the BASELINE: tighter-restraint options save
+      member steel but add purlins/girts, so we never silently claim that as a free
+      optimisation — we present the options and let the engineer choose.
     """
     passing = [
         (i, a)
@@ -778,17 +857,17 @@ def _recommend(
             return None
         return min(passing, key=lambda ia: ia[1].result.total_steel_mass_kg or 0.0)[0]
     if constraints.is_active():
-        # Compare alternatives against the baseline mass; recommend baseline (None) only if
-        # nothing strictly lighter passes within the constraint.
-        base_mass = baseline.total_steel_mass_kg
-        lighter = [
-            ia
-            for ia in passing
-            if base_mass is None or (ia[1].result.total_steel_mass_kg or 0.0) < base_mass - 0.5
-        ]
-        if not lighter:
+        if not passing:
             return None
-        return min(lighter, key=lambda ia: ia[1].result.total_steel_mass_kg or 0.0)[0]
+        lightest = min(passing, key=lambda ia: ia[1].result.total_steel_mass_kg or 0.0)
+        if not baseline_valid:
+            # The baseline violates the constraint, so it cannot be the recommendation;
+            # the lightest passing constraint-valid option is the right pick.
+            return lightest[0]
+        base_mass = baseline.total_steel_mass_kg
+        if base_mass is None or (lightest[1].result.total_steel_mass_kg or 0.0) < base_mass - 0.5:
+            return lightest[0]
+        return None
     return None
 
 

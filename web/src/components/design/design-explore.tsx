@@ -169,7 +169,7 @@ export function DesignExplore({
               </ul>
             ) : null}
 
-            {!outcome.used_llm ? (
+            {!outcome.used_llm && outcome.alternatives.length === 0 ? (
               <p className="text-xs text-subtle">
                 The design assistant wasn’t available, so only the standard design is shown.
               </p>
