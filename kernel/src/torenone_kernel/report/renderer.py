@@ -30,11 +30,11 @@ from typing import Any
 import jinja2
 
 from torenone_kernel.analysis.plane_frame import PortalAnalysis
-from torenone_kernel.checks.axial import cr_flexural
 from torenone_kernel.checks.bending import mcr_elastic, mr_ltb
 from torenone_kernel.checks.classification import classify_section
 from torenone_kernel.checks.material import fy_mpa as _fy_mpa
 from torenone_kernel.checks.shear import vr_web
+from torenone_kernel.codes import DEFAULT_CODE
 from torenone_kernel.loads.combinations import load_combinations
 from torenone_kernel.loads.dead import dead_loads
 from torenone_kernel.loads.imposed import imposed_roof_loads
@@ -222,22 +222,44 @@ def _compute_working(result: DesignResult) -> dict[str, Any]:
     raf_len_mm = math.hypot(half_mm, rise_mm)
     col_len_mm = geom.eaves_height_m * 1_000.0
 
+    # ---- Lateral restraint (purlins/girts) — same basis as design() ----
+    # The lateral-restraint spacing braces BOTH minor-axis flexural buckling AND LTB; when
+    # unset the member is unbraced over its full length. Mirroring design() here keeps the
+    # report's "show your working" consistent with the actual design — and, because the
+    # design already accepted these sections at these lengths, the capacity recomputation
+    # below cannot trip a slenderness limit the design had cleared.
+    ltb_raf_mm = (
+        spec.restraints.rafter_restraint_spacing_m * 1_000.0
+        if spec.restraints.rafter_restraint_spacing_m
+        else raf_len_mm
+    )
+    ltb_col_mm = (
+        spec.restraints.column_restraint_spacing_m * 1_000.0
+        if spec.restraints.column_restraint_spacing_m
+        else col_len_mm
+    )
+
     # ---- Section capacities (per member) ----
     member_workings: list[_MemberWorking] = []
-    for member, sec, KL_mm, LTB_mm in [
-        ("rafter", raf_sec, raf_len_mm, raf_len_mm),
-        ("column", col_sec, col_len_mm, col_len_mm),
+    for member, sec, axial_kl_mm, LTB_mm in [
+        ("rafter", raf_sec, raf_len_mm, ltb_raf_mm),
+        ("column", col_sec, col_len_mm, ltb_col_mm),
     ]:
         fy = _fy_mpa(spec.materials.steel_grade, sec.flange_thickness_mm)
         cls = classify_section(sec, fy, 0.0)
-        cr = cr_flexural(sec.area_mm2, fy, KL_mm, sec.radius_gyration_ry_mm)
+        # Axial resistance exactly as design() computes it: per-axis flexural buckling — major
+        # over the full length (rx), minor over the lateral-restraint spacing (ry) — taking the
+        # weaker. n=1.34 (hot-rolled), the design default.
+        cr = DEFAULT_CODE.axial_resistance(sec, fy, axial_kl_mm, LTB_mm, 1.34)
+        # The minor axis (braced length when restrained) governs the slenderness narrative.
+        minor_kl_mm = LTB_mm if LTB_mm > 1.0 else axial_kl_mm
         hw_mm = sec.depth_mm - 2.0 * sec.flange_thickness_mm
         vr = vr_web(hw_mm, sec.web_thickness_mm, fy)
         mcr = mcr_elastic(LTB_mm, sec.second_moment_iy_mm4,
                           sec.torsion_constant_j_mm4, sec.warping_constant_cw_mm6, 1.0)
         mr = mr_ltb(cls.overall_class, sec.plastic_modulus_zx_mm3,
                     sec.elastic_modulus_sx_mm3, fy, mcr)
-        kl_r = KL_mm / sec.radius_gyration_ry_mm
+        kl_r = minor_kl_mm / sec.radius_gyration_ry_mm
 
         member_workings.append(_MemberWorking(
             member=member,
@@ -249,7 +271,7 @@ def _compute_working(result: DesignResult) -> dict[str, Any]:
             zpl_mm3=sec.plastic_modulus_zx_mm3,
             ry_mm=sec.radius_gyration_ry_mm,
             fy_mpa=fy,
-            KL_mm=KL_mm,
+            KL_mm=minor_kl_mm,
             kl_over_r=kl_r,
             cr_kn=cr,
             hw_mm=hw_mm,

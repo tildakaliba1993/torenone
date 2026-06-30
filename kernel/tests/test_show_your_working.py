@@ -33,9 +33,33 @@ from torenone_kernel.models.frame_spec import (
     DeadLoadInputs,
     FrameGeometry,
     FrameSpec,
+    Restraints,
     WindContext,
 )
 from torenone_kernel.report.renderer import render_html
+
+
+def test_report_renders_for_restraint_braced_slender_member() -> None:
+    """Regression: a design whose minor axis is braced by close restraint may use a slender
+    section that is only adequate BECAUSE of that bracing. The report's "show your working"
+    must apply the same restraint the design did — otherwise it recomputes the member over its
+    full length, trips the KL/r > 200 slenderness limit, and the whole PDF build fails (the
+    "failed to generate or store the report" 502 the agent's "Closer rafter bracing" option hit).
+    """
+    spec = FrameSpec(
+        geometry=FrameGeometry(
+            span_m=20.0, eaves_height_m=6.0, roof_pitch_deg=10.0,
+            bay_spacing_m=6.0, number_of_bays=5,
+        ),
+        dead=DeadLoadInputs(roof_kpa=0.20),
+        restraints=Restraints(rafter_restraint_spacing_m=3.0),
+        wind=WindContext(basic_wind_speed_ms=36.0, terrain_category=TerrainCategory.B),
+    )
+    result = design(spec)
+    assert result.passed
+    # Must not raise SlendernessError — the report applies the braced length like the design.
+    html = render_html(result)
+    assert "Show Your Working" in html or "show your working" in html.lower()
 
 # ---------------------------------------------------------------------------
 # Fixtures
