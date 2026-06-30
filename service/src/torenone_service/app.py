@@ -53,6 +53,8 @@ from torenone_service.logging_config import configure_logging, get_logger
 from torenone_service.reports import (
     ReportBuilder,
     ReportStore,
+    RunStampContext,
+    StampUnavailableError,
     WeasyPrintReportBuilder,
     default_report_store,
     get_report_builder,
@@ -65,7 +67,10 @@ from torenone_service.schemas import (
     ParseDrawingRequest,
     ParseRequest,
     ParseResponse,
+    StampRequest,
+    StampResponse,
 )
+from torenone_service.stamp_service import StampError, build_stamped_pdf, utc_now_iso
 
 SERVICE_NAME = "torenone-engineering-service"
 SERVICE_VERSION = "0.1.0"
@@ -514,6 +519,85 @@ def create_app(
             ),
         )
         return DesignResponse(result=result, report=stored)
+
+    @app.post("/stamp")
+    @limiter.limit(DESIGN_RATE_LIMIT)
+    def stamp(
+        request: Request,
+        body: StampRequest,
+        user: AuthenticatedUser = Depends(require_user),
+        store: ReportStore = Depends(get_report_store),
+    ) -> StampResponse:
+        """Apply the calling registered engineer's e-stamp to a stored run.
+
+        Only a user the firm owner has marked a registered engineer (with an ECSA reg no) may
+        stamp. The run's PDF is re-rendered with the stamp and re-stored; the run records the
+        stamp. The kernel re-runs deterministically from the stored inputs, so the stamp's
+        fingerprint equals the original report fingerprint (tamper-evidence). No engineering
+        number changes — the stamp records professional responsibility, not validation.
+        """
+        try:
+            ctx: RunStampContext | None = store.load_run_for_stamp(
+                user_id=user.user_id, run_id=body.run_id
+            )
+        except StampUnavailableError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="stamping is not available in this environment",
+            ) from exc
+        if ctx is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="run not found")
+        if not ctx.is_registered_engineer or not ctx.ecsa_reg_no:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="only a registered engineer (with an ECSA registration number) can stamp",
+            )
+
+        stamped_at = utc_now_iso()
+        try:
+            pdf_bytes, applied = build_stamped_pdf(
+                frame_spec=ctx.frame_spec,
+                mode=ctx.mode,
+                result=ctx.result,
+                report_metadata=ctx.report_metadata,
+                engineer_name=ctx.engineer_name,
+                ecsa_reg_no=ctx.ecsa_reg_no,
+                stamped_at=stamped_at,
+            )
+        except StampError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message
+            ) from exc
+        except Exception as exc:
+            logger.error("stamp_render_failed", extra={"user_id": user.user_id}, exc_info=exc)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="failed to render the stamped report",
+            ) from exc
+
+        stamp_record = {**applied.model_dump(), "stamped_by": user.user_id}
+        try:
+            store.apply_stamp(
+                run_id=body.run_id,
+                firm_id=ctx.firm_id,
+                storage_path=ctx.storage_path,
+                pdf_bytes=pdf_bytes,
+                stamp=stamp_record,
+            )
+        except Exception as exc:
+            logger.error("stamp_store_failed", extra={"user_id": user.user_id}, exc_info=exc)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="failed to store the stamped report",
+            ) from exc
+
+        logger.info("stamp", extra={"user_id": user.user_id, "run_id": body.run_id})
+        return StampResponse(
+            engineer_name=applied.engineer_name,
+            ecsa_reg_no=applied.ecsa_reg_no,
+            stamped_at=applied.stamped_at,
+            fingerprint=applied.fingerprint,
+        )
 
     logger.info(
         "service_startup",

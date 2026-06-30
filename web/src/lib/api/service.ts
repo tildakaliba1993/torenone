@@ -487,6 +487,51 @@ export async function runDesignAgent(
   return (await res.json()) as AgentDesignOutcome;
 }
 
+/** A registered engineer's e-stamp recorded on a run (mirrors the kernel Stamp + audit). */
+export interface RunStamp {
+  engineer_name: string;
+  ecsa_reg_no: string;
+  stamped_at: string;
+  fingerprint: string;
+  stamped_by?: string;
+}
+
+/**
+ * Apply the calling registered engineer's e-stamp to a stored run. The service re-renders the
+ * calc package with the stamp and re-stores it; only a user the firm owner marked a registered
+ * engineer (with an ECSA reg no) may stamp. Records professional responsibility — not validation.
+ */
+export async function stampRun(runId: string): Promise<RunStamp> {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) {
+    throw new ServiceError("Your session has expired — please sign in again.");
+  }
+
+  const res = await serviceFetch(`${serviceBaseUrl()}/stamp`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ run_id: runId }),
+  });
+
+  if (!res.ok) {
+    let detail = `Stamping failed (${res.status}).`;
+    try {
+      const body = (await res.json()) as { detail?: unknown };
+      if (body?.detail) detail = String(body.detail);
+    } catch {
+      // keep status-based message
+    }
+    throw new ServiceError(detail);
+  }
+  return (await res.json()) as RunStamp;
+}
+
 export async function runDesign(request: DesignRequest): Promise<DesignResponse> {
   const supabase = createClient();
   const {

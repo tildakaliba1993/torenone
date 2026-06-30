@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { InviteColleagueForm } from "@/components/auth/invite-colleague-form";
 import { BillingCard } from "@/components/billing/billing-card";
+import { EngineerManager, type FirmMember } from "@/components/team/engineer-manager";
 import {
   Card,
   CardContent,
@@ -68,6 +69,19 @@ export default async function DashboardPage({
   // Provider-agnostic: true when the active payment provider (PAYMENT_PROVIDER) is configured.
   const paymentConfigured = await isPaymentConfigured();
 
+  // Firm roster for registered-engineer management. select("*") (RLS: read firm colleagues)
+  // stays resilient before the engineer-columns migration is applied.
+  let members: FirmMember[] = [];
+  if (firmId) {
+    const { data } = await supabase.from("profiles").select("*").eq("firm_id", firmId);
+    members = ((data ?? []) as Array<Record<string, unknown>>).map((p) => ({
+      id: String(p.id),
+      name: (p.name as string | null) ?? null,
+      is_registered_engineer: Boolean(p.is_registered_engineer),
+      ecsa_reg_no: (p.ecsa_reg_no as string | null) ?? null,
+    }));
+  }
+
   return (
     <main className="flex w-full flex-col gap-8">
       <header className="flex flex-col gap-2">
@@ -116,6 +130,19 @@ export default async function DashboardPage({
           </CardContent>
         </Card>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Registered engineers</CardTitle>
+          <CardDescription>
+            Only a registered (ECSA) engineer can apply an e-stamp to a calc package.
+            {role === "owner" ? " Mark colleagues and record their registration number below." : ""}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <EngineerManager members={members} isOwner={role === "owner"} selfId={user.id} />
+        </CardContent>
+      </Card>
     </main>
   );
 }

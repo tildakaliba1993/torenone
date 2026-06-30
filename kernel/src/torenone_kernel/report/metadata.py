@@ -7,7 +7,24 @@ field is optional; absent fields simply do not render, so a run with no metadata
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class Stamp(BaseModel):
+    """A registered engineer's e-stamp recorded on a calc package — professional sign-off.
+
+    Rendered in the sign-off block when present. ``fingerprint`` ties the stamp to the exact
+    ``DesignResult`` it was applied to (tamper-evidence): if the design changes, its fingerprint
+    changes and no longer matches the stamp. This records that a named, ECSA-registered engineer
+    has accepted professional responsibility — it is NOT a claim that TorenOne validated anything.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    engineer_name: str = Field(min_length=1)
+    ecsa_reg_no: str = Field(min_length=1)
+    stamped_at: str = Field(min_length=1, description="ISO-8601 UTC datetime the stamp was applied.")
+    fingerprint: str = Field(min_length=1, description="report_fingerprint(result) at stamp time.")
 
 
 class ReportMetadata(BaseModel):

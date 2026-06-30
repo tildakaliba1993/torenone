@@ -216,6 +216,26 @@ class DesignResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# /stamp  (registered-engineer e-stamp on a stored run)
+# ---------------------------------------------------------------------------
+
+
+class StampRequest(BaseModel):
+    """Apply the calling registered engineer's e-stamp to a stored design run."""
+
+    run_id: str = Field(min_length=1)
+
+
+class StampResponse(BaseModel):
+    """The applied stamp (the run's PDF has been re-rendered + re-stored with it)."""
+
+    engineer_name: str
+    ecsa_reg_no: str
+    stamped_at: str
+    fingerprint: str
+
+
+# ---------------------------------------------------------------------------
 # /design-agent  (agentic exploration — no PDF; the web replays the pick via /design)
 # ---------------------------------------------------------------------------
 

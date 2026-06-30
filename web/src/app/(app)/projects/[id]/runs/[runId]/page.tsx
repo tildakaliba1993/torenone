@@ -2,12 +2,14 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { RunResults } from "@/components/design/run-results";
+import { StampPanel } from "@/components/design/stamp-panel";
 import { ReportDownloadButton } from "@/components/projects/report-download-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   type DesignResponse,
   type DesignResult,
   type ReportMetadata,
+  type RunStamp,
 } from "@/lib/api/service";
 import { createClient } from "@/lib/supabase/server";
 
@@ -15,6 +17,7 @@ interface RawRun {
   id: string;
   mode: string;
   result: DesignResult | null;
+  stamp?: RunStamp | null;
   reports: Array<{ storage_path: string }> | { storage_path: string } | null;
 }
 
@@ -36,15 +39,25 @@ export default async function RunDetailPage({
   const { data: project } = await supabase.from("projects").select("*").eq("id", id).single();
   if (!project) notFound();
 
+  // select("*, ...") stays resilient before the runs.stamp migration is applied.
   const { data: runData } = await supabase
     .from("runs")
-    .select("id, mode, result, reports(storage_path)")
+    .select("*, reports(storage_path)")
     .eq("id", runId)
     .eq("project_id", id)
     .single();
   if (!runData) notFound();
 
   const run = runData as RawRun;
+
+  // The caller's registered-engineer status decides whether they may stamp. select("*") so this
+  // is resilient before the profiles engineer-columns migration is applied.
+  const { data: me } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  const isRegisteredEngineer = Boolean(
+    (me as { is_registered_engineer?: boolean } | null)?.is_registered_engineer &&
+      (me as { ecsa_reg_no?: string | null } | null)?.ecsa_reg_no,
+  );
+  const stamp = (run.stamp as RunStamp | null) ?? null;
   const storagePath = Array.isArray(run.reports)
     ? (run.reports[0]?.storage_path ?? null)
     : (run.reports?.storage_path ?? null);
@@ -100,6 +113,7 @@ export default async function RunDetailPage({
   return (
     <main className="flex w-full flex-col gap-6">
       {header}
+      <StampPanel runId={runId} stamp={stamp} canStamp={isRegisteredEngineer && !stamp} />
       <RunResults
         result={response}
         projectId={id}

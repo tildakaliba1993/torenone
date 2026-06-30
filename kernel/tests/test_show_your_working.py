@@ -36,10 +36,47 @@ from torenone_kernel.models.frame_spec import (
     Restraints,
     WindContext,
 )
-from torenone_kernel.report.metadata import ReportMetadata
-from torenone_kernel.report.renderer import render_html
+from torenone_kernel.report.metadata import ReportMetadata, Stamp
+from torenone_kernel.report.renderer import render_html, report_fingerprint
 
 _DOC_TABLE = '<table class="doc-control">'
+_STAMP_MARK = '<div class="stamp-mark">'
+
+
+def _spec_15m() -> FrameSpec:
+    return FrameSpec(
+        geometry=FrameGeometry(
+            span_m=15.0, eaves_height_m=5.0, roof_pitch_deg=8.0,
+            bay_spacing_m=6.0, number_of_bays=5,
+        ),
+        dead=DeadLoadInputs(roof_kpa=0.20),
+        wind=WindContext(basic_wind_speed_ms=36.0, terrain_category=TerrainCategory.B),
+    )
+
+
+def test_report_unstamped_shows_not_stamped_warning() -> None:
+    """No stamp => the 'not a stamped design' warning shows and the stamp block is absent."""
+    html = render_html(design(_spec_15m()))
+    assert "not a stamped design" in html
+    assert _STAMP_MARK not in html
+
+
+def test_report_stamped_renders_engineer_stamp() -> None:
+    """A stamp fills the sign-off block, affirms the stamp on the cover, and binds the fingerprint."""
+    result = design(_spec_15m())
+    fp = report_fingerprint(result)
+    stamp = Stamp(
+        engineer_name="J. Smith Pr.Eng",
+        ecsa_reg_no="ECSA 20250123",
+        stamped_at="2026-06-30T22:00:00Z",
+        fingerprint=fp,
+    )
+    html = render_html(result, None, stamp)
+    assert _STAMP_MARK in html
+    assert "not a stamped design" not in html  # the warning is replaced by the affirmation
+    assert "J. Smith Pr.Eng" in html
+    assert "ECSA 20250123" in html
+    assert fp in html  # the full fingerprint is bound into the stamp (tamper-evidence)
 
 
 def test_report_cover_unchanged_without_metadata() -> None:

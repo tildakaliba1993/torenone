@@ -1,7 +1,67 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+
+/**
+ * Owner-only: mark a firm colleague a registered (ECSA) engineer permitted to e-stamp calc
+ * packages (or revoke it). The caller's owner role is resolved server-side; the privileged
+ * cross-profile update uses the service-role admin client. The target is verified to be in the
+ * caller's firm (the admin client bypasses RLS, so this check is enforced explicitly).
+ */
+export async function setEngineerStatus(input: {
+  memberId: string;
+  isRegisteredEngineer: boolean;
+  ecsaRegNo: string;
+}): Promise<{ error?: string }> {
+  const reg = input.ecsaRegNo?.trim() || null;
+  if (input.isRegisteredEngineer && !reg) {
+    return { error: "An ECSA registration number is required to mark someone a registered engineer." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You are not signed in." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, firm_id")
+    .eq("id", user.id)
+    .single();
+  if (!profile?.firm_id) return { error: "No firm is linked to your account." };
+  if (profile.role !== "owner") {
+    return { error: "Only the firm owner can manage registered engineers." };
+  }
+
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return { error: "This is not configured on this deployment." };
+  }
+
+  const { data: target } = await admin
+    .from("profiles")
+    .select("firm_id")
+    .eq("id", input.memberId)
+    .single();
+  if (!target || target.firm_id !== profile.firm_id) {
+    return { error: "That person is not in your firm." };
+  }
+
+  const { error } = await admin
+    .from("profiles")
+    .update({ is_registered_engineer: input.isRegisteredEngineer, ecsa_reg_no: reg })
+    .eq("id", input.memberId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard");
+  return {};
+}
 
 /**
  * Invite a colleague into the caller's firm (Task §8.2). Owner-only.

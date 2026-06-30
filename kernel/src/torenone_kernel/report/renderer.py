@@ -40,7 +40,7 @@ from torenone_kernel.loads.dead import dead_loads
 from torenone_kernel.loads.imposed import imposed_roof_loads
 from torenone_kernel.models.results import DesignResult
 from torenone_kernel.report.diagrams import bmd_sfd_png, frame_geometry_png
-from torenone_kernel.report.metadata import ReportMetadata
+from torenone_kernel.report.metadata import ReportMetadata, Stamp
 from torenone_kernel.sections.library import SectionLibrary
 
 _TEMPLATE_PATH = Path(__file__).parent / "template.html.jinja2"
@@ -319,12 +319,18 @@ def _compute_working(result: DesignResult) -> dict[str, Any]:
     }
 
 
-def render_html(result: DesignResult, metadata: ReportMetadata | None = None) -> str:
+def render_html(
+    result: DesignResult,
+    metadata: ReportMetadata | None = None,
+    stamp: Stamp | None = None,
+) -> str:
     """Render *result* to a standalone HTML string.
 
     No arithmetic is performed here — all numeric values come directly from *result*.
     *metadata* is optional document/admin data (project, client, responsible engineer,
-    revision) for the cover; when absent or empty the cover is unchanged.
+    revision) for the cover; when absent or empty the cover is unchanged. *stamp* is an
+    optional registered-engineer e-stamp; when present the sign-off block is filled and the
+    cover affirms the design was reviewed and stamped (rather than "not yet stamped").
     """
     env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(str(_TEMPLATE_PATH.parent)),
@@ -419,6 +425,9 @@ def render_html(result: DesignResult, metadata: ReportMetadata | None = None) ->
         # cover unchanged. Never engineering data.
         "doc": metadata,
         "has_doc_metadata": metadata is not None and metadata.has_any(),
+        # Registered-engineer e-stamp (None unless the run has been stamped). When present, the
+        # sign-off block is filled and the cover affirms the stamp instead of "not yet stamped".
+        "stamp": stamp,
         # Show-your-working (FR-26)
         **working,
     }
@@ -426,7 +435,11 @@ def render_html(result: DesignResult, metadata: ReportMetadata | None = None) ->
     return template.render(**ctx)
 
 
-def render_pdf(result: DesignResult, metadata: ReportMetadata | None = None) -> bytes:
+def render_pdf(
+    result: DesignResult,
+    metadata: ReportMetadata | None = None,
+    stamp: Stamp | None = None,
+) -> bytes:
     """Render *result* to PDF bytes using WeasyPrint.
 
     Requires Python 3.11 + Homebrew pango/cairo on macOS.
@@ -445,6 +458,6 @@ def render_pdf(result: DesignResult, metadata: ReportMetadata | None = None) -> 
             "See docs/HANDOVER.md for environment setup."
         ) from exc
 
-    html_string = render_html(result, metadata)
+    html_string = render_html(result, metadata, stamp)
     pdf_bytes: bytes = weasyprint.HTML(string=html_string).write_pdf()
     return pdf_bytes

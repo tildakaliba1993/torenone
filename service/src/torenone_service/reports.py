@@ -12,6 +12,7 @@ real Supabase project:
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import uuid
 from collections.abc import Callable
@@ -43,6 +44,25 @@ class WeasyPrintReportBuilder:
         return render_pdf(result, metadata)
 
 
+class StampUnavailableError(RuntimeError):
+    """Raised when the active store cannot stamp (e.g. the in-process store has no runs)."""
+
+
+@dataclasses.dataclass(frozen=True)
+class RunStampContext:
+    """Everything needed to stamp a stored run — the caller's engineer identity + the run inputs."""
+
+    firm_id: str
+    engineer_name: str
+    ecsa_reg_no: str | None
+    is_registered_engineer: bool
+    frame_spec: dict[str, Any]
+    mode: str
+    result: dict[str, Any]
+    report_metadata: dict[str, Any] | None
+    storage_path: str
+
+
 @runtime_checkable
 class ReportStore(Protocol):
     def save_report(
@@ -54,6 +74,16 @@ class ReportStore(Protocol):
         pdf_bytes: bytes,
         mode: str = "design",
     ) -> StoredReport: ...
+
+    def load_run_for_stamp(self, *, user_id: str, run_id: str) -> RunStampContext | None:
+        """Load the caller's engineer identity + the run's inputs, or None if not in their firm."""
+        ...
+
+    def apply_stamp(
+        self, *, run_id: str, firm_id: str, storage_path: str, pdf_bytes: bytes, stamp: dict[str, Any]
+    ) -> None:
+        """Overwrite the run's stored PDF with the stamped one and record runs.stamp."""
+        ...
 
 
 class InMemoryReportStore:
@@ -81,6 +111,15 @@ class InMemoryReportStore:
             storage_path=storage_path,
             size_bytes=len(pdf_bytes),
         )
+
+    def load_run_for_stamp(self, *, user_id: str, run_id: str) -> RunStampContext | None:
+        # The in-process store keeps no run/profile rows — stamping needs the Supabase store.
+        raise StampUnavailableError("stamping requires the Supabase-backed report store")
+
+    def apply_stamp(
+        self, *, run_id: str, firm_id: str, storage_path: str, pdf_bytes: bytes, stamp: dict[str, Any]
+    ) -> None:
+        raise StampUnavailableError("stamping requires the Supabase-backed report store")
 
 
 @runtime_checkable
@@ -211,6 +250,65 @@ class SupabaseReportStore:
             storage_path=storage_path,
             size_bytes=len(pdf_bytes),
         )
+
+    def load_run_for_stamp(self, *, user_id: str, run_id: str) -> RunStampContext | None:
+        conn = self._connect()
+        try:
+            with conn.cursor() as cur:
+                prof = cur.execute(
+                    "select firm_id, name, is_registered_engineer, ecsa_reg_no "
+                    "from public.profiles where id = %s",
+                    (user_id,),
+                ).fetchone()
+                if prof is None:
+                    raise LookupError(f"no profile for user {user_id}")
+                firm_id, name, is_eng, reg_no = prof
+                # Scope the run to the caller's firm (defence-in-depth alongside RLS).
+                run = cur.execute(
+                    "select r.frame_spec, r.mode, r.result, rep.storage_path, p.report_metadata "
+                    "from public.runs r "
+                    "join public.reports rep on rep.run_id = r.id "
+                    "join public.projects p on p.id = r.project_id "
+                    "where r.id = %s and r.firm_id = %s",
+                    (run_id, firm_id),
+                ).fetchone()
+                if run is None:
+                    return None
+                frame_spec, mode, result, storage_path, report_metadata = run
+        finally:
+            conn.close()
+        return RunStampContext(
+            firm_id=str(firm_id),
+            engineer_name=name or "",
+            ecsa_reg_no=reg_no,
+            is_registered_engineer=bool(is_eng),
+            frame_spec=frame_spec,
+            mode=mode,
+            result=result,
+            report_metadata=report_metadata,
+            storage_path=storage_path,
+        )
+
+    def apply_stamp(
+        self, *, run_id: str, firm_id: str, storage_path: str, pdf_bytes: bytes, stamp: dict[str, Any]
+    ) -> None:
+        from psycopg.types.json import Jsonb
+
+        # Overwrite the stored PDF first (upsert), then record the stamp — so a stamped run
+        # never points at an un-stamped object.
+        self._uploader.upload(
+            bucket=self._bucket, path=storage_path, data=pdf_bytes, content_type="application/pdf"
+        )
+        conn = self._connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "update public.runs set stamp = %s where id = %s and firm_id = %s",
+                    (Jsonb(stamp), run_id, firm_id),
+                )
+            conn.commit()
+        finally:
+            conn.close()
 
 
 # Bound how long a single design request will wait to acquire a DB connection. The

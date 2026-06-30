@@ -162,6 +162,22 @@
       border-left-color: #D97706;
       background: var(--color-warn-bg);
     }
+    .box-stamped {
+      border-left-color: var(--color-pass);
+      background: var(--color-pass-bg);
+      color: var(--color-pass);
+    }
+    .stamp-mark {
+      border: 1.5pt solid var(--color-pass);
+      border-radius: 3pt;
+      padding: 8pt 11pt;
+      color: var(--color-pass);
+      background: var(--color-pass-bg);
+      font-size: 9pt;
+    }
+    .stamp-mark .stamp-title { font-weight: bold; letter-spacing: 0.04em; text-transform: uppercase; }
+    .stamp-mark .stamp-name { font-size: 11pt; font-weight: bold; margin-top: 3pt; }
+    .stamp-mark .stamp-meta { color: var(--color-text); margin-top: 3pt; }
 
     /* ------------------------------------------------------------------ */
     /* Provenance label                                                    */
@@ -276,6 +292,18 @@
 <!-- ================================================================ -->
 <!-- LIABILITY DISCLAIMER (Production-Readiness §2.4)                  -->
 <!-- ================================================================ -->
+{% if stamp %}
+<div class="box box-stamped">
+  <strong>&#10003; Reviewed &amp; stamped by a registered engineer.</strong>
+  This design was independently reviewed, verified and stamped by <strong>{{ stamp.engineer_name }}</strong>
+  (ECSA reg. {{ stamp.ecsa_reg_no }}) on {{ stamp.stamped_at }} (UTC), who has accepted professional
+  responsibility for it. TorenOne&rsquo;s deterministic SANS kernel computed the figures (a
+  computational aid); the named engineer&rsquo;s review and stamp — not TorenOne — is the
+  authoritative professional assurance. The stamp is bound to report fingerprint
+  <span style="font-family: monospace; font-size:8pt;">{{ stamp.fingerprint[:16] }}&hellip;</span>;
+  any change to the design changes this fingerprint and voids the stamp.
+</div>
+{% else %}
 <div class="box box-warn">
   <strong>&#9888; Computational aid — not a stamped design.</strong>
   This report is a machine-generated computational aid produced by TorenOne&rsquo;s deterministic
@@ -285,6 +313,7 @@
   this design — and confirm all items flagged PROVISIONAL or out of scope — and accept professional
   responsibility before it is used for construction.
 </div>
+{% endif %}
 
 <!-- ================================================================ -->
 <!-- PROVENANCE STATEMENT (PRD FR-26)                                  -->
@@ -881,6 +910,24 @@
 <!-- ================================================================ -->
 <div class="signoff">
   <h3>Engineer review &amp; sign-off</h3>
+  {% if stamp %}
+  <div class="stamp-mark">
+    <div class="stamp-title">&#10003; Digitally stamped — registered engineer</div>
+    <div class="stamp-name">{{ stamp.engineer_name }}</div>
+    <div class="stamp-meta">
+      ECSA registration no. {{ stamp.ecsa_reg_no }}<br>
+      Stamped: {{ stamp.stamped_at }} (UTC)<br>
+      Bound to report fingerprint:
+      <span style="font-family: monospace; font-size:8pt;">{{ stamp.fingerprint }}</span>
+    </div>
+    <p class="note" style="margin-top:6pt;">
+      The named professional, registered with the Engineering Council of South Africa (ECSA), has
+      independently reviewed and verified this design — including every item flagged PROVISIONAL or
+      out of scope — and accepts professional responsibility for it. This digital stamp is bound to
+      the report fingerprint above; any change to the design changes the fingerprint and voids the stamp.
+    </p>
+  </div>
+  {% else %}
   <p class="note">
     By signing below, the reviewing professional confirms they are registered with the Engineering
     Council of South Africa (ECSA), have independently reviewed and verified this design — including
@@ -896,6 +943,7 @@
       <td><div class="label">Date</div><div class="line"></div></td>
     </tr>
   </table>
+  {% endif %}
 </div>
 
 <!-- ================================================================ -->
