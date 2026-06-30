@@ -12,6 +12,7 @@ import {
   type AgentDesignOutcome,
   type DesignResponse,
   type DesignResult,
+  type ReportMetadata,
   ServiceError,
   runDesign,
   runDesignAgent,
@@ -33,10 +34,13 @@ export function DesignExplore({
   design,
   projectId,
   onUse,
+  reportMetadata,
 }: {
   design: DesignResult;
   projectId: string;
   onUse: (response: DesignResponse) => void;
+  /** Document metadata to bake into the chosen option's calc package (cover sheet). */
+  reportMetadata?: ReportMetadata;
 }) {
   const [phase, setPhase] = useState<"idle" | "loading" | "done">("idle");
   const [outcome, setOutcome] = useState<AgentDesignOutcome | null>(null);
@@ -80,6 +84,7 @@ export function DesignExplore({
         mode: alt.mode,
         sections: alt.sections ?? null,
         project_id: projectId,
+        report_metadata: reportMetadata ?? null,
       });
       onUse(response);
     } catch (e) {

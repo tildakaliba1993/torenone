@@ -71,7 +71,7 @@ class _FakeReportBuilder:
     def __init__(self) -> None:
         self.calls: list[DesignResult] = []
 
-    def build_pdf(self, result: DesignResult) -> bytes:
+    def build_pdf(self, result: DesignResult, metadata: object = None) -> bytes:
         self.calls.append(result)
         return FAKE_PDF
 

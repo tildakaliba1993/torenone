@@ -36,7 +36,56 @@ from torenone_kernel.models.frame_spec import (
     Restraints,
     WindContext,
 )
+from torenone_kernel.report.metadata import ReportMetadata
 from torenone_kernel.report.renderer import render_html
+
+_DOC_TABLE = '<table class="doc-control">'
+
+
+def test_report_cover_unchanged_without_metadata() -> None:
+    """No / empty document metadata => the cover document-control block is not rendered."""
+    spec = FrameSpec(
+        geometry=FrameGeometry(
+            span_m=15.0, eaves_height_m=5.0, roof_pitch_deg=8.0,
+            bay_spacing_m=6.0, number_of_bays=5,
+        ),
+        dead=DeadLoadInputs(roof_kpa=0.20),
+        wind=WindContext(basic_wind_speed_ms=36.0, terrain_category=TerrainCategory.B),
+    )
+    result = design(spec)
+    assert _DOC_TABLE not in render_html(result)
+    assert _DOC_TABLE not in render_html(result, ReportMetadata())
+
+
+def test_report_renders_document_metadata_on_cover() -> None:
+    """Supplied document metadata renders on the cover and pre-fills the sign-off name/reg."""
+    spec = FrameSpec(
+        geometry=FrameGeometry(
+            span_m=15.0, eaves_height_m=5.0, roof_pitch_deg=8.0,
+            bay_spacing_m=6.0, number_of_bays=5,
+        ),
+        dead=DeadLoadInputs(roof_kpa=0.20),
+        wind=WindContext(basic_wind_speed_ms=36.0, terrain_category=TerrainCategory.B),
+    )
+    result = design(spec)
+    md = ReportMetadata(
+        project_name="Granger Bay Warehouse",
+        client="Acme Developers",
+        project_number="TO-2026-014",
+        site_address="1 Beach Rd, Cape Town",
+        engineer_name="J. Smith Pr.Eng",
+        engineer_reg_no="ECSA 20250123",
+        revision="A",
+    )
+    html = render_html(result, md)
+    assert _DOC_TABLE in html
+    for value in (
+        "Granger Bay Warehouse", "Acme Developers", "TO-2026-014",
+        "1 Beach Rd, Cape Town", "J. Smith Pr.Eng", "ECSA 20250123",
+    ):
+        assert value in html, value
+    # Numbers in metadata are document data, not engineering data — the provenance guarantee
+    # (no AI-authored engineering numbers) is unaffected; this is plain cover text.
 
 
 def test_report_renders_for_restraint_braced_slender_member() -> None:

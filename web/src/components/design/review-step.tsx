@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import {
   type DesignResponse,
   type FrameSpec,
+  type ReportMetadata,
   ServiceError,
   runDesign,
 } from "@/lib/api/service";
@@ -79,6 +80,15 @@ const schema = z
       concrete_fcu_mpa: numberField({ message: "Must be greater than 0", gt: 0 }),
     }),
     materials: z.object({ steel_grade: z.enum(["S275JR", "S355JR"]) }),
+    document: z.object({
+      project_name: z.string(),
+      client: z.string(),
+      project_number: z.string(),
+      site_address: z.string(),
+      engineer_name: z.string(),
+      engineer_reg_no: z.string(),
+      revision: z.string(),
+    }),
     restraints: z.object({
       rafter_restraint_spacing_m: numberField({ message: "Must be greater than 0", gt: 0, optional: true }),
       column_restraint_spacing_m: numberField({ message: "Must be greater than 0", gt: 0, optional: true }),
@@ -130,6 +140,15 @@ function defaultsFromSpec(spec: FrameSpec): FormValues {
       concrete_fcu_mpa: n(spec.foundation?.concrete_fcu_mpa ?? 25),
     },
     materials: { steel_grade: spec.materials?.steel_grade ?? "S355JR" },
+    document: {
+      project_name: "",
+      client: "",
+      project_number: "",
+      site_address: "",
+      engineer_name: "",
+      engineer_reg_no: "",
+      revision: "",
+    },
     restraints: {
       rafter_restraint_spacing_m: n(spec.restraints?.rafter_restraint_spacing_m),
       column_restraint_spacing_m: n(spec.restraints?.column_restraint_spacing_m),
@@ -144,16 +163,33 @@ function defaultsFromSpec(spec: FrameSpec): FormValues {
 const SELECT_CLASS =
   "flex h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
 
+/** Build a ReportMetadata from the form's document fields, or undefined if all blank. */
+function buildReportMetadata(d: FormValues["document"]): ReportMetadata | undefined {
+  const md: ReportMetadata = {
+    project_name: d.project_name.trim() || null,
+    client: d.client.trim() || null,
+    project_number: d.project_number.trim() || null,
+    site_address: d.site_address.trim() || null,
+    engineer_name: d.engineer_name.trim() || null,
+    engineer_reg_no: d.engineer_reg_no.trim() || null,
+    revision: d.revision.trim() || null,
+  };
+  return Object.values(md).some((v) => v) ? md : undefined;
+}
+
 export function ReviewStep({
   spec,
   projectId,
   onComplete,
   onBack,
+  onReportMetadata,
 }: {
   spec: FrameSpec;
   projectId: string;
   onComplete: (result: DesignResponse) => void;
   onBack: () => void;
+  /** Lift the entered document metadata so in-session Explore runs reuse it. */
+  onReportMetadata?: (metadata: ReportMetadata | undefined) => void;
 }) {
   const [error, setError] = useState<string | null>(null);
   const form = useForm<FormValues>({
@@ -205,12 +241,15 @@ export function ReviewStep({
             { member: "column", designation: values.column_section.trim() },
           ]
         : null;
+    const reportMetadata = buildReportMetadata(values.document);
+    onReportMetadata?.(reportMetadata);
     try {
       const result = await runDesign({
         spec: builtSpec,
         mode: values.mode,
         sections,
         project_id: projectId,
+        report_metadata: reportMetadata ?? null,
       });
       onComplete(result);
     } catch (e) {
@@ -331,6 +370,27 @@ export function ReviewStep({
 
         <Card>
           <CardHeader>
+            <CardTitle>Document details (optional)</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <p className="text-sm text-muted">
+              These appear on the calc-package cover so it reads as a submission-ready rational
+              design report. All optional — leave blank to omit the cover block.
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <TextField name="document.project_name" label="Project name" />
+              <TextField name="document.project_number" label="Project number" />
+              <TextField name="document.client" label="Client" />
+              <TextField name="document.revision" label="Revision" placeholder="e.g. A" />
+              <TextField name="document.site_address" label="Site address" />
+              <TextField name="document.engineer_name" label="Responsible engineer" />
+              <TextField name="document.engineer_reg_no" label="ECSA registration no." />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Run mode</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -429,6 +489,31 @@ function NumberField({ name, label, unit }: { name: string; label: string; unit?
           </FormLabel>
           <FormControl>
             <Input type="number" inputMode="decimal" {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+}
+
+function TextField({
+  name,
+  label,
+  placeholder,
+}: {
+  name: string;
+  label: string;
+  placeholder?: string;
+}) {
+  return (
+    <FormField
+      name={name}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>{label}</FormLabel>
+          <FormControl>
+            <Input placeholder={placeholder} {...field} />
           </FormControl>
           <FormMessage />
         </FormItem>

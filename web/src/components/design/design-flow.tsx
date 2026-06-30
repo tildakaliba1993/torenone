@@ -8,7 +8,12 @@ import { useRouter } from "next/navigation";
 import { DescribeStep } from "@/components/design/describe-step";
 import { ResultsStep } from "@/components/design/results-step";
 import { ReviewStep } from "@/components/design/review-step";
-import { type DesignResponse, type FrameSpec, warmService } from "@/lib/api/service";
+import {
+  type DesignResponse,
+  type FrameSpec,
+  type ReportMetadata,
+  warmService,
+} from "@/lib/api/service";
 
 /**
  * Multi-step design flow: Describe (6.4) → Review/Run (6.5) → Results (6.6).
@@ -18,6 +23,7 @@ export function DesignFlow({ projectId, projectName }: { projectId: string; proj
   const router = useRouter();
   const [spec, setSpec] = useState<FrameSpec | null>(null);
   const [result, setResult] = useState<DesignResponse | null>(null);
+  const [reportMetadata, setReportMetadata] = useState<ReportMetadata | undefined>(undefined);
 
   // The run is persisted by the engineering service (not a Next action), so invalidate
   // the client Router Cache once it lands — otherwise the project's run history shows
@@ -56,6 +62,7 @@ export function DesignFlow({ projectId, projectName }: { projectId: string; proj
           spec={spec}
           projectId={projectId}
           onComplete={onDesignComplete}
+          onReportMetadata={setReportMetadata}
           onBack={() => setSpec(null)}
         />
       ) : null}
@@ -65,6 +72,7 @@ export function DesignFlow({ projectId, projectName }: { projectId: string; proj
           result={result}
           projectId={projectId}
           onUseAlternative={onDesignComplete}
+          reportMetadata={reportMetadata}
           onRestart={() => {
             setResult(null);
             setSpec(null);

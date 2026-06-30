@@ -70,7 +70,7 @@ class _RaisingBuilder:
     def __init__(self, exc: Exception) -> None:
         self._exc = exc
 
-    def build_pdf(self, result: DesignResult) -> bytes:
+    def build_pdf(self, result: DesignResult, metadata: object = None) -> bytes:
         raise self._exc
 
 

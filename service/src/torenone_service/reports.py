@@ -19,23 +19,28 @@ from typing import Any, Protocol, runtime_checkable
 
 from fastapi import Request
 from torenone_kernel.models.results import DesignResult
+from torenone_kernel.report.metadata import ReportMetadata
 
 from torenone_service.schemas import StoredReport
 
 
 @runtime_checkable
 class ReportBuilder(Protocol):
-    def build_pdf(self, result: DesignResult) -> bytes: ...
+    def build_pdf(
+        self, result: DesignResult, metadata: ReportMetadata | None = None
+    ) -> bytes: ...
 
 
 class WeasyPrintReportBuilder:
     """Render the calc-package PDF via the kernel report engine (needs WeasyPrint)."""
 
-    def build_pdf(self, result: DesignResult) -> bytes:
+    def build_pdf(
+        self, result: DesignResult, metadata: ReportMetadata | None = None
+    ) -> bytes:
         # Imported lazily so constructing the app does not require WeasyPrint.
         from torenone_kernel.report.renderer import render_pdf
 
-        return render_pdf(result)
+        return render_pdf(result, metadata)
 
 
 @runtime_checkable

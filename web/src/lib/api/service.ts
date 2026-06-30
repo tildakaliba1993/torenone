@@ -246,12 +246,24 @@ export interface SectionChoice {
   designation: string;
 }
 
+/** Optional document/admin metadata for the calc-package cover (not engineering data). */
+export interface ReportMetadata {
+  project_name?: string | null;
+  client?: string | null;
+  project_number?: string | null;
+  site_address?: string | null;
+  engineer_name?: string | null;
+  engineer_reg_no?: string | null;
+  revision?: string | null;
+}
+
 export interface DesignRequest {
   spec: FrameSpec;
   mode: "design" | "check";
   sections?: SectionChoice[] | null;
   cost_rate_zar_per_kg?: number | null;
   project_id?: string | null;
+  report_metadata?: ReportMetadata | null;
 }
 
 export interface StoredReport {

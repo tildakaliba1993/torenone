@@ -54,7 +54,7 @@ def _headers() -> dict[str, str]:
 
 
 class _FakeReportBuilder:
-    def build_pdf(self, result: DesignResult) -> bytes:
+    def build_pdf(self, result: DesignResult, metadata: object = None) -> bytes:
         return FAKE_PDF
 
 

@@ -40,6 +40,7 @@ from torenone_kernel.loads.dead import dead_loads
 from torenone_kernel.loads.imposed import imposed_roof_loads
 from torenone_kernel.models.results import DesignResult
 from torenone_kernel.report.diagrams import bmd_sfd_png, frame_geometry_png
+from torenone_kernel.report.metadata import ReportMetadata
 from torenone_kernel.sections.library import SectionLibrary
 
 _TEMPLATE_PATH = Path(__file__).parent / "template.html.jinja2"
@@ -318,10 +319,12 @@ def _compute_working(result: DesignResult) -> dict[str, Any]:
     }
 
 
-def render_html(result: DesignResult) -> str:
+def render_html(result: DesignResult, metadata: ReportMetadata | None = None) -> str:
     """Render *result* to a standalone HTML string.
 
     No arithmetic is performed here — all numeric values come directly from *result*.
+    *metadata* is optional document/admin data (project, client, responsible engineer,
+    revision) for the cover; when absent or empty the cover is unchanged.
     """
     env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(str(_TEMPLATE_PATH.parent)),
@@ -411,6 +414,11 @@ def render_html(result: DesignResult) -> str:
         # Restraints (None if unrestrained)
         "restraints_rafter_m":  result.frame_spec.restraints.rafter_restraint_spacing_m,
         "restraints_column_m":  result.frame_spec.restraints.column_restraint_spacing_m,
+        # Document metadata for the cover (project / client / engineer / revision). Optional —
+        # `doc` is None and `has_doc_metadata` False when no metadata was supplied, leaving the
+        # cover unchanged. Never engineering data.
+        "doc": metadata,
+        "has_doc_metadata": metadata is not None and metadata.has_any(),
         # Show-your-working (FR-26)
         **working,
     }
@@ -418,7 +426,7 @@ def render_html(result: DesignResult) -> str:
     return template.render(**ctx)
 
 
-def render_pdf(result: DesignResult) -> bytes:
+def render_pdf(result: DesignResult, metadata: ReportMetadata | None = None) -> bytes:
     """Render *result* to PDF bytes using WeasyPrint.
 
     Requires Python 3.11 + Homebrew pango/cairo on macOS.
@@ -437,6 +445,6 @@ def render_pdf(result: DesignResult) -> bytes:
             "See docs/HANDOVER.md for environment setup."
         ) from exc
 
-    html_string = render_html(result)
+    html_string = render_html(result, metadata)
     pdf_bytes: bytes = weasyprint.HTML(string=html_string).write_pdf()
     return pdf_bytes

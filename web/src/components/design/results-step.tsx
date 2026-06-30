@@ -18,7 +18,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { type CheckResult, type DesignResponse } from "@/lib/api/service";
+import {
+  type CheckResult,
+  type DesignResponse,
+  type ReportMetadata,
+} from "@/lib/api/service";
 import { getEntitledReportUrl } from "@/lib/billing/actions";
 import { createPackageCheckout } from "@/lib/payments/actions";
 import { beginCheckout } from "@/lib/payments/client";
@@ -51,6 +55,7 @@ export function ResultsStep({
   onRestart,
   projectId,
   onUseAlternative,
+  reportMetadata,
 }: {
   result: DesignResponse;
   /** Wizard "start another design" handler. Omitted when viewing a past run (read-only). */
@@ -59,6 +64,8 @@ export function ResultsStep({
   projectId?: string;
   /** Swap the displayed result to an explored alternative the engineer chose to run. */
   onUseAlternative?: (response: DesignResponse) => void;
+  /** Document metadata to bake into any calc package generated from an explored option. */
+  reportMetadata?: ReportMetadata;
 }) {
   const { result: design, report } = result;
   const [downloading, setDownloading] = useState(false);
@@ -173,6 +180,7 @@ export function ResultsStep({
           design={design}
           projectId={projectId}
           onUse={onUseAlternative}
+          reportMetadata={reportMetadata}
         />
       ) : null}
 

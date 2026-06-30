@@ -482,7 +482,7 @@ def create_app(
             ) from exc
 
         try:
-            pdf_bytes = builder.build_pdf(result)
+            pdf_bytes = builder.build_pdf(result, body.report_metadata)
             stored = store.save_report(
                 user_id=user.user_id,
                 project_id=body.project_id,

@@ -53,6 +53,10 @@
     .cover-logo { margin-bottom: 11pt; }
     .cover-logo svg { height: 19pt; width: auto; display: block; }
     .cover-rule { height: 1pt; background: rgba(255,255,255,0.18); margin: 11pt 0; }
+    .doc-control { width: 100%; border-collapse: collapse; margin-bottom: 16pt; font-size: 9pt; }
+    .doc-control td { border: 0.5pt solid var(--color-border); padding: 4pt 7pt; vertical-align: top; }
+    .doc-control td.k { background: #F3F4F6; font-weight: bold; width: 16%; white-space: nowrap; }
+    .doc-control td.v { width: 34%; }
 
     /* ------------------------------------------------------------------ */
     /* Engineer sign-off block                                             */
@@ -245,6 +249,29 @@
     Report fingerprint: <span style="font-family: monospace; font-size:8pt;">{{ report_fingerprint[:16] }}&hellip;</span>
   </div>
 </div>
+
+{% if has_doc_metadata %}
+<!-- ================================================================ -->
+<!-- DOCUMENT CONTROL (submission cover details)                       -->
+<!-- ================================================================ -->
+<table class="doc-control">
+  <tr>
+    <td class="k">Project</td><td class="v">{{ doc.project_name or "—" }}</td>
+    <td class="k">Project no.</td><td class="v">{{ doc.project_number or "—" }}</td>
+  </tr>
+  <tr>
+    <td class="k">Client</td><td class="v">{{ doc.client or "—" }}</td>
+    <td class="k">Revision</td><td class="v">{{ doc.revision or "—" }}</td>
+  </tr>
+  <tr>
+    <td class="k">Site address</td><td class="v" colspan="3">{{ doc.site_address or "—" }}</td>
+  </tr>
+  <tr>
+    <td class="k">Responsible engineer</td><td class="v">{{ doc.engineer_name or "—" }}</td>
+    <td class="k">ECSA reg. no.</td><td class="v">{{ doc.engineer_reg_no or "—" }}</td>
+  </tr>
+</table>
+{% endif %}
 
 <!-- ================================================================ -->
 <!-- LIABILITY DISCLAIMER (Production-Readiness §2.4)                  -->
@@ -861,8 +888,8 @@
   </p>
   <table class="signoff-table">
     <tr>
-      <td><div class="label">Reviewed &amp; verified by</div><div class="line"></div></td>
-      <td><div class="label">ECSA registration no.</div><div class="line"></div></td>
+      <td><div class="label">Reviewed &amp; verified by</div><div class="line">{% if doc and doc.engineer_name %}{{ doc.engineer_name }}{% endif %}</div></td>
+      <td><div class="label">ECSA registration no.</div><div class="line">{% if doc and doc.engineer_reg_no %}{{ doc.engineer_reg_no }}{% endif %}</div></td>
     </tr>
     <tr>
       <td><div class="label">Signature</div><div class="line"></div></td>

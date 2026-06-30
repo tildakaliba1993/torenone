@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, field_validator
 from torenone_ai import AgentConstraints, ParseResult, clarifying_questions
 from torenone_kernel.models.frame_spec import FrameGeometry, FrameSpec
 from torenone_kernel.models.results import DesignResult, SectionChoice
+from torenone_kernel.report.metadata import ReportMetadata
 
 # Computed (output-only) geometry fields, stripped from inbound specs so a spec
 # round-tripped from /parse (which serialises them) re-validates under extra="forbid".
@@ -178,6 +179,11 @@ class DesignRequest(BaseModel):
     )
     project_id: str | None = Field(
         default=None, description="Project to attach the run/report to (persistence)."
+    )
+    report_metadata: ReportMetadata | None = Field(
+        default=None,
+        description="Optional document/admin metadata (project, client, engineer, revision) "
+        "rendered on the calc-package cover. Not engineering data.",
     )
 
     @field_validator("spec", mode="before")
