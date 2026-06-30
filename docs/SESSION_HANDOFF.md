@@ -5,7 +5,58 @@ Full context for continuing work in a new session. Everything below is committed
 
 ---
 
-## ⏩⏩⏩⏩⏩ SESSION 6 CONTINUATION (2026-06-29) — **READ THIS FIRST**, then Session 5 below
+## ⏩⏩⏩⏩⏩⏩ SESSION 7 CONTINUATION (2026-06-29) — **READ THIS FIRST**, then Session 6 below
+
+> Seventh session — theme: **make the MVP an AI Structural Design Agent.** `main` CI-green; web on
+> Netlify, service on Fly (both LIVE at torenone.com). Worktree `loving-blackwell-89a1e6`; venv +
+> service in the MAIN checkout `/Users/cash/TorenOne`. Founder is NON-technical ([[communicate-plainly]]).
+> The single most important memory is **[[ai-agent-drawings-in]]** (the agent phase + how each new
+> front door reuses the whole deterministic safety pipeline).
+
+### What this session shipped (all on `main`, CI-green, DEPLOYED live)
+1. **Drawings/plans-in (vision)** — 1st agent capability. Upload a drawing/photo/PDF → vision model
+   reads ONLY labelled values → drafts FrameSpec → existing confirm-gate. `torenone_ai.parse_drawing`,
+   `POST /parse-drawing`, web upload in `describe-step.tsx`. **PDF hardened** (multi-page, render first
+   `MAX_PDF_PAGES=3` via pypdfium2+Pillow), HEIC guard, intake tips. Verified end-to-end with the REAL
+   model (gpt-5.5). See [[ai-agent-drawings-in]].
+2. **Conversational clarify loop** — 2nd agent capability. Incomplete brief/drawing → ask for the gaps
+   inline (pre-filled with what was read) → **deterministic merge** via new `POST /build-spec` (NO 2nd
+   LLM pass) → Review. `ParseResponse.partial` + per-question `input_field`; web `ClarifyStep`.
+3. **Website repositioned** "AI structural engineer" → **"AI structural design agent"** ("describe OR
+   upload a drawing"); honest claims kept. `web/src/lib/site.ts` drives metadata.
+4. **Whole-frame validation gate closed** via **Mahachi E13.1** (a complete published worked portal) —
+   member-design half exact + analysis half within ~6% (haunch/2nd-order = decision **D11**). The
+   **sign-off pack** (`docs/SIGN-OFF-PACK.md`, decisions D1–D11) + column-base (`baseplate_sans.py`,
+   E7.13/E7.14) + connections (`connections/textbook.py`, E7.5–E7.9 prying+bolt-group) + wind card all
+   landed. Two SA authorities now agree across members + bases + connections + a whole frame.
+
+### THE GOAL + NEXT STEP
+Goal: **MVP → full AI Structural Design Agent.** Front doors done (brief + drawing) + clarify loop.
+**NEXT = the AGENTIC DESIGN LOOP**: the agent proposes/iterates on the kernel (tries sections, reacts
+to a failed check, refines) but can **NEVER skip a mandatory check or compute an engineering number** —
+the deterministic kernel stays the source of truth + the engineer stamps (🔴 company law). Build it as
+a tool-calling loop where the LLM may ONLY call kernel functions (design/check/parse), never produce a
+number. Then: multi-code (AISC Phase 2). RC = Year-2.
+
+### Carry-forward / gotchas (do NOT regress)
+- **Deploy:** web auto-deploys on push (Netlify). Service/kernel → **`fly deploy` from the WORKTREE**
+  (fly authed as founder; avoids the main checkout's uncommitted `fly.toml`). Founder's earlier deploys
+  shipped OLD code (main checkout behind). Prod `fly.toml min_machines_running=1` now (I set it; was 0).
+  Verify a deployed route with a no-auth POST → 401 = live, 404 = needs deploy.
+- **Founder's disk was ~100% full** → crashed the local service + broke local web build. Freed the
+  worktree's redundant `web/node_modules`+`.next`; **so `next dev`/local web typecheck won't run until
+  `npm ci` in the worktree** (rely on CI; founder's disk still near-full — recommend they clear space).
+  Local service via preview_start (bash wrapper sources main `.env`, sets PYTHONPATH + DYLD); it drops
+  sometimes (disk) → restart. `NEXT_PUBLIC_ENGINEERING_SERVICE_URL`=localhost:8000 local / Fly prod.
+- **Correctness boundary = company law** ([[strategy-and-roadmap]]): 🟢 build / 🟡 PROVISIONAL+queue /
+  🔴 never flip→VERIFIED, never invent a method, never let the LLM compute an engineering number.
+- Stack is OpenAI (gpt-5.5, vision-capable). Tests via main-checkout venv:
+  `PYTHONPATH=kernel/src:tools:service/src /Users/cash/TorenOne/.venv/bin/pytest`. Always full mypy +
+  ruff. Watch CI `gh run watch --event push` (nightly Playwright is flaky/unrelated).
+
+---
+
+## ⏩⏩⏩⏩⏩ SESSION 6 CONTINUATION (2026-06-29) — then Session 5 below
 
 > Sixth session — theme: **annihilate dependence on the co-founder** by extending the second-authority
 > validation to every remaining engineering area + packaging it for a fast sign-off. `main` is
