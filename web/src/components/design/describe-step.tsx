@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { type ParseResponse, ServiceError, parseDescription } from "@/lib/api/service";
+import {
+  type ParseResponse,
+  ServiceError,
+  parseDescription,
+  parseDrawing,
+} from "@/lib/api/service";
 
 const EXAMPLES = [
   "20 m clear-span warehouse in Pretoria, 6 m to eaves, 10° roof pitch, 6 m bay spacing, 5 bays.",
@@ -13,15 +18,27 @@ const EXAMPLES = [
 ] as const;
 
 const MAX = 5000;
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 export function DescribeStep({ onComplete }: { onComplete: (result: ParseResponse) => void }) {
   const [description, setDescription] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<ParseResponse | null>(null);
+  const [drawingName, setDrawingName] = useState<string | null>(null);
+  const [drawingPreview, setDrawingPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const trimmed = description.trim();
   const disabled = pending || trimmed.length === 0 || description.length > MAX;
+
+  function handleResult(result: ParseResponse) {
+    if (result.status === "complete" && result.spec) {
+      onComplete(result);
+      return;
+    }
+    setFeedback(result);
+  }
 
   async function onParse() {
     if (trimmed.length === 0 || description.length > MAX) return;
@@ -29,14 +46,44 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
     setError(null);
     setFeedback(null);
     try {
-      const result = await parseDescription(trimmed);
-      if (result.status === "complete" && result.spec) {
-        onComplete(result);
-        return;
-      }
-      setFeedback(result);
+      handleResult(await parseDescription(trimmed));
     } catch (e) {
       setError(e instanceof ServiceError ? e.message : "Something went wrong while parsing.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  function readAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Could not read the file."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function onDrawingSelected(file: File | undefined) {
+    if (!file) return;
+    setError(null);
+    setFeedback(null);
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file (PNG, JPG, etc.).");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setError("That image is too large — please use one under 10 MB.");
+      return;
+    }
+    setPending(true);
+    setDrawingName(file.name);
+    try {
+      const dataUrl = await readAsDataUrl(file);
+      setDrawingPreview(dataUrl);
+      // Any text typed above is passed along as extra context for the drawing.
+      handleResult(await parseDrawing(dataUrl, trimmed || undefined));
+    } catch (e) {
+      setError(e instanceof ServiceError ? e.message : "Something went wrong reading the drawing.");
     } finally {
       setPending(false);
     }
@@ -77,6 +124,50 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
         </div>
       </div>
 
+      <div className="flex items-center gap-3" aria-hidden="true">
+        <span className="h-px flex-1 bg-border" />
+        <span className="text-xs tracking-wide text-subtle uppercase">or upload a drawing</span>
+        <span className="h-px flex-1 bg-border" />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <p className="text-sm text-muted">
+          Upload a drawing, plan, or sketch. We read only the dimensions you’ve labelled on it —
+          anything not shown becomes a question, never a guess. You confirm everything before any
+          engineering runs.
+        </p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            void onDrawingSelected(e.target.files?.[0]);
+            e.target.value = ""; // allow re-selecting the same file
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={pending}
+          className="flex flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border-strong bg-surface px-3 py-6 text-sm text-muted transition-colors hover:border-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <span className="font-medium text-foreground">Choose a drawing…</span>
+          <span className="text-xs text-subtle">PNG, JPG or similar, up to 10 MB</span>
+        </button>
+        {drawingPreview ? (
+          <div className="flex items-center gap-3 rounded-md border border-border bg-surface-raised p-2">
+            {/* eslint-disable-next-line @next/next/no-img-element -- local data-URL preview, not a remote asset */}
+            <img
+              src={drawingPreview}
+              alt="Uploaded drawing preview"
+              className="h-16 w-16 rounded object-cover"
+            />
+            <span className="text-sm text-muted">{drawingName}</span>
+          </div>
+        ) : null}
+      </div>
+
       {error ? (
         <p role="alert" className="text-sm font-medium text-danger">
           {error}
@@ -87,7 +178,7 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
 
       <div>
         <Button onClick={onParse} loading={pending} disabled={disabled}>
-          {pending ? "Parsing…" : "Parse description"}
+          {pending ? "Working…" : "Parse description"}
         </Button>
       </div>
     </div>
@@ -132,7 +223,9 @@ function ParseFeedback({ result }: { result: ParseResponse }) {
             </ul>
           </div>
         ) : null}
-        <p className="text-xs text-subtle">Add these to your description and parse again.</p>
+        <p className="text-xs text-subtle">
+          Add these to your description (or label them on the drawing) and try again.
+        </p>
       </CardContent>
     </Card>
   );

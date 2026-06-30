@@ -149,6 +149,48 @@ export async function parseDescription(description: string): Promise<ParseRespon
   return (await res.json()) as ParseResponse;
 }
 
+/**
+ * Drawings-in: parse an uploaded drawing/sketch of a portal frame into a draft FrameSpec.
+ *
+ * Mirrors {@link parseDescription} exactly — same auth, same retry, same `ParseResponse` — so the
+ * confirm/clarification UI is shared. The image is sent as a `data:` URL. The vision model only
+ * transcribes labelled dimensions; the kernel does all engineering and the user confirms downstream.
+ */
+export async function parseDrawing(
+  imageDataUrl: string,
+  note?: string,
+): Promise<ParseResponse> {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) {
+    throw new ServiceError("Your session has expired — please sign in again.");
+  }
+
+  const res = await serviceFetch(`${serviceBaseUrl()}/parse-drawing`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ image_data_url: imageDataUrl, note: note?.trim() || null }),
+  });
+
+  if (!res.ok) {
+    let detail = `Reading the drawing failed (${res.status}).`;
+    try {
+      const body = (await res.json()) as { detail?: unknown };
+      if (body?.detail) detail = String(body.detail);
+    } catch {
+      // non-JSON error body — keep the status-based message
+    }
+    throw new ServiceError(detail);
+  }
+
+  return (await res.json()) as ParseResponse;
+}
+
 // ---------------------------------------------------------------------------
 // /design
 // ---------------------------------------------------------------------------
