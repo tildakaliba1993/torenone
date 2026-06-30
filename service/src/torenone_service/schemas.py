@@ -29,6 +29,29 @@ class ParseRequest(BaseModel):
     )
 
 
+class ParseDrawingRequest(BaseModel):
+    """A drawing/sketch/plan of a steel portal frame (the drawings-in front door)."""
+
+    image_data_url: str = Field(
+        min_length=1,
+        max_length=16_000_000,  # ~12 MB image base64-encoded (~1.37× expansion)
+        description="The drawing as a data: URL (data:image/<type>;base64,...) or an https URL.",
+    )
+    note: str | None = Field(
+        default=None,
+        max_length=2000,
+        description="Optional accompanying context not shown on the drawing.",
+    )
+
+    @field_validator("image_data_url")
+    @classmethod
+    def _must_be_image(cls, value: str) -> str:
+        v = value.strip()
+        if not (v.startswith("data:image/") or v.startswith("https://")):
+            raise ValueError("image_data_url must be a data:image/* URL or an https URL")
+        return v
+
+
 class ParseAssumption(BaseModel):
     """A documented default applied because the user did not state the value."""
 

@@ -24,7 +24,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.responses import JSONResponse, Response
-from torenone_ai import parse_description
+from torenone_ai import parse_description, parse_drawing
 
 from torenone_service.ai_runtime import (
     AIRuntime,
@@ -52,6 +52,7 @@ from torenone_service.reports import (
 from torenone_service.schemas import (
     DesignRequest,
     DesignResponse,
+    ParseDrawingRequest,
     ParseRequest,
     ParseResponse,
 )
@@ -67,6 +68,10 @@ _DEFAULT_CORS_ORIGINS = ("http://localhost:3000", "http://127.0.0.1:3000")
 # Max accepted request-body size. A FrameSpec/description payload is a few KB; 256 KB is a
 # generous-but-bounded cap that blocks abusive/runaway payloads. Override via env.
 MAX_REQUEST_BYTES: int = int(os.environ.get("MAX_REQUEST_BYTES", "").strip() or 256 * 1024)
+# A drawing/photo payload (base64 data URL) is larger than a text description but still bounded.
+MAX_IMAGE_REQUEST_BYTES: int = int(
+    os.environ.get("MAX_IMAGE_REQUEST_BYTES", "").strip() or 12 * 1024 * 1024
+)
 
 # Per-IP rate limits on the expensive POST routes (abuse / runaway-cost guard). Override
 # via env. /parse calls OpenAI (cost); /design runs the FEA + PDF (CPU). Defaults are
@@ -235,10 +240,16 @@ def create_app(
         A FrameSpec / description payload is small (a few KB); the cap is generous but
         bounded. Enforced via the Content-Length header (clients must send it).
         """
+        # The drawings-in endpoint carries an image, so it gets a larger (still bounded) cap.
+        limit = (
+            MAX_IMAGE_REQUEST_BYTES
+            if request.url.path == "/parse-drawing"
+            else MAX_REQUEST_BYTES
+        )
         content_length = request.headers.get("content-length")
         if content_length is not None:
             try:
-                if int(content_length) > MAX_REQUEST_BYTES:
+                if int(content_length) > limit:
                     return JSONResponse(
                         status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                         content={"detail": "request body too large"},
@@ -310,6 +321,41 @@ def create_app(
         response = ParseResponse.from_result(result)
         logger.info(
             "parse",
+            extra={"user_id": user.user_id, "status": response.status},
+        )
+        return response
+
+    @app.post("/parse-drawing")
+    @limiter.limit(PARSE_RATE_LIMIT)
+    def parse_drawing_route(
+        request: Request,
+        body: ParseDrawingRequest,
+        user: AuthenticatedUser = Depends(require_user),
+        ai: AIRuntime = Depends(get_ai_runtime),
+    ) -> ParseResponse:
+        """Parse a frame DRAWING/sketch into a FrameSpec (or questions / refusal).
+
+        The drawings-in front door. Same protection, rate limit, and response shape as
+        ``/parse`` — and the same safety contract: the vision model only transcribes the
+        labelled dimensions into the nullable extraction; no engineering number is produced,
+        and every value flows through the existing confirm gate (see torenone_ai.parse_drawing).
+        """
+        try:
+            result = parse_drawing(
+                body.image_data_url, client=ai.client, model=ai.model, note=body.note
+            )
+        except OpenAIError as exc:
+            logger.warning(
+                "ai_upstream_error",
+                extra={"user_id": user.user_id, "error_type": type(exc).__name__},
+            )
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="the AI parsing service is temporarily unavailable",
+            ) from exc
+        response = ParseResponse.from_result(result)
+        logger.info(
+            "parse_drawing",
             extra={"user_id": user.user_id, "status": response.status},
         )
         return response
