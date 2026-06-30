@@ -525,13 +525,20 @@ class DrawingDecodeError(ValueError):
     """Raised when an uploaded drawing/PDF cannot be decoded or rendered to an image."""
 
 
-def pdf_to_image_data_url(pdf_bytes: bytes, *, scale: float = 2.0) -> str:
-    """Render the FIRST page of a PDF to a PNG ``data:`` URL.
+# A plan set's general-arrangement drawing is on the first sheet(s) — but page 1 is often a cover
+# sheet, so we render the first few pages and let the vision model read whichever holds the frame.
+# Bounded to keep token cost + latency in check.
+MAX_PDF_PAGES: int = 3
 
-    Lets a PDF *plan* feed the same vision path as an image: most general-arrangement plans put
-    the frame on page 1. The vision model still only transcribes the labelled dimensions — rendering
-    the page changes nothing about the safety contract. ``pypdfium2`` ships its own binary (no system
-    deps); Pillow encodes the page to PNG.
+
+def pdf_to_image_data_urls(
+    pdf_bytes: bytes, *, max_pages: int = MAX_PDF_PAGES, scale: float = 2.0
+) -> list[str]:
+    """Render the first ``max_pages`` pages of a PDF to PNG ``data:`` URLs.
+
+    Lets a PDF *plan* feed the same vision path as an image. Rendering the page(s) changes nothing
+    about the safety contract — the model still only transcribes labelled values. ``pypdfium2`` ships
+    its own binary (no system deps); Pillow encodes each page to PNG.
     """
     import io
 
@@ -542,22 +549,32 @@ def pdf_to_image_data_url(pdf_bytes: bytes, *, scale: float = 2.0) -> str:
         doc = pdfium.PdfDocument(pdf_bytes)
     except Exception as exc:  # noqa: BLE001 — any parse failure is a bad-input error
         raise DrawingDecodeError("the PDF could not be read") from exc
+    urls: list[str] = []
     try:
-        if len(doc) == 0:
+        n = len(doc)
+        if n == 0:
             raise DrawingDecodeError("the PDF has no pages")
-        pil_image: Image.Image = doc[0].render(scale=scale).to_pil()
-        buffer = io.BytesIO()
-        pil_image.convert("RGB").save(buffer, format="PNG")
+        for i in range(min(n, max(1, max_pages))):
+            pil_image: Image.Image = doc[i].render(scale=scale).to_pil()
+            buffer = io.BytesIO()
+            pil_image.convert("RGB").save(buffer, format="PNG")
+            urls.append(image_data_url(buffer.getvalue(), "image/png"))
     finally:
         doc.close()
-    return image_data_url(buffer.getvalue(), "image/png")
+    return urls
 
 
-def coerce_drawing_to_image_url(image_url: str) -> str:
-    """Pass an image/https URL through unchanged; render a PDF ``data:`` URL to a PNG image URL.
+def pdf_to_image_data_url(pdf_bytes: bytes, *, scale: float = 2.0) -> str:
+    """Render only the FIRST page of a PDF to a PNG ``data:`` URL (single-image convenience)."""
+    return pdf_to_image_data_urls(pdf_bytes, max_pages=1, scale=scale)[0]
 
-    The single entry point that normalises any accepted upload (image or PDF) into something the
-    vision model can read. Raises :class:`DrawingDecodeError` on a malformed PDF (→ a 4xx upstream).
+
+def coerce_drawing_to_images(image_url: str, *, max_pages: int = MAX_PDF_PAGES) -> list[str]:
+    """Normalise any accepted upload to a list of vision-ready image URLs.
+
+    Image/https URLs pass through as a 1-element list; a PDF ``data:`` URL becomes its first
+    rendered page images. The single entry point feeding the vision model. Raises
+    :class:`DrawingDecodeError` on a malformed PDF (→ a 4xx upstream).
     """
     if image_url.startswith("data:application/pdf"):
         import base64
@@ -567,8 +584,13 @@ def coerce_drawing_to_image_url(image_url: str) -> str:
             pdf_bytes = base64.b64decode(payload)
         except Exception as exc:  # noqa: BLE001
             raise DrawingDecodeError("the PDF data could not be decoded") from exc
-        return pdf_to_image_data_url(pdf_bytes)
-    return image_url
+        return pdf_to_image_data_urls(pdf_bytes, max_pages=max_pages)
+    return [image_url]
+
+
+def coerce_drawing_to_image_url(image_url: str) -> str:
+    """Single-image variant of :func:`coerce_drawing_to_images` (first image only)."""
+    return coerce_drawing_to_images(image_url, max_pages=1)[0]
 
 
 def parse_drawing(
@@ -596,17 +618,23 @@ def parse_drawing(
     note:
         Optional accompanying text from the user (e.g. context not on the drawing).
 
-    A PDF ``data:`` URL is rendered to an image first (:func:`coerce_drawing_to_image_url`); a
-    malformed PDF raises :class:`DrawingDecodeError`.
+    A PDF ``data:`` URL is rendered to image(s) first (:func:`coerce_drawing_to_images`) — the first
+    few pages, since a plan set's frame sheet may not be page 1; a malformed PDF raises
+    :class:`DrawingDecodeError`.
     """
-    image_url = coerce_drawing_to_image_url(image_url)
+    images = coerce_drawing_to_images(image_url)
     cap = _default_max_output_tokens() if max_output_tokens is None else max_output_tokens
     extra: dict[str, Any] = {"max_output_tokens": cap} if cap and cap > 0 else {}
 
-    user_content: list[dict[str, Any]] = [
-        {"type": "input_text", "text": note.strip() if note and note.strip() else _DEFAULT_DRAWING_INSTRUCTION},
-        {"type": "input_image", "image_url": image_url},
-    ]
+    instruction = note.strip() if note and note.strip() else _DEFAULT_DRAWING_INSTRUCTION
+    if len(images) > 1:
+        instruction += (
+            f"\n\n(There are {len(images)} pages/sheets attached — read whichever shows the portal "
+            "frame and its labelled dimensions; ignore cover sheets and unrelated sheets.)"
+        )
+    user_content: list[dict[str, Any]] = [{"type": "input_text", "text": instruction}]
+    for img in images:
+        user_content.append({"type": "input_image", "image_url": img})
     response = client.responses.parse(
         model=model,
         input=[

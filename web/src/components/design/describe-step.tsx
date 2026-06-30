@@ -73,6 +73,14 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
       setError("Please choose an image (PNG, JPG…) or a PDF.");
       return;
     }
+    // HEIC/HEIF (the default iPhone photo format) can't be read by the vision model.
+    if (file.type === "image/heic" || file.type === "image/heif" || /\.hei[cf]$/i.test(file.name)) {
+      setError(
+        "iPhone HEIC photos aren’t supported yet — please use a JPG or PNG (set the iPhone camera to " +
+          "“Most Compatible”, or just take a screenshot of the drawing).",
+      );
+      return;
+    }
     if (file.size > MAX_IMAGE_BYTES) {
       setError("That file is too large — please use one under 10 MB.");
       return;
@@ -158,9 +166,14 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
 
       <div className="flex flex-col gap-2">
         <p className="text-sm text-muted">
-          Upload a drawing, plan, or sketch. We read only the dimensions you’ve labelled on it —
-          anything not shown becomes a question, never a guess. You confirm everything before any
-          engineering runs.
+          Upload a drawing, plan, or sketch (image or PDF). We read only the dimensions you’ve
+          labelled on it — anything not shown becomes a question, never a guess. You confirm
+          everything before any engineering runs.
+        </p>
+        <p className="text-xs text-subtle">
+          Tip: best results when the span, eaves height, pitch and bay spacing are labelled — and a
+          notes block gives the roof dead load, wind speed and terrain category, so nothing is left
+          to ask.
         </p>
         <input
           ref={fileInputRef}

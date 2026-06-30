@@ -35,11 +35,13 @@ from torenone_ai.parsing import (
     ParseResult,
     build_frame_spec,
     coerce_drawing_to_image_url,
+    coerce_drawing_to_images,
     image_data_url,
     parse_description,
     parse_description_from_env,
     parse_drawing,
     pdf_to_image_data_url,
+    pdf_to_image_data_urls,
 )
 
 __all__ = [
@@ -61,7 +63,9 @@ __all__ = [
     "parse_drawing",
     "image_data_url",
     "pdf_to_image_data_url",
+    "pdf_to_image_data_urls",
     "coerce_drawing_to_image_url",
+    "coerce_drawing_to_images",
     "DrawingDecodeError",
     # Clarifying questions (Task 3.3)
     "ClarifyingQuestion",

@@ -22,9 +22,11 @@ from torenone_ai import (
     DrawingDecodeError,
     FrameSpecExtraction,
     coerce_drawing_to_image_url,
+    coerce_drawing_to_images,
     image_data_url,
     parse_drawing,
     pdf_to_image_data_url,
+    pdf_to_image_data_urls,
 )
 from torenone_kernel.models.enums import TerrainCategory
 from torenone_service.ai_runtime import AIRuntime
@@ -45,6 +47,13 @@ def _pdf_data_url() -> str:
     return image_data_url(_tiny_pdf_bytes(), "application/pdf")
 
 
+def _multi_page_pdf_bytes(pages: int = 4) -> bytes:
+    imgs = [Image.new("RGB", (240, 160), "white") for _ in range(pages)]
+    buf = io.BytesIO()
+    imgs[0].save(buf, format="PDF", save_all=True, append_images=imgs[1:])
+    return buf.getvalue()
+
+
 # --- unit: PDF → image -----------------------------------------------------------------------
 
 def test_pdf_renders_to_png_image_url() -> None:
@@ -61,6 +70,24 @@ def test_coerce_passes_images_through_but_renders_pdf() -> None:
 def test_malformed_pdf_raises_decode_error() -> None:
     with pytest.raises(DrawingDecodeError):
         coerce_drawing_to_image_url("data:application/pdf;base64,not-a-real-pdf!!!")
+
+
+def test_multi_page_pdf_renders_first_pages_only() -> None:
+    # A plan set's frame may not be on page 1; render the first few pages, capped.
+    urls = pdf_to_image_data_urls(_multi_page_pdf_bytes(4), max_pages=3)
+    assert len(urls) == 3
+    assert all(u.startswith("data:image/png;base64,") for u in urls)
+    # A single-page PDF yields exactly one image.
+    assert len(coerce_drawing_to_images(_pdf_data_url())) == 1
+
+
+def test_parse_drawing_sends_every_rendered_page() -> None:
+    client = _FakeAIClient(_complete())
+    pdf_url = image_data_url(_multi_page_pdf_bytes(3), "application/pdf")
+    result = parse_drawing(pdf_url, client=client, model="gpt-5.5")
+    assert result.is_complete
+    blocks = [b for b in client.captured["input"][1]["content"] if b["type"] == "input_image"]
+    assert len(blocks) == 3, "all rendered pages must reach the model"
 
 
 # --- parse_drawing with a PDF (mock vision client) -------------------------------------------
