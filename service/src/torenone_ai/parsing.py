@@ -446,6 +446,17 @@ def parse_description(
         text_format=FrameSpecExtraction,
         **extra,
     )
+    return _result_from_parse_response(response, unparseable_reason="description could not be parsed")
+
+
+def _result_from_parse_response(response: Any, *, unparseable_reason: str) -> ParseResult:
+    """Map an OpenAI Structured-Outputs response to a :class:`ParseResult`.
+
+    Shared by the text (:func:`parse_description`) and drawing (:func:`parse_drawing`) front
+    doors: both fill the same nullable :class:`FrameSpecExtraction`, then this hands off to the
+    deterministic :func:`build_frame_spec` — so the LLM never produces an engineering number on
+    either path, and all missing-field/defaulting/validation logic is identical.
+    """
     extraction = getattr(response, "output_parsed", None)
     if extraction is None:
         # The model returned nothing usable — flag everything as needing clarification
@@ -453,11 +464,11 @@ def parse_description(
         return ParseResult(
             spec=None,
             missing=[
-                MissingField(field=path, label=label, why="description could not be parsed")
+                MissingField(field=path, label=label, why=unparseable_reason)
                 for _attr, path, label in _REQUIRED_FIELDS
             ],
             assumptions=[],
-            errors=["The description could not be parsed into a frame specification."],
+            errors=["The input could not be parsed into a frame specification."],
         )
     return build_frame_spec(extraction)
 
@@ -468,3 +479,87 @@ def parse_description_from_env(text: str, *, config: AIConfig | None = None) -> 
 
     cfg = config or AIConfig.from_env()
     return parse_description(text, client=build_client(cfg), model=cfg.model)
+
+
+# ---------------------------------------------------------------------------
+# Drawings/plans-in (vision) — first AI-agent capability
+# ---------------------------------------------------------------------------
+
+VISION_SYSTEM_PROMPT = (
+    "You are a transcription assistant for a structural-engineering tool. The user provides a "
+    "DRAWING, sketch, or plan of a single-bay steel portal frame. Read ONLY the dimensions, "
+    "labels, and notes explicitly drawn or written on it.\n\n"
+    "HARD RULES:\n"
+    "1. If a value is not explicitly shown or labelled, set it to null. NEVER measure it off the "
+    "drawing by scale, estimate it, infer it, or invent it — read only labelled numbers.\n"
+    "2. Do NOT perform any engineering calculation. Only transcribe labelled numbers and convert "
+    "units.\n"
+    "3. Convert all lengths to metres, loads to kPa, wind speed to m/s, and pitch to degrees. "
+    "Drawing dimensions are usually labelled in mm — convert them to metres.\n"
+    "4. Set terrain_category only if the drawing or its notes clearly describe the surroundings; "
+    "otherwise null.\n"
+    "5. If you are unsure about any field, it MUST be null. A clarifying question is always better "
+    "than a guess.\n"
+    "6. If the same quantity appears more than once with conflicting/contradictory values, set "
+    "that field to null (do not pick one).\n"
+    "7. SCOPE: this tool only designs single-bay symmetric steel portal frames. If the drawing is "
+    "clearly a different structure (multi-storey, concrete/timber, a bridge, a truss, a crane "
+    "gantry, a multi-bay/multi-span building, etc.), set in_scope=false and give a short "
+    "out_of_scope_reason. Otherwise leave in_scope null."
+)
+
+_DEFAULT_DRAWING_INSTRUCTION = (
+    "Read this drawing of a single-bay steel portal frame and extract only the labelled values."
+)
+
+
+def image_data_url(data: bytes, mime_type: str) -> str:
+    """Build a ``data:`` URL from raw image bytes — the form the vision API accepts inline."""
+    import base64
+
+    encoded = base64.b64encode(data).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
+
+
+def parse_drawing(
+    image_url: str,
+    *,
+    client: Any,
+    model: str,
+    note: str | None = None,
+    max_output_tokens: int | None = None,
+) -> ParseResult:
+    """Parse a frame DRAWING/sketch into a :class:`ParseResult` using a vision model.
+
+    The new "drawings-in" front door. The LLM reads labelled dimensions from the image and fills
+    the SAME nullable :class:`FrameSpecExtraction` that :func:`parse_description` uses — so it never
+    produces an engineering number (it transcribes labelled values, it does not scale-measure), and
+    every downstream step (missing-field flagging, documented defaults, validation, the confirm
+    gate) is shared and unchanged.
+
+    Parameters
+    ----------
+    image_url:
+        The image as a ``data:`` URL (see :func:`image_data_url`) or an https URL.
+    client, model:
+        Injected vision-capable client (same OpenAI Responses API as text parsing) + model id.
+    note:
+        Optional accompanying text from the user (e.g. context not on the drawing).
+    """
+    cap = _default_max_output_tokens() if max_output_tokens is None else max_output_tokens
+    extra: dict[str, Any] = {"max_output_tokens": cap} if cap and cap > 0 else {}
+
+    user_content: list[dict[str, Any]] = [
+        {"type": "input_text", "text": note.strip() if note and note.strip() else _DEFAULT_DRAWING_INSTRUCTION},
+        {"type": "input_image", "image_url": image_url},
+    ]
+    response = client.responses.parse(
+        model=model,
+        input=[
+            {"role": "system", "content": VISION_SYSTEM_PROMPT},
+            {"role": "user", "content": user_content},
+        ],
+        text_format=FrameSpecExtraction,
+        **extra,
+    )
+    return _result_from_parse_response(response, unparseable_reason="drawing could not be parsed")

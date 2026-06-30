@@ -33,8 +33,10 @@ from torenone_ai.parsing import (
     MissingField,
     ParseResult,
     build_frame_spec,
+    image_data_url,
     parse_description,
     parse_description_from_env,
+    parse_drawing,
 )
 
 __all__ = [
@@ -52,6 +54,9 @@ __all__ = [
     "build_frame_spec",
     "parse_description",
     "parse_description_from_env",
+    # Drawings/plans-in (vision)
+    "parse_drawing",
+    "image_data_url",
     # Clarifying questions (Task 3.3)
     "ClarifyingQuestion",
     "clarifying_questions",
