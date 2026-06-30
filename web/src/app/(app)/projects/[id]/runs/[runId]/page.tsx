@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { ResultsStep } from "@/components/design/results-step";
+import { RunResults } from "@/components/design/run-results";
 import { ReportDownloadButton } from "@/components/projects/report-download-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { type DesignResponse, type DesignResult } from "@/lib/api/service";
@@ -95,7 +95,7 @@ export default async function RunDetailPage({
   return (
     <main className="flex w-full flex-col gap-6">
       {header}
-      <ResultsStep result={response} />
+      <RunResults result={response} projectId={id} />
     </main>
   );
 }
