@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { DesignsManager } from "@/components/projects/designs-manager";
+import { DocumentDetails } from "@/components/projects/document-details";
 import { type RunRow } from "@/components/projects/run-history";
+import { type ReportMetadata } from "@/lib/api/service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState, EmptyStateIcon } from "@/components/ui/empty-state";
 import { LinkButton } from "@/components/ui/link-button";
@@ -34,7 +36,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: project } = await supabase.from("projects").select("id, name").eq("id", id).single();
+  // select("*") (not an explicit column list) so this stays resilient before the
+  // report_metadata migration is applied — a missing column is simply absent, not an error.
+  const { data: project } = await supabase.from("projects").select("*").eq("id", id).single();
   if (!project) notFound();
 
   // RLS (Task 5.4) scopes both runs and the embedded reports to the firm. Search / filter /
@@ -91,6 +95,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           )}
         </CardContent>
       </Card>
+
+      <DocumentDetails
+        projectId={project.id as string}
+        initial={(project.report_metadata as ReportMetadata | null) ?? null}
+      />
     </main>
   );
 }

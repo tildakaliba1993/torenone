@@ -4,7 +4,11 @@ import { notFound, redirect } from "next/navigation";
 import { RunResults } from "@/components/design/run-results";
 import { ReportDownloadButton } from "@/components/projects/report-download-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { type DesignResponse, type DesignResult } from "@/lib/api/service";
+import {
+  type DesignResponse,
+  type DesignResult,
+  type ReportMetadata,
+} from "@/lib/api/service";
 import { createClient } from "@/lib/supabase/server";
 
 interface RawRun {
@@ -28,7 +32,8 @@ export default async function RunDetailPage({
   if (!user) redirect("/login");
 
   // RLS (Task 5.4) scopes the project + run to the caller's firm; a foreign id → notFound.
-  const { data: project } = await supabase.from("projects").select("id, name").eq("id", id).single();
+  // select("*") stays resilient before the report_metadata migration is applied.
+  const { data: project } = await supabase.from("projects").select("*").eq("id", id).single();
   if (!project) notFound();
 
   const { data: runData } = await supabase
@@ -95,7 +100,11 @@ export default async function RunDetailPage({
   return (
     <main className="flex w-full flex-col gap-6">
       {header}
-      <RunResults result={response} projectId={id} />
+      <RunResults
+        result={response}
+        projectId={id}
+        reportMetadata={(project.report_metadata as ReportMetadata | null) ?? undefined}
+      />
     </main>
   );
 }

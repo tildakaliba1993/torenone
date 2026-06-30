@@ -19,11 +19,22 @@ import {
  * Multi-step design flow: Describe (6.4) → Review/Run (6.5) → Results (6.6).
  * The parsed spec and design result are held in client state across steps.
  */
-export function DesignFlow({ projectId, projectName }: { projectId: string; projectName: string }) {
+export function DesignFlow({
+  projectId,
+  projectName,
+  initialReportMetadata,
+}: {
+  projectId: string;
+  projectName: string;
+  /** Project-level document metadata — pre-fills the Review card and seeds the run metadata. */
+  initialReportMetadata?: ReportMetadata;
+}) {
   const router = useRouter();
   const [spec, setSpec] = useState<FrameSpec | null>(null);
   const [result, setResult] = useState<DesignResponse | null>(null);
-  const [reportMetadata, setReportMetadata] = useState<ReportMetadata | undefined>(undefined);
+  const [reportMetadata, setReportMetadata] = useState<ReportMetadata | undefined>(
+    initialReportMetadata,
+  );
 
   // The run is persisted by the engineering service (not a Next action), so invalidate
   // the client Router Cache once it lands — otherwise the project's run history shows
@@ -63,6 +74,7 @@ export function DesignFlow({ projectId, projectName }: { projectId: string; proj
           projectId={projectId}
           onComplete={onDesignComplete}
           onReportMetadata={setReportMetadata}
+          initialReportMetadata={initialReportMetadata}
           onBack={() => setSpec(null)}
         />
       ) : null}

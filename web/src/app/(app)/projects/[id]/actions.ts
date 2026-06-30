@@ -2,7 +2,39 @@
 
 import { revalidatePath } from "next/cache";
 
+import { type ReportMetadata } from "@/lib/api/service";
 import { createClient } from "@/lib/supabase/server";
+
+/**
+ * Save the project's document/cover metadata (client, engineer, etc.). Every calc package
+ * generated for this project then inherits it. Empty/blank values are normalised to null, and
+ * an all-blank metadata clears the column. RLS scopes the update to the caller's firm.
+ */
+export async function updateProjectReportMetadata(input: {
+  projectId: string;
+  metadata: ReportMetadata;
+}): Promise<{ error?: string }> {
+  const m = input.metadata;
+  const cleaned: ReportMetadata = {
+    project_name: m.project_name?.trim() || null,
+    client: m.client?.trim() || null,
+    project_number: m.project_number?.trim() || null,
+    site_address: m.site_address?.trim() || null,
+    engineer_name: m.engineer_name?.trim() || null,
+    engineer_reg_no: m.engineer_reg_no?.trim() || null,
+    revision: m.revision?.trim() || null,
+  };
+  const hasAny = Object.values(cleaned).some((v) => v);
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("projects")
+    .update({ report_metadata: hasAny ? cleaned : null })
+    .eq("id", input.projectId);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/projects/${input.projectId}`);
+  return {};
+}
 
 /** Rename a design run's label (searchable). RLS scopes the update to the firm. */
 export async function renameRun(input: {

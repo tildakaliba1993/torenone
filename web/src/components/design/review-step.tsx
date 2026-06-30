@@ -114,7 +114,7 @@ const n = (value: number | undefined | null): string =>
 const toNum = (s: string): number => Number(s.trim());
 const toOptNum = (s: string): number | null => (s.trim() === "" ? null : Number(s.trim()));
 
-function defaultsFromSpec(spec: FrameSpec): FormValues {
+function defaultsFromSpec(spec: FrameSpec, doc?: ReportMetadata): FormValues {
   return {
     geometry: {
       span_m: n(spec.geometry.span_m),
@@ -141,13 +141,13 @@ function defaultsFromSpec(spec: FrameSpec): FormValues {
     },
     materials: { steel_grade: spec.materials?.steel_grade ?? "S355JR" },
     document: {
-      project_name: "",
-      client: "",
-      project_number: "",
-      site_address: "",
-      engineer_name: "",
-      engineer_reg_no: "",
-      revision: "",
+      project_name: doc?.project_name ?? "",
+      client: doc?.client ?? "",
+      project_number: doc?.project_number ?? "",
+      site_address: doc?.site_address ?? "",
+      engineer_name: doc?.engineer_name ?? "",
+      engineer_reg_no: doc?.engineer_reg_no ?? "",
+      revision: doc?.revision ?? "",
     },
     restraints: {
       rafter_restraint_spacing_m: n(spec.restraints?.rafter_restraint_spacing_m),
@@ -183,6 +183,7 @@ export function ReviewStep({
   onComplete,
   onBack,
   onReportMetadata,
+  initialReportMetadata,
 }: {
   spec: FrameSpec;
   projectId: string;
@@ -190,11 +191,13 @@ export function ReviewStep({
   onBack: () => void;
   /** Lift the entered document metadata so in-session Explore runs reuse it. */
   onReportMetadata?: (metadata: ReportMetadata | undefined) => void;
+  /** Project-level document metadata to pre-fill the document fields. */
+  initialReportMetadata?: ReportMetadata;
 }) {
   const [error, setError] = useState<string | null>(null);
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: defaultsFromSpec(spec),
+    defaultValues: defaultsFromSpec(spec, initialReportMetadata),
   });
 
   const geometry = useWatch({ control: form.control, name: "geometry" });
