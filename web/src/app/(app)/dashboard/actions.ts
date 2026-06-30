@@ -13,12 +13,17 @@ import { createClient } from "@/lib/supabase/server";
  */
 export async function setEngineerStatus(input: {
   memberId: string;
+  name: string;
   isRegisteredEngineer: boolean;
   ecsaRegNo: string;
 }): Promise<{ error?: string }> {
   const reg = input.ecsaRegNo?.trim() || null;
-  if (input.isRegisteredEngineer && !reg) {
-    return { error: "An ECSA registration number is required to mark someone a registered engineer." };
+  const name = input.name?.trim() || null;
+  if (input.isRegisteredEngineer && (!reg || !name)) {
+    return {
+      error:
+        "A full name and ECSA registration number are required to mark someone a registered engineer.",
+    };
   }
 
   const supabase = await createClient();
@@ -53,10 +58,13 @@ export async function setEngineerStatus(input: {
     return { error: "That person is not in your firm." };
   }
 
-  const { error } = await admin
-    .from("profiles")
-    .update({ is_registered_engineer: input.isRegisteredEngineer, ecsa_reg_no: reg })
-    .eq("id", input.memberId);
+  const updates: Record<string, unknown> = {
+    is_registered_engineer: input.isRegisteredEngineer,
+    ecsa_reg_no: reg,
+  };
+  // The engineer's name appears on every stamp; persist it when given (don't wipe on revoke).
+  if (name) updates.name = name;
+  const { error } = await admin.from("profiles").update(updates).eq("id", input.memberId);
   if (error) return { error: error.message };
 
   revalidatePath("/dashboard");

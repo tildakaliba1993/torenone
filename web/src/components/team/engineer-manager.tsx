@@ -50,6 +50,7 @@ function MemberRow({
 }) {
   const [isEng, setIsEng] = useState(member.is_registered_engineer);
   const [reg, setReg] = useState(member.ecsa_reg_no ?? "");
+  const [name, setName] = useState(member.name ?? "");
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +63,7 @@ function MemberRow({
     setError(null);
     const res = await setEngineerStatus({
       memberId: member.id,
+      name,
       isRegisteredEngineer: isEng,
       ecsaRegNo: reg,
     });
@@ -105,6 +107,16 @@ function MemberRow({
         </label>
       </div>
       <div className="flex flex-wrap items-center gap-3">
+        <Input
+          placeholder="Full name (as on the ECSA register)"
+          value={name}
+          disabled={!isEng}
+          onChange={(e) => {
+            setStatus("idle");
+            setName(e.target.value);
+          }}
+          className="max-w-xs"
+        />
         <Input
           placeholder="ECSA registration no."
           value={reg}

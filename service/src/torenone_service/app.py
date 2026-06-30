@@ -552,6 +552,11 @@ def create_app(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="only a registered engineer (with an ECSA registration number) can stamp",
             )
+        if not ctx.engineer_name.strip():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="your name is not set — record it under Account → Registered engineers, then stamp",
+            )
 
         stamped_at = utc_now_iso()
         try:

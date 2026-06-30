@@ -10,6 +10,7 @@ Run:
 
 from __future__ import annotations
 
+import dataclasses
 import time
 from typing import Any
 
@@ -121,6 +122,14 @@ def test_engineer_without_reg_no_is_forbidden() -> None:
     store = _FakeStore(_context(is_engineer=True, reg_no=None))
     resp = _client(store).post("/stamp", json={"run_id": "r1"}, headers=_headers())
     assert resp.status_code == 403
+
+
+def test_engineer_without_name_is_422() -> None:
+    ctx = dataclasses.replace(_context(is_engineer=True, reg_no="ECSA 1"), engineer_name="")
+    store = _FakeStore(ctx)
+    resp = _client(store).post("/stamp", json={"run_id": "r1"}, headers=_headers())
+    assert resp.status_code == 422
+    assert store.applied == []
 
 
 def test_stamping_unavailable_is_503() -> None:
