@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import Link from "next/link";
 
+import { DesignExplore } from "@/components/design/design-explore";
 import { FrameDiagrams } from "@/components/design/frame-diagrams";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -48,10 +49,16 @@ function fmtZar(value: number): string {
 export function ResultsStep({
   result,
   onRestart,
+  projectId,
+  onUseAlternative,
 }: {
   result: DesignResponse;
   /** Wizard "start another design" handler. Omitted when viewing a past run (read-only). */
   onRestart?: () => void;
+  /** Project to attach an explored alternative's run to. Omitted in the read-only viewer. */
+  projectId?: string;
+  /** Swap the displayed result to an explored alternative the engineer chose to run. */
+  onUseAlternative?: (response: DesignResponse) => void;
 }) {
   const { result: design, report } = result;
   const [downloading, setDownloading] = useState(false);
@@ -156,6 +163,10 @@ export function ResultsStep({
       </Card>
 
       <LiabilityNotice />
+
+      {projectId && onUseAlternative ? (
+        <DesignExplore design={design} projectId={projectId} onUse={onUseAlternative} />
+      ) : null}
 
       {design.diagram ? (
         <Card>

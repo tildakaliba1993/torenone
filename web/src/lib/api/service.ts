@@ -394,6 +394,87 @@ export async function getReportSignedUrl(storagePath: string): Promise<string> {
   return data.signedUrl;
 }
 
+// ---------------------------------------------------------------------------
+// Agentic design exploration (POST /design-agent)
+// ---------------------------------------------------------------------------
+
+/** Engineer-stated limits the agentic search must honour (inputs, never results). */
+export interface AgentConstraints {
+  /** If set, members may only use these section designations (e.g. stock on hand). */
+  allowed_sections?: string[] | null;
+  /** If set, no member may be deeper than this (mm) — e.g. headroom/clearance. */
+  max_depth_mm?: number | null;
+}
+
+/** One kernel-verified design option the agent found. `result` is the source of truth. */
+export interface AgentAlternative {
+  label: string;
+  rationale: string;
+  mode: "design" | "check";
+  rafter_restraint_spacing_m?: number | null;
+  column_restraint_spacing_m?: number | null;
+  sections?: SectionChoice[] | null;
+  result: DesignResult;
+  /** Frame steel mass vs the baseline (kg); negative = lighter. Kernel-derived. */
+  mass_delta_kg?: number | null;
+  trade_off_note: string;
+}
+
+/** The full exploration outcome — no PDF; the chosen option is replayed via {@link runDesign}. */
+export interface AgentDesignOutcome {
+  baseline: DesignResult | null;
+  baseline_note?: string | null;
+  alternatives: AgentAlternative[];
+  /** Index into `alternatives` of the recommended option, or null to keep the baseline. */
+  recommended_index: number | null;
+  narrative: string;
+  notes: string[];
+  /** False if the exploration degraded to the baseline only (AI unavailable). */
+  used_llm: boolean;
+}
+
+/**
+ * Run the agentic design loop over a confirmed spec. The AI only orchestrates the kernel and
+ * proposes input levers — it never computes an engineering number; every value comes back from
+ * the deterministic kernel, and the plain design is always the baseline (never worse than
+ * {@link runDesign}). Exploration only: no PDF is produced. Replay the chosen option through
+ * {@link runDesign} to get the stamped calc package.
+ */
+export async function runDesignAgent(
+  spec: FrameSpec,
+  constraints?: AgentConstraints | null,
+): Promise<AgentDesignOutcome> {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) {
+    throw new ServiceError("Your session has expired — please sign in again.");
+  }
+
+  const res = await serviceFetch(`${serviceBaseUrl()}/design-agent`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ spec, constraints: constraints ?? null }),
+  });
+
+  if (!res.ok) {
+    let detail = `The design exploration failed (${res.status}).`;
+    try {
+      const body = (await res.json()) as { detail?: unknown };
+      if (body?.detail) detail = String(body.detail);
+    } catch {
+      // non-JSON error body — keep the status-based message
+    }
+    throw new ServiceError(detail);
+  }
+
+  return (await res.json()) as AgentDesignOutcome;
+}
+
 export async function runDesign(request: DesignRequest): Promise<DesignResponse> {
   const supabase = createClient();
   const {
