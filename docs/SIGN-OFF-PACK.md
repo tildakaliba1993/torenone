@@ -72,6 +72,7 @@ your sign-off.** Full working is in the linked detailed cards.
 | **D9** | **Bolt bearing ply fu** — kernel 480 (SANS) vs 470 (EN) | 480 | Confirm basis (minor) | ☐ |
 | **D10** | **Section-data reconciliation** — 203×133 UB mass/width differ <1% vs Red Book | as packaged | Confirm at section sign-off | ☐ |
 | **D11** | **Prismatic frame model** — no haunch modelled; under-predicts the eaves moment ~6% vs a haunched frame (E13.1: 141 vs 150 kN·m) | prismatic | Confirm acceptable, or model the eaves/ridge haunch | ☐ |
+| **D12** | **Mono-pitch (single-slope) frame** — NEW geometry (T1-3), PROVISIONAL. Statics validated (equilibrium exact, pinned-base = 0, asymmetry, converges to the flat-portal solver as slope→0; `test_plane_frame_monopitch.py`). NB gravity applied as **true global-vertical** here (the duopitch path applies it member-**perpendicular** — ~1.5% at 10° pitch); reconcile. Member sizing reuses the validated SANS check path; **wind + connections/baseplate/footing NOT yet modelled for mono-pitch**. | PROVISIONAL, gravity only | Validate the mono-pitch method (and the vertical-vs-perpendicular load convention) before any billable use | ☐ |
 
 **Detailed cards:** D1/D2/D3/D8/D9/D10 → `docs/REDBOOK-VALIDATION.md`; D4–D7 → `docs/WIND-VERIFICATION.md`.
 

@@ -225,6 +225,68 @@ def solve_portal_udl(
     }
 
 
+def solve_monopitch_udl(
+    span_mm: float,
+    eaves_low_mm: float,
+    eaves_high_mm: float,
+    w_n_per_mm: float,
+    col_section: SectionProperties,
+    raf_section: SectionProperties,
+) -> dict[str, float]:
+    """Solve a pinned-base **mono-pitch** (single-slope) portal frame under a vertical UDL.
+
+    PROVISIONAL — new geometry (T1-3), pending registered-engineer validation. The model is the
+    asymmetric analogue of :func:`solve_portal_udl`: a low column, a single sloping rafter, and a
+    high column. ``w_n_per_mm`` is applied as a global vertical (Fy) load per unit rafter length.
+
+    Nodes:
+        BL — base, low side   (0, 0)
+        EL — eaves, low side  (0, eaves_low_mm)
+        EH — eaves, high side (span_mm, eaves_high_mm)
+        BH — base, high side  (span_mm, 0)
+
+    Returns a dict of signed reactions (N) and salient moments (N·mm), plus the total applied
+    vertical load — enough to verify global equilibrium and the pinned-base conditions.
+    """
+    raf_len_mm = math.hypot(span_mm, eaves_high_mm - eaves_low_mm)
+
+    m = _new_model()
+    _add_section(m, "col_sec", col_section)
+    _add_section(m, "raf_sec", raf_section)
+    m.add_node("BL",       0,            0, 0)
+    m.add_node("EL",       0,  eaves_low_mm, 0)
+    m.add_node("EH", span_mm, eaves_high_mm, 0)
+    m.add_node("BH", span_mm,            0, 0)
+
+    _pin_support(m, "BL")
+    _pin_support(m, "BH")
+    _fix_out_of_plane(m, "EL")
+    _fix_out_of_plane(m, "EH")
+
+    m.add_member("COL_L", "BL", "EL", "steel", "col_sec")   # low column  (i=base, j=eaves)
+    m.add_member("RAF",   "EL", "EH", "steel", "raf_sec")   # single sloping rafter
+    m.add_member("COL_H", "EH", "BH", "steel", "col_sec")   # high column (i=eaves, j=base)
+
+    # Gravity is a GLOBAL vertical load ("FY", uppercase) — not the member-local perpendicular
+    # ("Fy"). w is per unit rafter length, so the total vertical = w x rafter length.
+    m.add_member_dist_load("RAF", "FY", -w_n_per_mm, -w_n_per_mm, case="DL")
+    _add_load_combo(m)
+    m.analyze_linear(log=False, check_stability=False)
+
+    return {
+        "V_low_N":          float(m.nodes["BL"].RxnFY[_COMBO]),
+        "V_high_N":         float(m.nodes["BH"].RxnFY[_COMBO]),
+        "H_low_N":          float(m.nodes["BL"].RxnFX[_COMBO]),
+        "H_high_N":         float(m.nodes["BH"].RxnFX[_COMBO]),
+        # COL_L runs base(x=0) -> eaves(x=eaves_low); COL_H runs eaves(x=0) -> base(x=eaves_high).
+        "M_eaves_low_Nmm":  abs(m.members["COL_L"].moment("Mz", eaves_low_mm,  _COMBO)),
+        "M_eaves_high_Nmm": abs(m.members["COL_H"].moment("Mz", 0.0, _COMBO)),
+        "M_base_low_Nmm":   abs(m.members["COL_L"].moment("Mz", 0.0, _COMBO)),
+        "M_base_high_Nmm":  abs(m.members["COL_H"].moment("Mz", eaves_high_mm, _COMBO)),
+        "total_vertical_N": w_n_per_mm * raf_len_mm,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Portal builder from FrameSpec
 # ---------------------------------------------------------------------------
