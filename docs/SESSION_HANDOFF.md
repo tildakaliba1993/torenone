@@ -5,7 +5,43 @@ Full context for continuing work in a new session. Everything below is committed
 
 ---
 
-## ⏩⏩⏩⏩⏩⏩ SESSION 7 CONTINUATION (2026-06-29) — **READ THIS FIRST**, then Session 6 below
+## ⏩⏩⏩⏩⏩⏩⏩ SESSION 8 CONTINUATION (2026-06-30) — **READ THIS FIRST**, then Session 7 below
+
+> Eighth session — theme: **the AGENTIC DESIGN LOOP** (the next agent step from Session 7). `main`
+> CI-green; web on Netlify, service on Fly (LIVE at torenone.com). Worktree
+> `elegant-grothendieck-c946e9`; venv + service in the MAIN checkout `/Users/cash/TorenOne`. Founder
+> is NON-technical ([[communicate-plainly]]). Key memory: **[[agentic-design-loop]]**.
+
+### What this session shipped
+1. **Agentic design loop** (3rd agent capability) — an AI that *orchestrates* the deterministic
+   kernel to find a **better** design, but **never computes an engineering number**. Tool-calling
+   loop: the model may ONLY call `list_sections`/`run_design`/`run_check`/`stop` (`AgentAction`); the
+   kernel computes every value; the plain `design()` baseline is always a candidate so the result is
+   **never worse than `/design`**; selection is deterministic code reading kernel masses; model free
+   text is guarded number-free; no tool can skip a mandatory check; bounded + degrades to baseline if
+   the AI is down. `service/src/torenone_ai/design_agent.py`, `POST /design-agent` (exploration only,
+   no PDF), 18 tests. **Shipped to Fly + verified live** (no-auth POST → 401). See [[agentic-design-loop]].
+2. **Web "Explore better options" panel** — opt-in (one click, never fires on mount) on the results
+   step; shows kernel-costed alternatives with their trade-offs; "Use this design" replays the pick
+   through `/design` for the stamped PDF. Additive: `design-explore.tsx` + `runDesignAgent()`;
+   `ResultsStep` gained 2 OPTIONAL props — read-only viewer + all existing tests untouched.
+
+### Carry-forward / gotchas (do NOT regress)
+- **The agent's levers are restraint spacing + section choice ONLY — NOT `autosize_for_wind`** (that's
+  the PROVISIONAL wind method, OFF until the co-founder validates, [[wind-analysis-provisional]]).
+  Honest recommendation: unconstrained → recommend the BASELINE (tighter restraint isn't a free win);
+  constrained → lightest passing; dead-end → the rescuing alternative.
+- **Web could not be built locally this session** (worktree has no `node_modules` — disk). So the web
+  change went via a **PR** (CI runs web typecheck/build on `pull_request`; Netlify only builds on push
+  to `main`) → validate on the PR, then merge = the ONE Netlify build ([[netlify-deploy-frugally]]).
+  Founder's disk still near-full — recommend clearing space + `npm ci` in the worktree to restore
+  local web checks.
+- Service/kernel → `fly deploy` from the WORKTREE (fly authed). Correctness boundary = company law
+  ([[strategy-and-roadmap]]): 🟢 build / 🟡 PROVISIONAL+queue / 🔴 never let the LLM compute a number.
+
+---
+
+## ⏩⏩⏩⏩⏩⏩ SESSION 7 CONTINUATION (2026-06-29) — then Session 6 below
 
 > Seventh session — theme: **make the MVP an AI Structural Design Agent.** `main` CI-green; web on
 > Netlify, service on Fly (both LIVE at torenone.com). Worktree `loving-blackwell-89a1e6`; venv +
