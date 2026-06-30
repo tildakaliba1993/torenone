@@ -874,6 +874,6 @@ class OpenAIProposer:
             **extra,
         )
         action = getattr(response, "output_parsed", None)
-        if action is None:
+        if not isinstance(action, AgentAction):
             return AgentAction(tool="stop")
         return action
