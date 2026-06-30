@@ -25,6 +25,15 @@ Full context for continuing work in a new session. Everything below is committed
    step; shows kernel-costed alternatives with their trade-offs; "Use this design" replays the pick
    through `/design` for the stamped PDF. Additive: `design-explore.tsx` + `runDesignAgent()`;
    `ResultsStep` gained 2 OPTIONAL props — read-only viewer + all existing tests untouched.
+3. **Agent hardening** — deterministic seed exploration (works without the model): unconstrained →
+   tighter-restraint sweep; constrained → lightest-first search over the allowed catalogue. Only
+   PASSING options are surfaced. Fix: when constraints make the auto-sized baseline invalid, recommend
+   the lightest passing constraint-valid option (not the invalid baseline).
+4. **Validation gate — LTB beam E5.2 (the last pending 2nd-source) CLOSED.** Mahachi E5.2 (533×210×109,
+   unbraced 8 m, ω2=1.0) reproduced exactly (Mcr=381, Mr=343 kN·m) from the kernel's OWN library data →
+   validates the section data AND `mcr_elastic`/`mr_ltb` together. Every member-design area now has
+   BOTH SA authorities. `kernel/tests/validation/textbook/test_textbook_members.py`; docs updated
+   (REDBOOK-VALIDATION.md, SIGN-OFF-PACK.md). See [[redbook-validation]], [[sign-off-pack]].
 
 ### Carry-forward / gotchas (do NOT regress)
 - **The agent's levers are restraint spacing + section choice ONLY — NOT `autosize_for_wind`** (that's

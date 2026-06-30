@@ -41,7 +41,7 @@ path. Each row is guarded by an automated must-pass test.
 |---|---|---|---|
 | Section properties | Red Book Tables 2.9/2.10 | 11 sections ≤1% (2 data bugs fixed) | `validation/redbook/` |
 | Compression `Cr` | Red Book Ex 4.1/4.3 · Mahachi E4.3 | exact–1.5% | redbook + textbook |
-| Moment `Mr`, LTB `Mcr/Mr` | Red Book Ex 4.3/5.1/5.2 · Mahachi E5.1/E6.1 | ≤1% | redbook + textbook |
+| Moment `Mr`, LTB `Mcr/Mr` | Red Book Ex 4.3/5.1/5.2 · Mahachi E5.1/**E5.2**/E6.1 | ≤1% | redbook + textbook |
 | Classification | Red Book Table 5.3 (15 sections) | all match | redbook |
 | Shear `Vr` formula | Red Book Ex 5.3 · Mahachi E5.1 | exact (basis flagged → D1) | redbook + textbook |
 | Beam-column interaction (cl. 13.8) | Mahachi E6.1 (3 modes) | ≤0.2% | textbook |

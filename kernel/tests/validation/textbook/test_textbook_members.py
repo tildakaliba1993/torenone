@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import pytest
 from torenone_kernel.checks.axial import cr_flexural
-from torenone_kernel.checks.bending import mr_laterally_supported
+from torenone_kernel.checks.bending import mcr_elastic, mr_laterally_supported, mr_ltb
 from torenone_kernel.checks.classification import Class4Error, SectionClass, classify_section
 from torenone_kernel.checks.shear import vr_web
 from torenone_kernel.sections import SectionLibrary
@@ -33,6 +33,37 @@ def test_compression_cr_e4_3() -> None:
     # E4.3: 356x171x67 I-section, Grade 300W, pinned, L=6000 mm → Cr = 589 kN (minor-axis flexural).
     cr = cr_flexural(area_mm2=8550, fy_mpa=300, KL_mm=6000, r_mm=39.9)
     assert cr == pytest.approx(589.0, rel=_TOL), f"{_SRC}, E4.3: Cr={cr:.0f} kN vs 589 kN"
+
+
+def test_section_data_533x210x109_e5_2() -> None:
+    # E5.2 inputs for the 533x210x109 I-section — confirm the kernel's library data matches
+    # the book's properties used in the worked LTB example (a section-data corroboration).
+    s = _LIB.get("533x210x109")
+    assert s.depth_mm == pytest.approx(539.5, rel=_TOL), f"{_SRC}, E5.2 depth"
+    assert s.second_moment_iy_mm4 == pytest.approx(29.4e6, rel=_TOL), f"{_SRC}, E5.2 Iy"
+    assert s.torsion_constant_j_mm4 == pytest.approx(1280e3, rel=_TOL), f"{_SRC}, E5.2 J"
+    assert s.warping_constant_cw_mm6 == pytest.approx(1990e9, rel=_TOL), f"{_SRC}, E5.2 Cw"
+    assert s.plastic_modulus_zx_mm3 == pytest.approx(2830e3, rel=_TOL), f"{_SRC}, E5.2 Zpl"
+
+
+def test_lateral_torsional_buckling_e5_2() -> None:
+    # E5.2: 533x210x109 beam, Grade 300W (fy=300), unbraced over the full L=8000 mm span,
+    # K=1.0; the Code takes ω2=1.0 (conservative — the in-span moment exceeds the end moment).
+    # Driven by the kernel's OWN library section data, so this validates the section data AND
+    # the LTB method together against the book's boxed answers: Mcr=381, Mr=343 kN·m.
+    s = _LIB.get("533x210x109")
+    mcr = mcr_elastic(
+        KL_mm=8000.0,
+        Iy_mm4=s.second_moment_iy_mm4,
+        J_mm4=s.torsion_constant_j_mm4,
+        Cw_mm6=s.warping_constant_cw_mm6,
+        omega2=1.0,
+    )
+    assert mcr == pytest.approx(381.0, rel=_TOL), f"{_SRC}, E5.2: Mcr={mcr:.0f} kN·m vs 381 kN·m"
+
+    # Mcr (381) ≤ 0.67·Mp (569) ⇒ elastic LTB governs ⇒ Mr = φ·Mcr (cl. 13.6a(ii)).
+    mr = mr_ltb(SectionClass.CLASS1, s.plastic_modulus_zx_mm3, s.elastic_modulus_sx_mm3, 300.0, mcr)
+    assert mr == pytest.approx(343.0, rel=_TOL), f"{_SRC}, E5.2: Mr={mr:.0f} kN·m vs 343 kN·m"
 
 
 def test_moment_resistance_supported_e5_1() -> None:

@@ -119,6 +119,9 @@ authorities now independently confirm the same kernel output.
 | Moment Mr, laterally supported (E5.1, 457×191×98) | `mr_laterally_supported` | 602 kN·m | 602 | exact |
 | Shear Vr (E5.1, 457×191×98) | `vr_web` | 950 kN | 950 | exact (overall-depth basis) |
 | Classification (E5.1 / E4.3) | `classify_section` | Class 1 / not Class 4 | match | — |
+| **LTB beam Mcr (E5.2, 533×210×109, KL=8 m, ω2=1.0)** | `mcr_elastic` | 381 kN·m | 381 | <0.1% |
+| **LTB beam Mr (E5.2, 533×210×109)** — cl. 13.6a(ii), Mcr ≤ 0.67 Mp | `mr_ltb` | 343 kN·m | 343 | <0.1% |
+| Section data (E5.2, 533×210×109): Iy, J, Cw, Zpl, depth | `SectionLibrary` | book values | match | ≤0.1% |
 | LTB critical moment Mcr (E6.1, 305×305×118) | `mcr_elastic` | 7 400 kN·m | 7 400 | exact |
 | Moment-gradient ω2 (E6.1, κ=0.75) | `omega2_factor` | 2.5 | 2.5 | exact |
 | **Beam-column interaction (E6.1)** — cl. 13.8.1, all 3 modes | `beam_column_check` | 0.930 / 0.72 / 0.994 | 0.931 / 0.719 / 0.995 | ≤0.2% |
@@ -177,7 +180,12 @@ E7.7/E7.9 — for in-plane bracket/splice connections) and the *Eurocode-3 T-stu
 (E7.5). The bolt **resistances** these rely on (Tr, Vr, Br, the Vu/Vr+Tu/Tr≤1.4 interaction) are
 already validated against Red Book Table 7.2; the book's E7.4/E7.5/E7.8 reconfirm the exact formulas.
 
-Planned additions (next increment): LTB beam (E5.2) as a second LTB source.
+**LTB beam now has TWO authorities (2026-06-30).** The lateral-torsional-buckling path was
+previously validated only against the Red Book (Ex 5.2). The Mahachi textbook's **E5.2** (533×210×109
+beam, unbraced over an 8 m span, ω2=1.0) is now reproduced exactly — Mcr=381, Mr=343 kN·m — driven by
+the kernel's *own* library section data, so it confirms the section data **and** the `mcr_elastic` +
+`mr_ltb` method in one. With this, every member-design area (compression, moment, shear, LTB,
+classification, beam-column interaction) is corroborated by **both** SA authorities.
 
 ## Method items for the co-founder (not component-benchmarkable — method choices, need sign-off)
 
