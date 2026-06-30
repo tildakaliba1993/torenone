@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 export const metadata: Metadata = { title: "Projects" };
 
 const FIRST_RUN_STEPS = [
-  { n: "1", title: "Describe", body: "Tell TorenOne about the frame in plain English." },
+  { n: "1", title: "Describe or upload", body: "Tell TorenOne about the frame in plain English, or upload a drawing." },
   { n: "2", title: "Review", body: "Confirm the inputs on an editable form — you stay the pilot." },
   { n: "3", title: "Get the calc package", body: "A clause-referenced SANS report, ready to review." },
 ];
@@ -38,7 +38,7 @@ export default async function ProjectsPage() {
         <EmptyState
           icon={<EmptyStateIcon d="M4 20V8l8-5 8 5v12M4 20h16M9 20v-6h6v6" />}
           title="Design your first portal frame"
-          description="Describe a single-bay steel portal frame in plain English and get a clause-referenced SANS calculation package in minutes. Free to start — you stay the responsible engineer."
+          description="Describe a single-bay steel portal frame in plain English — or upload a drawing — and get a clause-referenced SANS calculation package in minutes. Free to start — you stay the responsible engineer."
           action={<CreateProjectDialog triggerLabel="Create your first project" />}
         >
           <div className="mt-2 grid w-full max-w-2xl gap-3 sm:grid-cols-3">

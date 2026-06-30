@@ -89,6 +89,30 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
     }
   }
 
+  // Re-read the SAME drawing — picking up anything the engineer has since typed above (e.g. a
+  // dimension the drawing didn't label). Lets a partially-read drawing be completed without
+  // re-uploading or losing what was already read.
+  async function onReadDrawingAgain() {
+    if (!drawingPreview) return;
+    setPending(true);
+    setError(null);
+    setFeedback(null);
+    try {
+      handleResult(await parseDrawing(drawingPreview, trimmed || undefined));
+    } catch (e) {
+      setError(e instanceof ServiceError ? e.message : "Something went wrong reading the drawing.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  function removeDrawing() {
+    setDrawingPreview(null);
+    setDrawingName(null);
+    setFeedback(null);
+    setError(null);
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
@@ -163,7 +187,15 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
               alt="Uploaded drawing preview"
               className="h-16 w-16 rounded object-cover"
             />
-            <span className="text-sm text-muted">{drawingName}</span>
+            <span className="flex-1 truncate text-sm text-muted">{drawingName}</span>
+            <button
+              type="button"
+              onClick={removeDrawing}
+              disabled={pending}
+              className="text-xs text-subtle underline-offset-2 hover:text-foreground hover:underline disabled:opacity-60"
+            >
+              Remove
+            </button>
           </div>
         ) : null}
       </div>
@@ -177,9 +209,15 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
       {feedback ? <ParseFeedback result={feedback} /> : null}
 
       <div>
-        <Button onClick={onParse} loading={pending} disabled={disabled}>
-          {pending ? "Working…" : "Parse description"}
-        </Button>
+        {drawingPreview ? (
+          <Button onClick={() => void onReadDrawingAgain()} loading={pending} disabled={pending}>
+            {pending ? "Reading…" : "Read drawing again with these details"}
+          </Button>
+        ) : (
+          <Button onClick={onParse} loading={pending} disabled={disabled}>
+            {pending ? "Working…" : "Parse description"}
+          </Button>
+        )}
       </div>
     </div>
   );

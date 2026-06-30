@@ -81,7 +81,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               className="border-0 bg-transparent py-10"
               icon={<EmptyStateIcon d="M4 6h16M4 12h10M4 18h7" />}
               title="No designs yet"
-              description="Describe a frame and TorenOne sizes and checks it end-to-end — members, connections, baseplates and footings."
+              description="Describe a frame — or upload a drawing — and TorenOne sizes and checks it end-to-end: members, connections, baseplates and footings."
               action={
                 <LinkButton href={`/projects/${project.id}/design/new`}>New design</LinkButton>
               }

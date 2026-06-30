@@ -11,21 +11,23 @@ export const SITE_URL = (
 
 export const SITE_NAME = "TorenOne";
 
-export const SITE_TAGLINE = "The AI structural engineer";
+export const SITE_TAGLINE = "The AI structural design agent";
 
 export const SITE_DESCRIPTION =
-  "TorenOne turns a plain-English brief into a code-checked, review-ready SANS calculation package for single-bay steel portal frames — members, connections, baseplates and footings, computed by a deterministic engineering kernel, not an AI guess. In minutes, not days.";
+  "TorenOne is an AI structural design agent for single-bay SANS steel portal frames. Describe the frame or upload a drawing — the agent drafts the design and runs every SANS check on a deterministic engineering kernel (members, connections, baseplates and footings), then hands you a clause-referenced, stamp-ready calculation package. You review, confirm and stamp. Minutes, not days.";
 
 /** Compact description for social cards (keep well under ~200 chars). */
 export const SITE_DESCRIPTION_SHORT =
-  "Describe a steel portal frame; get a clause-referenced, stamp-ready SANS calculation package in minutes — computed by a deterministic engineering kernel, not an AI guess.";
+  "An AI structural design agent for SANS steel portal frames. Describe it or upload a drawing; get a clause-referenced, stamp-ready calc package — computed by a deterministic kernel, confirmed by you.";
 
 export const SITE_KEYWORDS = [
+  "AI structural design agent",
+  "AI structural engineer",
   "structural engineering software",
   "steel portal frame design",
+  "drawing to structural design",
   "SANS 10162-1",
   "SANS 10160",
-  "AI structural engineer",
   "portal frame calculator",
   "South Africa structural engineering",
   "steel frame design software",

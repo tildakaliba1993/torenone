@@ -75,8 +75,8 @@ export function Stats() {
 
 const FEATURES = [
   {
-    title: "Plain-English brief",
-    body: "Describe your frame in a sentence. The AI extracts a typed spec — and is architecturally forbidden from guessing an engineering number.",
+    title: "Brief or drawing, in",
+    body: "Describe your frame in a sentence, or upload a drawing or plan. The agent extracts a typed spec — reading only what you stated or labelled, never guessing an engineering number.",
     icon: <PathIcon d="M4 6h16M4 12h10M4 18h7" />,
   },
   {
@@ -113,7 +113,7 @@ export function Features() {
         <SectionHeading
           eyebrow="What you get"
           title="Built for real engineering work"
-          subtitle="Not a chatbot that sounds confident — a structural engine that does the work and shows its working."
+          subtitle="Not a chatbot that sounds confident — a design agent that does the work and shows its working."
         />
       </Reveal>
       <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -136,8 +136,8 @@ export function Features() {
 const STEPS = [
   {
     n: "1",
-    title: "Describe",
-    body: "Open TorenOne and describe the frame in plain English. The AI turns it into a typed, reviewable specification — never inventing a value.",
+    title: "Describe or upload",
+    body: "Describe the frame in plain English, or upload a drawing or plan. The agent turns it into a typed, reviewable specification — reading only what you stated or labelled, never inventing a value.",
   },
   {
     n: "2",
@@ -158,7 +158,7 @@ export function HowItWorks() {
         <Reveal>
           <SectionHeading
             eyebrow="How it works"
-            title="From a sentence to a stamp-ready package"
+            title="From a brief or a drawing to a stamp-ready package"
             subtitle="Three steps. Minutes, not days."
           />
         </Reveal>
@@ -204,8 +204,8 @@ export function WhyDifferent() {
           </p>
           <p className="text-muted mt-4 max-w-3xl text-base leading-7">
             TorenOne is built <span className="text-foreground">AI-native from the ground up</span>,
-            not a chatbot bolted onto a legacy interface. Your plain-English brief goes to a
-            deterministic, version-pinned structural engine — validated clause-by-clause against the
+            not a chatbot bolted onto a legacy interface. Your brief — or your drawing — goes to a
+            deterministic, version-pinned structural engine, validated clause-by-clause against the
             SANS standards. Reproducible. Cited. Stamp-ready. It&rsquo;s the workflow the incumbents
             can&rsquo;t retrofit onto twenty-year-old software, and the one your firm can finally
             trust. <span className="text-foreground">Accuracy is the product.</span>
@@ -283,7 +283,7 @@ export function SiteFooter() {
           <Logo title="TorenOne — home" className="mb-1 h-7 w-auto" />
         </Link>
         <p className="text-muted text-sm">
-          TorenOne — the AI structural engineer for SANS steel portal frames.
+          TorenOne — the AI structural design agent for SANS steel portal frames.
         </p>
         <p className="text-subtle text-xs">© 2026 TorenOne. All rights reserved.</p>
         <div className="text-subtle mt-1 flex flex-wrap items-center justify-center gap-4 text-xs">

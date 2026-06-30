@@ -29,18 +29,20 @@ export function Hero() {
 
           <Reveal delay={80}>
             <h1 className="text-foreground text-4xl font-semibold tracking-tight sm:text-5xl xl:text-6xl">
-              Describe the frame.
+              Describe it or draw it.
               <br />
-              <span className="text-accent">TorenOne engineers it.</span>
+              <span className="text-accent">TorenOne designs it.</span>
             </h1>
           </Reveal>
 
           <Reveal delay={160}>
             <p className="text-muted max-w-xl text-base leading-7">
-              TorenOne turns a plain-English brief into a fully code-checked SANS calc package —
-              members, connections, baseplates and footings — computed by a{" "}
-              <span className="text-foreground">deterministic engineering kernel</span>, not an AI
-              guess. Review, confirm, and download a stamp-ready report in minutes.
+              TorenOne is an <span className="text-foreground">AI structural design agent</span>.
+              Describe a steel portal frame or upload a drawing — it drafts the design, then runs the
+              full SANS check on a{" "}
+              <span className="text-foreground">deterministic engineering kernel</span> (members,
+              connections, baseplates and footings), not an AI guess. Review, confirm, and download a
+              stamp-ready calc package in minutes.
             </p>
           </Reveal>
 

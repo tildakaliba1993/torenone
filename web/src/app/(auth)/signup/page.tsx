@@ -13,7 +13,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 
 const PERKS = [
-  "Describe a frame → stamp-ready SANS calc package in minutes",
+  "Describe it or upload a drawing → stamp-ready SANS calc package in minutes",
   "Deterministic engine — every number cited to a clause",
   "Free to start · you stay the authoritative engineer",
 ];
@@ -21,7 +21,7 @@ const PERKS = [
 export const metadata: Metadata = {
   title: "Create your account",
   description:
-    "Create a free TorenOne firm account and start designing code-checked SANS steel portal frames in minutes.",
+    "Create a free TorenOne firm account and put the AI structural design agent to work — describe a frame or upload a drawing and get a code-checked SANS calc package in minutes.",
   alternates: { canonical: "/signup" },
 };
 
@@ -36,7 +36,9 @@ export default async function SignupPage() {
     <Card>
       <CardHeader>
         <CardTitle className="text-2xl">Create your firm account</CardTitle>
-        <CardDescription>Start designing code-checked steel portal frames.</CardDescription>
+        <CardDescription>
+          Put the AI structural design agent to work on your steel portal frames.
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         <ul className="flex flex-col gap-2">
