@@ -20,7 +20,12 @@ export interface ParseQuestion {
   kind: "missing" | "invalid";
   unit?: string | null;
   options?: string[] | null;
+  /** The FrameSpecExtraction field this answer fills — the key sent to /build-spec. */
+  input_field?: string | null;
 }
+
+/** A flat set of FrameSpecExtraction inputs (read values + clarified answers). */
+export type FrameSpecInputs = Record<string, boolean | number | string | null>;
 
 export interface FrameGeometry {
   span_m: number;
@@ -62,6 +67,8 @@ export interface ParseResponse {
   missing: string[];
   errors: string[];
   scope_note: string | null;
+  /** The values already read (keyed by FrameSpecExtraction field) — pre-fills the clarify form. */
+  partial?: FrameSpecInputs;
 }
 
 /** Raised for any failure talking to the engineering service (network or HTTP). */
@@ -179,6 +186,45 @@ export async function parseDrawing(
 
   if (!res.ok) {
     let detail = `Reading the drawing failed (${res.status}).`;
+    try {
+      const body = (await res.json()) as { detail?: unknown };
+      if (body?.detail) detail = String(body.detail);
+    } catch {
+      // non-JSON error body — keep the status-based message
+    }
+    throw new ServiceError(detail);
+  }
+
+  return (await res.json()) as ParseResponse;
+}
+
+/**
+ * Clarify-loop commit: build a FrameSpec from the merged read + clarified inputs.
+ *
+ * Deterministic on the server (NO LLM) — `build_frame_spec` flags any still-missing required field,
+ * applies documented defaults, and validates. So the engineer's answers and whatever was read
+ * combine into a spec without a second model pass. Same auth/retry/ParseResponse as parsing.
+ */
+export async function buildSpec(values: FrameSpecInputs): Promise<ParseResponse> {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) {
+    throw new ServiceError("Your session has expired — please sign in again.");
+  }
+
+  const res = await serviceFetch(`${serviceBaseUrl()}/build-spec`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify(values),
+  });
+
+  if (!res.ok) {
+    let detail = `Couldn’t build the specification (${res.status}).`;
     try {
       const body = (await res.json()) as { detail?: unknown };
       if (body?.detail) detail = String(body.detail);

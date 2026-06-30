@@ -74,6 +74,8 @@ class ParseQuestion(BaseModel):
     kind: Literal["missing", "invalid"]
     unit: str | None = None
     options: list[str] | None = None
+    # The FrameSpecExtraction field this answer fills — the key the clarify loop sends to /build-spec.
+    input_field: str | None = None
 
 
 ParseStatus = Literal["complete", "needs_clarification", "invalid", "out_of_scope"]
@@ -96,6 +98,10 @@ class ParseResponse(BaseModel):
     missing: list[str] = []
     errors: list[str] = []
     scope_note: str | None = None
+    # The values the model already read (keyed by FrameSpecExtraction field), so the clarify
+    # loop pre-fills what's understood and the engineer only completes the gaps. Empty when nothing
+    # was parsed or the request was out of scope.
+    partial: dict[str, bool | float | str | None] = {}
 
     @classmethod
     def from_result(cls, result: ParseResult) -> ParseResponse:
@@ -115,6 +121,7 @@ class ParseResponse(BaseModel):
                 kind="invalid" if q.kind == "invalid" else "missing",
                 unit=q.unit,
                 options=q.options,
+                input_field=q.input_field,
             )
             for q in clarifying_questions(result)
         ]
@@ -122,6 +129,15 @@ class ParseResponse(BaseModel):
             ParseAssumption(field=a.field, value=_json_value(a.value), note=a.note)
             for a in result.assumptions
         ]
+        # Surface the values already read (non-null extraction fields) so the clarify loop can
+        # pre-fill them; never on an out-of-scope refusal.
+        partial: dict[str, bool | float | str | None] = {}
+        if result.extraction is not None and not result.out_of_scope:
+            partial = {
+                field: _json_value(value)
+                for field, value in result.extraction.model_dump().items()
+                if value is not None and field not in ("in_scope", "out_of_scope_reason")
+            }
         return cls(
             status=status,
             spec=result.spec,
@@ -130,6 +146,7 @@ class ParseResponse(BaseModel):
             missing=[m.field for m in result.missing],
             errors=list(result.errors),
             scope_note=result.scope_note,
+            partial=partial,
         )
 
 

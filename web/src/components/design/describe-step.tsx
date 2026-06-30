@@ -5,8 +5,10 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  type FrameSpecInputs,
   type ParseResponse,
   ServiceError,
+  buildSpec,
   parseDescription,
   parseDrawing,
 } from "@/lib/api/service";
@@ -227,7 +229,15 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
         </p>
       ) : null}
 
-      {feedback ? <ParseFeedback result={feedback} /> : null}
+      {feedback && feedback.status !== "out_of_scope" && feedback.questions.some((q) => q.input_field) ? (
+        <ClarifyStep
+          key={feedback.questions.map((q) => q.field).join(",")}
+          response={feedback}
+          onComplete={onComplete}
+        />
+      ) : feedback ? (
+        <ParseFeedback result={feedback} />
+      ) : null}
 
       <div>
         {drawingPreview ? (
@@ -242,6 +252,141 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
       </div>
     </div>
   );
+}
+
+/**
+ * The conversational clarify loop: when a brief or drawing is missing values, ask for them inline
+ * (pre-filled with what was already read) and merge the answers into a spec via the deterministic
+ * /build-spec — no second model pass. A complete result advances straight to Review.
+ */
+function ClarifyStep({
+  response: initial,
+  onComplete,
+}: {
+  response: ParseResponse;
+  onComplete: (result: ParseResponse) => void;
+}) {
+  const [response, setResponse] = useState<ParseResponse>(initial);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const askable = response.questions.filter((q) => q.input_field);
+  const partial: FrameSpecInputs = response.partial ?? {};
+  const readSummary = Object.entries(partial).filter(
+    ([key]) => !askable.some((q) => q.input_field === key),
+  );
+
+  async function onContinue() {
+    setPending(true);
+    setError(null);
+    try {
+      const merged: FrameSpecInputs = { ...partial };
+      for (const q of askable) {
+        const field = q.input_field;
+        if (!field) continue;
+        const raw = (answers[field] ?? "").trim();
+        if (!raw) continue;
+        merged[field] = q.options ? raw : Number(raw);
+      }
+      const result = await buildSpec(merged);
+      if (result.status === "complete" && result.spec) {
+        onComplete(result);
+        return;
+      }
+      setResponse(result); // still incomplete/invalid — re-ask the remaining fields
+    } catch (e) {
+      setError(e instanceof ServiceError ? e.message : "Couldn’t build the specification.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-4 py-5">
+        <div className="flex flex-col gap-1">
+          <p className="font-medium text-foreground">A few more details</p>
+          <p className="text-sm text-muted">
+            Fill in what wasn’t stated and I’ll complete the specification — nothing is guessed.
+          </p>
+        </div>
+
+        {readSummary.length > 0 ? (
+          <p className="text-xs text-subtle">
+            Already read: {readSummary.map(([k, v]) => `${labelFor(k)} ${v}`).join(" · ")}
+          </p>
+        ) : null}
+
+        <div className="flex flex-col gap-3">
+          {askable.map((q) => {
+            const field = q.input_field as string;
+            return (
+              <div key={field} className="flex flex-col gap-1">
+                <label htmlFor={`clarify-${field}`} className="text-sm text-foreground">
+                  {q.question}
+                  {q.unit ? <span className="text-subtle"> ({q.unit})</span> : null}
+                </label>
+                {q.options ? (
+                  <select
+                    id={`clarify-${field}`}
+                    value={answers[field] ?? ""}
+                    onChange={(e) => setAnswers((a) => ({ ...a, [field]: e.target.value }))}
+                    className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  >
+                    <option value="">Select…</option>
+                    {q.options.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    id={`clarify-${field}`}
+                    type="number"
+                    inputMode="decimal"
+                    value={answers[field] ?? ""}
+                    onChange={(e) => setAnswers((a) => ({ ...a, [field]: e.target.value }))}
+                    className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-subtle focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {error ? (
+          <p role="alert" className="text-sm font-medium text-danger">
+            {error}
+          </p>
+        ) : null}
+
+        <div>
+          <Button onClick={() => void onContinue()} loading={pending} disabled={pending}>
+            {pending ? "Building…" : "Continue"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  span_m: "span",
+  eaves_height_m: "eaves",
+  roof_pitch_deg: "pitch",
+  bay_spacing_m: "bay",
+  number_of_bays: "bays",
+  roof_dead_load_kpa: "dead load",
+  basic_wind_speed_ms: "wind",
+  terrain_category: "terrain",
+  steel_grade: "grade",
+  base_fixity: "base",
+};
+
+function labelFor(field: string): string {
+  return FIELD_LABELS[field] ?? field;
 }
 
 function ParseFeedback({ result }: { result: ParseResponse }) {

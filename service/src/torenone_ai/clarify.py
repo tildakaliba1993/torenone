@@ -67,12 +67,38 @@ _LEAF_INDEX: dict[str, tuple[str, str | None, list[str] | None]] = {
     path.split(".")[-1]: meta for path, meta in _FIELD_QUESTIONS.items()
 }
 
+# Canonical FrameSpec path -> the matching FrameSpecExtraction input field. The clarify loop
+# collects answers keyed by this input field and merges them deterministically (build_frame_spec),
+# so the engineer's answers + whatever was already read combine WITHOUT a second LLM pass. Note
+# the names are not always the leaf (dead.roof_kpa -> roof_dead_load_kpa).
+_CANONICAL_TO_INPUT: dict[str, str] = {
+    "geometry.span_m": "span_m",
+    "geometry.eaves_height_m": "eaves_height_m",
+    "geometry.roof_pitch_deg": "roof_pitch_deg",
+    "geometry.bay_spacing_m": "bay_spacing_m",
+    "geometry.number_of_bays": "number_of_bays",
+    "dead.roof_kpa": "roof_dead_load_kpa",
+    "dead.services_kpa": "services_kpa",
+    "dead.wall_cladding_kpa": "wall_cladding_kpa",
+    "wind.basic_wind_speed_ms": "basic_wind_speed_ms",
+    "wind.terrain_category": "terrain_category",
+    "wind.site_altitude_m": "site_altitude_m",
+    "materials.steel_grade": "steel_grade",
+    "base_fixity": "base_fixity",
+}
+_LEAF_TO_INPUT: dict[str, str] = {path.split(".")[-1]: inp for path, inp in _CANONICAL_TO_INPUT.items()}
+
 
 def _lookup(field: str) -> tuple[str, str | None, list[str] | None] | None:
     """Resolve question metadata by full path, then by leaf field name."""
     if field in _FIELD_QUESTIONS:
         return _FIELD_QUESTIONS[field]
     return _LEAF_INDEX.get(field.split(".")[-1])
+
+
+def _input_field(field: str) -> str | None:
+    """The FrameSpecExtraction input name for a canonical path / validation field."""
+    return _CANONICAL_TO_INPUT.get(field) or _LEAF_TO_INPUT.get(field.split(".")[-1])
 
 
 @dataclasses.dataclass(frozen=True)
@@ -84,6 +110,7 @@ class ClarifyingQuestion:
     kind: str             # "missing" | "invalid"
     unit: str | None = None
     options: list[str] | None = None
+    input_field: str | None = None  # the FrameSpecExtraction field the answer fills
 
 
 def clarifying_questions(result: ParseResult) -> list[ClarifyingQuestion]:
@@ -108,7 +135,8 @@ def clarifying_questions(result: ParseResult) -> list[ClarifyingQuestion]:
             text, unit, options = f"Please provide {m.label}.", None, None
         questions.append(
             ClarifyingQuestion(
-                field=m.field, question=text, kind="missing", unit=unit, options=options
+                field=m.field, question=text, kind="missing", unit=unit, options=options,
+                input_field=_input_field(m.field),
             )
         )
 
@@ -128,6 +156,7 @@ def clarifying_questions(result: ParseResult) -> list[ClarifyingQuestion]:
                 kind="invalid",
                 unit=unit,
                 options=options,
+                input_field=_input_field(field),
             )
         )
 

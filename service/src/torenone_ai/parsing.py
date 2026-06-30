@@ -201,6 +201,9 @@ class ParseResult:
     errors: list[str]
     out_of_scope: bool = False
     scope_note: str | None = None
+    # The (nullable) values the LLM read — carried so the clarify loop can pre-fill what was
+    # already understood and the engineer only completes the gaps. None when nothing was parsed.
+    extraction: FrameSpecExtraction | None = None
 
     @property
     def is_complete(self) -> bool:
@@ -258,7 +261,7 @@ def build_frame_spec(extraction: FrameSpecExtraction) -> ParseResult:
         )
         return ParseResult(
             spec=None, missing=[], assumptions=[], errors=[],
-            out_of_scope=True, scope_note=note,
+            out_of_scope=True, scope_note=note, extraction=extraction,
         )
 
     # 1. Required fields are NEVER assumed — flag any that are null.
@@ -268,7 +271,9 @@ def build_frame_spec(extraction: FrameSpecExtraction) -> ParseResult:
         if getattr(extraction, attr) is None
     ]
     if missing:
-        return ParseResult(spec=None, missing=missing, assumptions=[], errors=[])
+        return ParseResult(
+            spec=None, missing=missing, assumptions=[], errors=[], extraction=extraction
+        )
 
     # All required fields are guaranteed present past this point (narrows Optionals).
     assert extraction.span_m is not None
@@ -369,10 +374,12 @@ def build_frame_spec(extraction: FrameSpecExtraction) -> ParseResult:
     except ValidationError as exc:
         return ParseResult(
             spec=None, missing=[], assumptions=assumptions,
-            errors=_humanise_validation_error(exc),
+            errors=_humanise_validation_error(exc), extraction=extraction,
         )
 
-    return ParseResult(spec=spec, missing=[], assumptions=assumptions, errors=[])
+    return ParseResult(
+        spec=spec, missing=[], assumptions=assumptions, errors=[], extraction=extraction
+    )
 
 
 # ---------------------------------------------------------------------------

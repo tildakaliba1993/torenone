@@ -24,7 +24,13 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.responses import JSONResponse, Response
-from torenone_ai import DrawingDecodeError, parse_description, parse_drawing
+from torenone_ai import (
+    DrawingDecodeError,
+    FrameSpecExtraction,
+    build_frame_spec,
+    parse_description,
+    parse_drawing,
+)
 
 from torenone_service.ai_runtime import (
     AIRuntime,
@@ -362,6 +368,27 @@ def create_app(
         response = ParseResponse.from_result(result)
         logger.info(
             "parse_drawing",
+            extra={"user_id": user.user_id, "status": response.status},
+        )
+        return response
+
+    @app.post("/build-spec")
+    @limiter.limit(PARSE_RATE_LIMIT)
+    def build_spec_route(
+        request: Request,
+        body: FrameSpecExtraction,
+        user: AuthenticatedUser = Depends(require_user),
+    ) -> ParseResponse:
+        """Build a FrameSpec from the merged read + clarified values — the clarify-loop commit.
+
+        Deterministic: **no LLM runs here.** ``build_frame_spec`` only flags missing required
+        fields, applies documented defaults, and validates — so the engineer's answers combine with
+        whatever was already read (from a brief or a drawing) into a spec, with no new chance for the
+        model to misread. Protected; no AI runtime needed.
+        """
+        response = ParseResponse.from_result(build_frame_spec(body))
+        logger.info(
+            "build_spec",
             extra={"user_id": user.user_id, "status": response.status},
         )
         return response
