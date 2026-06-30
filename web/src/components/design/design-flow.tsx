@@ -63,6 +63,8 @@ export function DesignFlow({ projectId, projectName }: { projectId: string; proj
       {step === "results" && result ? (
         <ResultsStep
           result={result}
+          projectId={projectId}
+          onUseAlternative={onDesignComplete}
           onRestart={() => {
             setResult(null);
             setSpec(null);
