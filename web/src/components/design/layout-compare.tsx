@@ -85,11 +85,14 @@ export function LayoutCompare({
     }
   }
 
-  const recommended =
-    data && data.lightest_passing_bays != null
-      ? data.options.find((o) => o.number_of_bays === data.lightest_passing_bays)
-      : undefined;
+  const [hoverBays, setHoverBays] = useState<number | null>(null);
   const geo = usedSpec?.geometry;
+  // Which layout the building preview shows: the hovered row, else the lightest passing option.
+  const previewBays = hoverBays ?? data?.lightest_passing_bays ?? null;
+  const preview =
+    data && previewBays != null
+      ? data.options.find((o) => o.number_of_bays === previewBays)
+      : undefined;
 
   return (
     <div className="border-border bg-surface-raised flex flex-col gap-3 rounded-lg border p-4">
@@ -121,18 +124,22 @@ export function LayoutCompare({
 
       {data ? (
         <div className="flex flex-col gap-2">
-          {recommended && geo ? (
+          {preview && geo ? (
             <div className="border-border bg-surface rounded-md border p-3">
               <p className="text-muted mb-1 text-xs">
-                Lightest option — {recommended.number_of_frames} frames
+                {preview.number_of_bays === data.lightest_passing_bays
+                  ? "Lightest option"
+                  : "Previewing"}{" "}
+                — {preview.number_of_frames} frames · hover a row to preview
               </p>
               <BuildingFrames
-                numberOfFrames={recommended.number_of_frames}
+                key={preview.number_of_bays}
+                numberOfFrames={preview.number_of_frames}
                 span={geo.span_m}
                 eaves={geo.eaves_height_m}
                 pitch={geo.roof_pitch_deg}
                 roofType={geo.roof_type}
-                baySpacingM={recommended.bay_spacing_m}
+                baySpacingM={preview.bay_spacing_m}
               />
             </div>
           ) : null}
@@ -152,12 +159,18 @@ export function LayoutCompare({
                 {data.options.map((o) => {
                   const isLightest = o.number_of_bays === data.lightest_passing_bays;
                   const isCurrent = o.number_of_bays === currentBays;
+                  const isPreview = o.number_of_bays === previewBays;
                   return (
                     <tr
                       key={o.number_of_bays}
+                      onMouseEnter={() => setHoverBays(o.number_of_bays)}
+                      onMouseLeave={() => setHoverBays(null)}
+                      onFocus={() => setHoverBays(o.number_of_bays)}
+                      tabIndex={0}
                       className={cn(
-                        "border-border border-t",
+                        "border-border cursor-default border-t transition-colors",
                         isLightest && "bg-success/5",
+                        isPreview && "bg-accent/10",
                       )}
                     >
                       <td className="text-foreground px-3 py-2 font-medium">{o.number_of_frames}</td>

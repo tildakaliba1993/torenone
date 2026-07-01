@@ -86,6 +86,16 @@ Full context for continuing work in a new session. Everything below is committed
    - **Phase 3 — polish**: SVG draw-in (`.animate-draw` + `pathLength={1}`, reduced-motion safe),
      `animate-fade-in`, BMD/SFD fade-in. Tests: `designed-frame.test.tsx`, `building-frames.test.tsx`.
    Web-only → one Netlify deploy, no `fly deploy`. See [[ux-speed-and-polish-bar]].
+5. **Interactive + WebGL 3D visuals (🟢) — founder: "elevate to match/beat Genia, make interactive."**
+   Chose full WebGL (three.js) over lightweight SVG. `building-model-3d.tsx` (three@0.185 /
+   @react-three/fiber@9 / @react-three/drei@10): orbit + auto-rotate + members coloured by governing
+   utilisation + hover-to-inspect overlay. `building-3d.tsx` = `next/dynamic(ssr:false)` wrapper so
+   three.js is a **code-split ~880 KB chunk loaded ONLY on the results view** (protects the fast bar).
+   Results uses the 3D; the SVG building stays in the **layout compare** (fast) and is now interactive
+   (hover a row → live-rebuild the preview). `designed-frame.tsx` interactive too (hover member →
+   highlight + governing-check caption). **Test gotcha:** mock `@/components/design/building-3d` in
+   jsdom tests (R3F needs ResizeObserver/WebGL). Web-only → one Netlify deploy. New deps in
+   `web/package.json`. See [[ux-speed-and-polish-bar]].
 
 ### Verified locally (all green)
 - Service: **316 passed**, 1 skipped (`PYTHONPATH=kernel/src:tools:service/src .venv/bin/pytest service`).

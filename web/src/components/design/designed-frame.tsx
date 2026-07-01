@@ -1,4 +1,9 @@
+"use client";
+
+import { useState } from "react";
+
 import type { CheckResult, FrameSpec, SectionChoice } from "@/lib/api/service";
+import { cn } from "@/lib/utils";
 
 /**
  * The "hero" visual of a completed design: the actual portal frame drawn to scale, with each member
@@ -25,12 +30,14 @@ const BAND_COLOR: Record<Band, string> = {
   unknown: "var(--border-strong)",
 };
 
-/** Governing (max) gating utilisation for a member, read off the kernel's check names. */
-function memberUtil(checks: CheckResult[], member: "column" | "rafter"): number | null {
-  const us = checks
-    .filter((c) => !c.informational && c.name.toLowerCase().startsWith(`${member}:`))
-    .map((c) => c.utilisation);
-  return us.length ? Math.max(...us) : null;
+type MemberKind = "column" | "rafter";
+
+/** The governing (max-utilisation) gating check for a member, read off the kernel's check names. */
+function governingCheck(checks: CheckResult[], member: MemberKind): CheckResult | null {
+  const own = checks.filter(
+    (c) => !c.informational && c.name.toLowerCase().startsWith(`${member}:`),
+  );
+  return own.length ? own.reduce((m, c) => (c.utilisation > m.utilisation ? c : m)) : null;
 }
 
 function designationFor(sections: SectionChoice[], member: string): string | null {
@@ -40,6 +47,7 @@ function designationFor(sections: SectionChoice[], member: string): string | nul
 interface DrawMember {
   a: [number, number]; // world metres
   b: [number, number];
+  kind: MemberKind;
   util: number | null;
   designation: string | null;
 }
@@ -53,6 +61,8 @@ export function DesignedFrame({
   sections: SectionChoice[];
   checks: CheckResult[];
 }) {
+  const [hovered, setHovered] = useState<MemberKind | null>(null);
+
   const g = spec.geometry;
   const span = g.span_m;
   const eaves = g.eaves_height_m;
@@ -68,22 +78,24 @@ export function DesignedFrame({
   const highEaves = eaves + span * Math.tan((pitch * Math.PI) / 180); // monopitch high side
   const topH = monopitch ? highEaves : apex;
 
-  const colUtil = memberUtil(checks, "column");
-  const rafUtil = memberUtil(checks, "rafter");
+  const colCheck = governingCheck(checks, "column");
+  const rafCheck = governingCheck(checks, "rafter");
+  const colUtil = colCheck?.utilisation ?? null;
+  const rafUtil = rafCheck?.utilisation ?? null;
   const colSec = designationFor(sections, "column");
   const rafSec = designationFor(sections, "rafter");
 
   const members: DrawMember[] = monopitch
     ? [
-        { a: [0, 0], b: [0, eaves], util: colUtil, designation: colSec },
-        { a: [span, 0], b: [span, highEaves], util: colUtil, designation: colSec },
-        { a: [0, eaves], b: [span, highEaves], util: rafUtil, designation: rafSec },
+        { a: [0, 0], b: [0, eaves], kind: "column", util: colUtil, designation: colSec },
+        { a: [span, 0], b: [span, highEaves], kind: "column", util: colUtil, designation: colSec },
+        { a: [0, eaves], b: [span, highEaves], kind: "rafter", util: rafUtil, designation: rafSec },
       ]
     : [
-        { a: [0, 0], b: [0, eaves], util: colUtil, designation: colSec },
-        { a: [span, 0], b: [span, eaves], util: colUtil, designation: colSec },
-        { a: [0, eaves], b: [span / 2, apex], util: rafUtil, designation: rafSec },
-        { a: [span / 2, apex], b: [span, eaves], util: rafUtil, designation: rafSec },
+        { a: [0, 0], b: [0, eaves], kind: "column", util: colUtil, designation: colSec },
+        { a: [span, 0], b: [span, eaves], kind: "column", util: colUtil, designation: colSec },
+        { a: [0, eaves], b: [span / 2, apex], kind: "rafter", util: rafUtil, designation: rafSec },
+        { a: [span / 2, apex], b: [span, eaves], kind: "rafter", util: rafUtil, designation: rafSec },
       ];
 
   const W = 560;
@@ -144,20 +156,23 @@ export function DesignedFrame({
             );
           })}
         </g>
-        {/* members, coloured by utilisation, drawn in on mount */}
+        {/* members, coloured by utilisation, drawn in on mount; hover to inspect */}
         {members.map((m, i) => (
           <line
             key={i}
             pathLength={1}
-            className="animate-draw"
+            className="animate-draw cursor-pointer"
             style={{ animationDelay: `${i * 90}ms` }}
             x1={px(m.a[0])}
             y1={py(m.a[1])}
             x2={px(m.b[0])}
             y2={py(m.b[1])}
             stroke={BAND_COLOR[band(m.util)]}
-            strokeWidth={7}
+            strokeWidth={hovered === m.kind ? 10 : 7}
+            strokeOpacity={hovered && hovered !== m.kind ? 0.45 : 1}
             strokeLinecap="round"
+            onPointerEnter={() => setHovered(m.kind)}
+            onPointerLeave={() => setHovered(null)}
           />
         ))}
         {/* pinned bases */}
@@ -193,38 +208,67 @@ export function DesignedFrame({
         </text>
       </svg>
 
-      <MemberSummary column={{ util: colUtil, designation: colSec }} rafter={{ util: rafUtil, designation: rafSec }} />
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <MemberRow
+          kind="column"
+          designation={colSec}
+          check={colCheck}
+          hovered={hovered}
+          onHover={setHovered}
+        />
+        <MemberRow
+          kind="rafter"
+          designation={rafSec}
+          check={rafCheck}
+          hovered={hovered}
+          onHover={setHovered}
+        />
+      </div>
       <Legend />
     </div>
   );
 }
 
-function MemberSummary({
-  column,
-  rafter,
+function MemberRow({
+  kind,
+  designation,
+  check,
+  hovered,
+  onHover,
 }: {
-  column: { util: number | null; designation: string | null };
-  rafter: { util: number | null; designation: string | null };
+  kind: MemberKind;
+  designation: string | null;
+  check: CheckResult | null;
+  hovered: MemberKind | null;
+  onHover: (k: MemberKind | null) => void;
 }) {
-  const rows: { label: string; util: number | null; designation: string | null }[] = [
-    { label: "Column", ...column },
-    { label: "Rafter", ...rafter },
-  ];
+  const util = check?.utilisation ?? null;
+  const active = hovered === kind;
   return (
-    <div className="border-border grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-2">
-      {rows.map((r) => (
-        <div key={r.label} className="flex items-center gap-2 text-sm">
-          <span
-            className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-            style={{ backgroundColor: BAND_COLOR[band(r.util)] }}
-          />
-          <span className="text-muted w-16 shrink-0">{r.label}</span>
-          <span className="text-foreground font-mono">{r.designation ?? "—"}</span>
-          <span className="text-muted ml-auto tabular-nums">
-            {r.util != null ? `${Math.round(r.util * 100)}%` : "—"}
-          </span>
-        </div>
-      ))}
+    <div
+      onPointerEnter={() => onHover(kind)}
+      onPointerLeave={() => onHover(null)}
+      className={cn(
+        "border-border flex cursor-pointer flex-col gap-0.5 rounded-md border p-3 text-sm transition-colors",
+        active ? "border-accent bg-surface-raised" : "bg-surface",
+      )}
+    >
+      <div className="flex items-center gap-2">
+        <span
+          className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ backgroundColor: BAND_COLOR[band(util)] }}
+        />
+        <span className="text-muted w-16 shrink-0 capitalize">{kind}</span>
+        <span className="text-foreground font-mono">{designation ?? "—"}</span>
+        <span className="text-muted ml-auto tabular-nums">
+          {util != null ? `${Math.round(util * 100)}%` : "—"}
+        </span>
+      </div>
+      {check ? (
+        <p className="text-subtle pl-4 text-xs">
+          Governed by {check.name.replace(/^[^:]+:\s*/, "")} ({check.clause})
+        </p>
+      ) : null}
     </div>
   );
 }

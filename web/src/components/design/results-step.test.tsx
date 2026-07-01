@@ -18,6 +18,9 @@ vi.mock("@/lib/payments/actions", () => ({
 vi.mock("@/lib/payments/client", () => ({
   beginCheckout: (directive: unknown) => beginCheckout(directive),
 }));
+// The WebGL 3D model needs a real browser (ResizeObserver + WebGL); stub it here — these tests
+// cover the results content, not the 3D canvas (the model has its own concerns).
+vi.mock("@/components/design/building-3d", () => ({ Building3D: () => null }));
 
 import { ResultsStep } from "./results-step";
 
