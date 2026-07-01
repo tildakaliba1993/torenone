@@ -34,19 +34,39 @@ Full context for continuing work in a new session. Everything below is committed
      code check. No engineering method/number changed → **not** a sign-off-pack item. Same reusable
      pattern: a new front door fills the SAME nullable `FrameSpecExtraction` → same clarify/confirm
      gate → same kernel. Loads/wind aren't on a GA → they become clarifying questions (never guessed).
+   - **Sample test drawing:** `~/Downloads/torenone-architect-GA-sample.pdf` (generated via WeasyPrint;
+     script in scratchpad `make_ga.py`) — a realistic architect's GA (24 m span grids A/B, 5 bays @
+     6 m, eaves +6.000, ridge +8.116, pitch 10°, title block "steel frames by structural engineer").
+2. **Web speed + universal loading system (🟢)** — the app felt slow and static; fixed both:
+   - **Speed (fewer serial Supabase round-trips):** the `(app)` layout no longer blocks the shell on
+     an auth+profile query — auth is already enforced by the proxy middleware, so the shell paints
+     instantly and the **firm name streams in via `<Suspense>`**. Dropped redundant `getUser()` calls
+     from `projects/[id]` + `design/new` pages (middleware gates them). Parallelised independent
+     queries with `Promise.all` in `projects/[id]` (project+runs) and `runs/[runId]`
+     (getUser+project+run, then profile) — waterfalls → single waves.
+   - **Universal, beautiful loading state:** upgraded `Skeleton` to a shimmer sweep (reduced-motion →
+     pulse); new shared primitives `components/ui/page-skeleton.tsx` (`PageShell`, `PageHeaderSkeleton`,
+     `CardSkeleton`, `ListSkeleton`) used by **every** route's `loading.tsx` — one loading language.
+     Added the two MISSING `loading.tsx` (`runs/[runId]`, `design/new`) so every navigation streams an
+     instant skeleton.
+   - **Less robotic:** `components/app/route-transition.tsx` (client) — content **fades in** per route
+     + a slim accent **top progress bar** sweeps on each navigation; header nav uses
+     `components/ui/nav-link.tsx` with **`useLinkStatus`** for instant click feedback. All motion
+     respects `prefers-reduced-motion` (animation tokens registered in `@theme`; verified in compiled
+     CSS). Visually confirmed via a temp preview page + dev-server screenshot (since removed).
 
 ### Verified locally (all green)
 - Service: **313 passed**, 1 skipped (`PYTHONPATH=kernel/src:tools:service/src .venv/bin/pytest service`).
-- Web: **127 passed** (`npm run test`), `typecheck`/`lint`/`build` all clean. (Re-ran `npm ci` in the
+- Web: **134 passed** (`npm run test`), `typecheck`/`lint`/`build` all clean. (Re-ran `npm ci` in the
   worktree — disk had ~13 GB free, so local web checks work again this session.)
 - `mypy kernel/src tools service/src` clean (71 files); `ruff` clean.
 
 ### DEPLOYED LIVE (2026-07-01)
-- Pushed to `main` (commit `b1fc0db`), **CI green** (web + kernel/service + Docker; Playwright E2E is
-  nightly-only). **Service deployed to Fly** from the worktree (`fly deploy`): `/health` 200,
-  `/propose-frame` no-auth POST → **401 (live)**. **Web auto-deployed via Netlify** on the push.
-  (Deploy-time "not listening on expected address" warning was transient — a machine scaling down
-  mid-rollout; health 200 confirms reachability.) [[netlify-deploy-frugally]], [[deploy-targets]].
+- **Propose-frame (item 1):** pushed to `main` (commit `b1fc0db`), CI green, **service deployed to Fly**
+  (`/propose-frame` no-auth POST → 401 = live), **web auto-deployed via Netlify**.
+- **Web speed + loading (item 2):** web-only (no service change → no `fly deploy` needed); ships on the
+  next push to `main` via Netlify. Correctness boundary untouched (🟢 — no engineering numbers).
+  [[netlify-deploy-frugally]], [[deploy-targets]].
 
 ### What's next (priority — founder's call; keep it disciplined)
 - Same as Session 9: Tier 0 (co-founder validation gate + pilots) is the real revenue blocker and is

@@ -4,9 +4,16 @@ import { describe, expect, it } from "vitest";
 import { Skeleton } from "./skeleton";
 
 describe("Skeleton", () => {
-  it("renders a pulsing placeholder", () => {
+  it("renders a shimmering placeholder", () => {
     render(<Skeleton />);
-    expect(screen.getByTestId("skeleton").className).toContain("animate-pulse");
+    const el = screen.getByTestId("skeleton");
+    expect(el.className).toContain("animate-shimmer");
+    expect(el.className).toContain("overflow-hidden");
+  });
+
+  it("falls back to a pulse when motion is reduced", () => {
+    render(<Skeleton />);
+    expect(screen.getByTestId("skeleton").className).toContain("motion-reduce:animate-pulse");
   });
 
   it("merges a custom className", () => {

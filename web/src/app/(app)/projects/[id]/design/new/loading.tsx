@@ -4,8 +4,7 @@ export default function Loading() {
   return (
     <PageShell>
       <PageHeaderSkeleton eyebrow />
-      <CardSkeleton rows={4} />
-      <CardSkeleton rows={2} />
+      <CardSkeleton rows={6} />
     </PageShell>
   );
 }

@@ -3,9 +3,9 @@ import { CardSkeleton, PageHeaderSkeleton, PageShell } from "@/components/ui/pag
 export default function Loading() {
   return (
     <PageShell>
-      <PageHeaderSkeleton eyebrow />
-      <CardSkeleton rows={4} />
+      <PageHeaderSkeleton eyebrow action={false} />
       <CardSkeleton rows={2} />
+      <CardSkeleton rows={5} />
     </PageShell>
   );
 }

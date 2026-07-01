@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 import { DesignsManager } from "@/components/projects/designs-manager";
 import { DocumentDetails } from "@/components/projects/document-details";
@@ -31,24 +31,22 @@ function derivedLabel(spec: RawRunRow["frame_spec"]): string {
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
-  // select("*") (not an explicit column list) so this stays resilient before the
-  // report_metadata migration is applied — a missing column is simply absent, not an error.
-  const { data: project } = await supabase.from("projects").select("*").eq("id", id).single();
+  // Auth is enforced by the proxy middleware; RLS (Task 5.4) scopes every read to the caller's
+  // firm. The project and its runs are independent, so fetch them in parallel (one round-trip,
+  // not a waterfall). select("*") stays resilient before the report_metadata migration is applied.
+  const [{ data: project }, { data: runsData }] = await Promise.all([
+    supabase.from("projects").select("*").eq("id", id).single(),
+    supabase
+      .from("runs")
+      .select(
+        "id, label, mode, passed, governing_utilisation, created_at, frame_spec, reports(storage_path)",
+      )
+      .eq("project_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1000),
+  ]);
   if (!project) notFound();
-
-  // RLS (Task 5.4) scopes both runs and the embedded reports to the firm. Search / filter /
-  // sort / paginate happen client-side (real-time) over this set.
-  const { data: runsData } = await supabase
-    .from("runs")
-    .select("id, label, mode, passed, governing_utilisation, created_at, frame_spec, reports(storage_path)")
-    .eq("project_id", id)
-    .order("created_at", { ascending: false })
-    .limit(1000);
 
   const runs: RunRow[] = ((runsData ?? []) as RawRunRow[]).map((r) => ({
     id: r.id,

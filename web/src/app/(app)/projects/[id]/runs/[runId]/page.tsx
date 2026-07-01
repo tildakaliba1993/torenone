@@ -29,23 +29,23 @@ export default async function RunDetailPage({
 }) {
   const { id, runId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+
+  // The caller, project and run are independent — fetch them together (one round-trip, not a
+  // waterfall). RLS (Task 5.4) scopes the project + run to the caller's firm; a foreign id →
+  // notFound. select("*") stays resilient before the report_metadata / runs.stamp migrations.
+  const [
+    {
+      data: { user },
+    },
+    { data: project },
+    { data: runData },
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from("projects").select("*").eq("id", id).single(),
+    supabase.from("runs").select("*, reports(storage_path)").eq("id", runId).eq("project_id", id).single(),
+  ]);
   if (!user) redirect("/login");
-
-  // RLS (Task 5.4) scopes the project + run to the caller's firm; a foreign id → notFound.
-  // select("*") stays resilient before the report_metadata migration is applied.
-  const { data: project } = await supabase.from("projects").select("*").eq("id", id).single();
   if (!project) notFound();
-
-  // select("*, ...") stays resilient before the runs.stamp migration is applied.
-  const { data: runData } = await supabase
-    .from("runs")
-    .select("*, reports(storage_path)")
-    .eq("id", runId)
-    .eq("project_id", id)
-    .single();
   if (!runData) notFound();
 
   const run = runData as RawRun;

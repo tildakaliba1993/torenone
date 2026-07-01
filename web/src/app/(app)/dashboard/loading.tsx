@@ -1,13 +1,11 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { CardSkeleton, PageHeaderSkeleton, PageShell } from "@/components/ui/page-skeleton";
 
 export default function Loading() {
   return (
-    <main className="flex w-full flex-col gap-8">
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-7 w-32" />
-        <Skeleton className="h-4 w-64" />
-      </div>
-      <Skeleton className="h-40 w-full" />
-    </main>
+    <PageShell className="gap-8">
+      <PageHeaderSkeleton action={false} />
+      <CardSkeleton rows={3} />
+      <CardSkeleton rows={2} />
+    </PageShell>
   );
 }
