@@ -13,18 +13,21 @@ import math
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-from torenone_kernel.models.enums import BaseFixity, SteelGrade, TerrainCategory
+from torenone_kernel.models.enums import BaseFixity, RoofType, SteelGrade, TerrainCategory
 
 _STRICT = ConfigDict(frozen=True, extra="forbid")
 
 
 class FrameGeometry(BaseModel):
-    """Geometry of a single-bay symmetric pitched portal frame."""
+    """Geometry of a single-bay pitched portal frame (symmetric duopitch, or mono-pitch)."""
 
     model_config = _STRICT
 
     span_m: float = Field(gt=0, description="Clear span, eaves to eaves (m).")
-    eaves_height_m: float = Field(gt=0, description="Column height to eaves (m).")
+    eaves_height_m: float = Field(
+        gt=0,
+        description="Column height to eaves (m). For a mono-pitch roof this is the LOW eaves.",
+    )
     roof_pitch_deg: float = Field(
         gt=0, le=45, description="Roof pitch (deg). >45 is out of MVP scope."
     )
@@ -32,13 +35,25 @@ class FrameGeometry(BaseModel):
         gt=0, description="Frame spacing = tributary width of one internal frame (m)."
     )
     number_of_bays: int = Field(ge=1, description="Number of bays along the building length.")
+    roof_type: RoofType = Field(
+        default=RoofType.DUOPITCH,
+        description="Roof shape. DUOPITCH (symmetric, default) or MONOPITCH (single slope, "
+        "PROVISIONAL — pending engineer validation).",
+    )
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def apex_height_m(self) -> float:
+        # Duopitch apex at mid-span. (Not used for mono-pitch — see high_eaves_height_m.)
         return self.eaves_height_m + (self.span_m / 2.0) * math.tan(
             math.radians(self.roof_pitch_deg)
         )
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def high_eaves_height_m(self) -> float:
+        # Mono-pitch high eaves, rising over the full span. (Unused for a duopitch.)
+        return self.eaves_height_m + self.span_m * math.tan(math.radians(self.roof_pitch_deg))
 
     @computed_field  # type: ignore[prop-decorator]
     @property

@@ -31,6 +31,7 @@ import math
 # PyNite is installed --user; ensure the user site-packages is on sys.path.
 import site
 import sys
+from typing import NamedTuple
 
 for _sp in site.getsitepackages() + [site.getusersitepackages()]:
     if _sp not in sys.path:
@@ -285,6 +286,93 @@ def solve_monopitch_udl(
         "M_base_high_Nmm":  abs(m.members["COL_H"].moment("Mz", eaves_high_mm, _COMBO)),
         "total_vertical_N": w_n_per_mm * raf_len_mm,
     }
+
+
+class MonopitchDemand(NamedTuple):
+    """Governing member demands for a mono-pitch frame under one gravity combination (kN / kN·m).
+
+    Each member's axial/shear/moment is the worst (envelope max) over the member — conservative
+    for sizing. ``rafter_sag_mm`` is the max rafter transverse deflection (for the SLS check).
+    """
+
+    rafter_cu_kn: float
+    rafter_vu_kn: float
+    rafter_mu_knm: float
+    low_col_cu_kn: float
+    low_col_vu_kn: float
+    low_col_mu_knm: float
+    high_col_cu_kn: float
+    high_col_vu_kn: float
+    high_col_mu_knm: float
+    rafter_sag_mm: float
+
+
+class MonopitchAnalysis:
+    """Mono-pitch (single-slope) pinned-base portal frame — PROVISIONAL (T1-3, sign-off D12).
+
+    The asymmetric analogue of :class:`PortalAnalysis`: a low column, a single sloping rafter,
+    and a high column. ``demand()`` returns the governing member forces (and rafter sag) for
+    member sizing. Gravity is applied as a GLOBAL-vertical load (see `solve_monopitch_udl`).
+    """
+
+    _N_SAMPLES = 21
+
+    def __init__(
+        self, spec: FrameSpec, column_section: SectionProperties, rafter_section: SectionProperties
+    ) -> None:
+        self.spec = spec
+        self.col_sec = column_section
+        self.raf_sec = rafter_section
+
+    def _build(self, w_raf_n_mm: float) -> tuple[FEModel3D, float, float, float]:
+        geom = self.spec.geometry
+        span_mm = geom.span_m * 1_000.0
+        low_mm = geom.eaves_height_m * 1_000.0
+        high_mm = geom.high_eaves_height_m * 1_000.0
+        raf_len_mm = math.hypot(span_mm, high_mm - low_mm)
+
+        m = _new_model()
+        _add_section(m, "col_sec", self.col_sec)
+        _add_section(m, "raf_sec", self.raf_sec)
+        m.add_node("BL", 0, 0, 0)
+        m.add_node("EL", 0, low_mm, 0)
+        m.add_node("EH", span_mm, high_mm, 0)
+        m.add_node("BH", span_mm, 0, 0)
+        _pin_support(m, "BL")
+        _pin_support(m, "BH")
+        _fix_out_of_plane(m, "EL")
+        _fix_out_of_plane(m, "EH")
+        m.add_member("COL_L", "BL", "EL", "steel", "col_sec")
+        m.add_member("RAF", "EL", "EH", "steel", "raf_sec")
+        m.add_member("COL_H", "EH", "BH", "steel", "col_sec")
+        m.add_member_dist_load("RAF", "FY", -w_raf_n_mm, -w_raf_n_mm, case="DL")
+        _add_load_combo(m)
+        m.analyze_linear(log=False, check_stability=False)
+        return m, low_mm, high_mm, raf_len_mm
+
+    def demand(self, rafter_udl_kn_per_m: float) -> MonopitchDemand:
+        """Return the governing member demands for *rafter_udl_kn_per_m* (kN/m, downward +)."""
+        m, low_mm, high_mm, raf_len_mm = self._build(rafter_udl_kn_per_m)
+
+        def _envelope(member: str, length_mm: float) -> tuple[float, float, float, float]:
+            cu = vu = mu = sag = 0.0
+            for i in range(self._N_SAMPLES):
+                x = length_mm * i / (self._N_SAMPLES - 1)
+                cu = max(cu, abs(m.members[member].axial(x, _COMBO)))
+                vu = max(vu, abs(m.members[member].shear("Fy", x, _COMBO)))
+                mu = max(mu, abs(m.members[member].moment("Mz", x, _COMBO)))
+                sag = max(sag, abs(m.members[member].deflection("dy", x, _COMBO)))
+            return cu / 1e3, vu / 1e3, mu / 1e6, sag  # N→kN, N·mm→kN·m, mm
+
+        raf_cu, raf_vu, raf_mu, raf_sag = _envelope("RAF", raf_len_mm)
+        low_cu, low_vu, low_mu, _ = _envelope("COL_L", low_mm)
+        high_cu, high_vu, high_mu, _ = _envelope("COL_H", high_mm)
+        return MonopitchDemand(
+            rafter_cu_kn=raf_cu, rafter_vu_kn=raf_vu, rafter_mu_knm=raf_mu,
+            low_col_cu_kn=low_cu, low_col_vu_kn=low_vu, low_col_mu_knm=low_mu,
+            high_col_cu_kn=high_cu, high_col_vu_kn=high_vu, high_col_mu_knm=high_mu,
+            rafter_sag_mm=raf_sag,
+        )
 
 
 # ---------------------------------------------------------------------------

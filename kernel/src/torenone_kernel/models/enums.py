@@ -16,6 +16,14 @@ class BaseFixity(str, Enum):
     FIXED = "fixed"
 
 
+class RoofType(str, Enum):
+    """Frame roof shape. DUOPITCH (symmetric, the validated default) or MONOPITCH (single
+    slope — PROVISIONAL, pending registered-engineer validation; sign-off-pack D12)."""
+
+    DUOPITCH = "duopitch"
+    MONOPITCH = "monopitch"
+
+
 class SteelGrade(str, Enum):
     S275JR = "S275JR"
     S355JR = "S355JR"
