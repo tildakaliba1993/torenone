@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { FrameSketch } from "@/components/design/frame-sketch";
 import { KernelProgress } from "@/components/design/kernel-progress";
+import { LayoutCompare } from "@/components/design/layout-compare";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -165,6 +166,42 @@ function defaultsFromSpec(spec: FrameSpec, doc?: ReportMetadata): FormValues {
 const SELECT_CLASS =
   "flex h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
 
+/** Build the FrameSpec from confirmed form values (shared by the design run + layout compare). */
+function frameSpecFromValues(values: FormValues): FrameSpec {
+  return {
+    geometry: {
+      span_m: toNum(values.geometry.span_m),
+      eaves_height_m: toNum(values.geometry.eaves_height_m),
+      roof_pitch_deg: toNum(values.geometry.roof_pitch_deg),
+      bay_spacing_m: toNum(values.geometry.bay_spacing_m),
+      number_of_bays: toNum(values.geometry.number_of_bays),
+      roof_type: values.geometry.roof_type,
+    },
+    materials: { steel_grade: values.materials.steel_grade },
+    base_fixity: "pinned",
+    restraints: {
+      rafter_restraint_spacing_m: toOptNum(values.restraints.rafter_restraint_spacing_m),
+      column_restraint_spacing_m: toOptNum(values.restraints.column_restraint_spacing_m),
+    },
+    dead: {
+      roof_kpa: toNum(values.dead.roof_kpa),
+      services_kpa: toNum(values.dead.services_kpa),
+      wall_cladding_kpa: toNum(values.dead.wall_cladding_kpa),
+    },
+    imposed: { roof_access: values.imposed.roof_access },
+    wind: {
+      basic_wind_speed_ms: toNum(values.wind.basic_wind_speed_ms),
+      terrain_category: values.wind.terrain_category,
+      site_altitude_m: toNum(values.wind.site_altitude_m),
+      has_dominant_opening: values.wind.has_dominant_opening,
+    },
+    foundation: {
+      allowable_bearing_kpa: toOptNum(values.foundation.allowable_bearing_kpa),
+      concrete_fcu_mpa: toNum(values.foundation.concrete_fcu_mpa),
+    },
+  };
+}
+
 /** Build a ReportMetadata from the form's document fields, or undefined if all blank. */
 function buildReportMetadata(d: FormValues["document"]): ReportMetadata | undefined {
   const md: ReportMetadata = {
@@ -211,40 +248,22 @@ export function ReviewStep({
   const mode = useWatch({ control: form.control, name: "mode" });
   const confirmed = useWatch({ control: form.control, name: "confirmed" });
 
+  // Build a spec from the current form values for the layout comparison — or null if the geometry /
+  // loads / wind aren't all valid numbers yet (so we never send a half-filled spec to the engine).
+  function specForCompare(): FrameSpec | null {
+    const v = form.getValues();
+    const required = [
+      v.geometry.span_m, v.geometry.eaves_height_m, v.geometry.roof_pitch_deg,
+      v.geometry.bay_spacing_m, v.geometry.number_of_bays, v.dead.roof_kpa,
+      v.wind.basic_wind_speed_ms,
+    ];
+    if (required.some((s) => s.trim() === "" || !Number.isFinite(Number(s)))) return null;
+    return frameSpecFromValues(v);
+  }
+
   async function onSubmit(values: FormValues) {
     setError(null);
-    const builtSpec: FrameSpec = {
-      geometry: {
-        span_m: toNum(values.geometry.span_m),
-        eaves_height_m: toNum(values.geometry.eaves_height_m),
-        roof_pitch_deg: toNum(values.geometry.roof_pitch_deg),
-        bay_spacing_m: toNum(values.geometry.bay_spacing_m),
-        number_of_bays: toNum(values.geometry.number_of_bays),
-        roof_type: values.geometry.roof_type,
-      },
-      materials: { steel_grade: values.materials.steel_grade },
-      base_fixity: "pinned",
-      restraints: {
-        rafter_restraint_spacing_m: toOptNum(values.restraints.rafter_restraint_spacing_m),
-        column_restraint_spacing_m: toOptNum(values.restraints.column_restraint_spacing_m),
-      },
-      dead: {
-        roof_kpa: toNum(values.dead.roof_kpa),
-        services_kpa: toNum(values.dead.services_kpa),
-        wall_cladding_kpa: toNum(values.dead.wall_cladding_kpa),
-      },
-      imposed: { roof_access: values.imposed.roof_access },
-      wind: {
-        basic_wind_speed_ms: toNum(values.wind.basic_wind_speed_ms),
-        terrain_category: values.wind.terrain_category,
-        site_altitude_m: toNum(values.wind.site_altitude_m),
-        has_dominant_opening: values.wind.has_dominant_opening,
-      },
-      foundation: {
-        allowable_bearing_kpa: toOptNum(values.foundation.allowable_bearing_kpa),
-        concrete_fcu_mpa: toNum(values.foundation.concrete_fcu_mpa),
-      },
-    };
+    const builtSpec: FrameSpec = frameSpecFromValues(values);
     const sections =
       values.mode === "check"
         ? [
@@ -334,6 +353,17 @@ export function ReviewStep({
               <NumberField name="geometry.bay_spacing_m" label="Bay spacing" unit="m" />
               <NumberField name="geometry.number_of_bays" label="Number of bays" />
             </div>
+
+            <LayoutCompare
+              getSpec={specForCompare}
+              currentBays={Number(geometry?.number_of_bays)}
+              onApply={(bays, spacing) => {
+                form.setValue("geometry.number_of_bays", String(bays), { shouldValidate: true });
+                form.setValue("geometry.bay_spacing_m", String(Number(spacing.toFixed(3))), {
+                  shouldValidate: true,
+                });
+              }}
+            />
           </CardContent>
         </Card>
 

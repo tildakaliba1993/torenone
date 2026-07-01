@@ -600,3 +600,71 @@ export async function runDesign(request: DesignRequest): Promise<DesignResponse>
 
   return (await res.json()) as DesignResponse;
 }
+
+// ---------------------------------------------------------------------------
+// /compare-layouts — topology (Path A): ways to frame the same building
+// ---------------------------------------------------------------------------
+
+export interface LayoutOption {
+  number_of_bays: number;
+  bay_spacing_m: number;
+  number_of_frames: number;
+  feasible: boolean;
+  per_frame_mass_kg: number | null;
+  total_primary_mass_kg: number | null;
+  passed: boolean;
+  governing_utilisation: number;
+  is_baseline: boolean;
+  sections: SectionChoice[];
+}
+
+export interface LayoutComparison {
+  building_length_m: number;
+  baseline_bays: number;
+  lightest_passing_bays: number | null;
+  options: LayoutOption[];
+  notes: string[];
+}
+
+/**
+ * Ask the engine for the sensible ways to frame this building (same length + envelope, different
+ * bay counts), each designed and ranked by total primary steel. The engineer picks a layout; every
+ * number comes from the deterministic kernel (no AI). See torenone_kernel.layout.
+ */
+export async function compareLayouts(
+  spec: FrameSpec,
+  costRateZarPerKg?: number,
+): Promise<LayoutComparison> {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) {
+    throw new ServiceError("Your session has expired — please sign in again.");
+  }
+
+  const res = await serviceFetch(`${serviceBaseUrl()}/compare-layouts`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({
+      spec,
+      cost_rate_zar_per_kg: costRateZarPerKg ?? null,
+    }),
+  });
+
+  if (!res.ok) {
+    let detail = `Comparing framing options failed (${res.status}).`;
+    try {
+      const body = (await res.json()) as { detail?: unknown };
+      if (body?.detail) detail = String(body.detail);
+    } catch {
+      // non-JSON error body — keep the status-based message
+    }
+    throw new ServiceError(detail);
+  }
+
+  return (await res.json()) as LayoutComparison;
+}

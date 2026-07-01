@@ -35,6 +35,7 @@ from torenone_ai import (
     propose_frame_from_drawing,
     run_design_agent,
 )
+from torenone_kernel.layout import compare_bay_layouts
 
 from torenone_service.ai_runtime import (
     AIRuntime,
@@ -63,8 +64,10 @@ from torenone_service.reports import (
 )
 from torenone_service.schemas import (
     AgentDesignRequest,
+    CompareLayoutsRequest,
     DesignRequest,
     DesignResponse,
+    LayoutComparisonResponse,
     ParseDrawingRequest,
     ParseRequest,
     ParseResponse,
@@ -563,6 +566,47 @@ def create_app(
             ),
         )
         return DesignResponse(result=result, report=stored)
+
+    @app.post("/compare-layouts")
+    @limiter.limit(DESIGN_RATE_LIMIT)
+    def compare_layouts_route(
+        request: Request,
+        body: CompareLayoutsRequest,
+        user: AuthenticatedUser = Depends(require_user),
+    ) -> LayoutComparisonResponse:
+        """Ways to frame this building, ranked by total primary steel (topology, Path A).
+
+        Re-frames the SAME building (same length + envelope) with different bay counts and designs
+        each through the unchanged, validated kernel — surfacing the most economical layout for the
+        engineer to pick. No PDF and no engineering number is produced by anything but the kernel
+        (see torenone_kernel.layout). Bounded by the kernel's option cap + the wall-clock budget.
+        """
+        try:
+            cost = body.cost_rate_zar_per_kg
+            comparison = _run_with_timeout(
+                lambda: (
+                    compare_bay_layouts(body.spec, cost_rate_zar_per_kg=cost)
+                    if cost is not None
+                    else compare_bay_layouts(body.spec)
+                ),
+                design_timeout,
+            )
+        except DesignTimeoutError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                detail="the layout comparison took too long and was aborted",
+            ) from exc
+        except ValueError as exc:
+            # A bad/undesignable input spec (e.g. the baseline itself cannot be framed).
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
+            ) from exc
+        response = LayoutComparisonResponse.from_comparison(comparison)
+        logger.info(
+            "compare_layouts",
+            extra={"user_id": user.user_id, "options": len(response.options)},
+        )
+        return response
 
     @app.post("/stamp")
     @limiter.limit(DESIGN_RATE_LIMIT)

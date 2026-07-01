@@ -118,6 +118,23 @@ the trust layer that gets designs actually *used*. That, plus submission-ready o
   inputs the user types by hand today, all confirmed at the gate); it never sizes a member or
   computes any engineering number, so no engineering method/number changed → 🟢, not sign-off-gated.
   Our focused, in-wedge slice of Genia's topology generation.
+
+  **Topology — honest status + plan (2026-07-01, founder pressed on "is this competitive vs Genia?"):**
+  what shipped is *smart intake + a fixed single-topology proposal*, NOT topology *generation* — well
+  behind Genia on this axis (as the gap analysis said). "Getting it right" splits into **Path A**
+  (nail real-drawing intake + generate/compare within the designable system, all 🟢, ships live) and
+  **Path B** (real topology GENERATION = the engine can design MULTIPLE systems — multi-bay/lean-to —
+  and the agent generates & compares framing schemes; 🟡, needs the future Pr.Eng to validate). **Key
+  insight: real topology-gen is gated on breadth of designable systems — you can't "propose the best
+  system" if the engine only knows one. So topology and multi-bay are the same project.** Founder chose
+  **Path A first, then B.**
+  - ✅ **Path A generate-and-compare SHIPPED (2026-07-01, 🟢):** `torenone_kernel.layout`
+    (`compare_bay_layouts`) re-frames the SAME building with different bay counts, designs EACH via the
+    validated `design()` pipeline, and ranks by **total primary steel** (per-frame mass × frame count).
+    `POST /compare-layouts`; web "Compare framing options" table in the Review step (pick a layout →
+    sets bay spacing + count). Deterministic — no new engineering number/method (🟢). Our honest,
+    in-wedge answer to Genia's "compare hundreds of layouts / 20% less material." Also strengthened the
+    GA extraction prompt (multi-sheet plan sets, grid/level reading).
 - Cost/material optimisation with **real SA fabricator rates + section availability** (data moat).
 
 **Tier 3 — only post-traction:** AISC (US) *to follow SA firms doing international work*, not to fight

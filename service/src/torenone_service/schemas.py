@@ -7,6 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 from torenone_ai import AgentConstraints, ParseResult, clarifying_questions
+from torenone_kernel.layout import BayLayoutComparison
 from torenone_kernel.models.frame_spec import FrameGeometry, FrameSpec
 from torenone_kernel.models.results import DesignResult, SectionChoice
 from torenone_kernel.report.metadata import ReportMetadata
@@ -14,6 +15,16 @@ from torenone_kernel.report.metadata import ReportMetadata
 # Computed (output-only) geometry fields, stripped from inbound specs so a spec
 # round-tripped from /parse (which serialises them) re-validates under extra="forbid".
 _GEOMETRY_COMPUTED: frozenset[str] = frozenset(FrameGeometry.model_computed_fields)
+
+
+def _strip_computed_geometry(value: Any) -> Any:
+    """Drop read-only computed geometry fields so a serialised spec re-validates (extra='forbid')."""
+    if isinstance(value, dict):
+        geometry = value.get("geometry")
+        if isinstance(geometry, dict) and any(k in geometry for k in _GEOMETRY_COMPUTED):
+            cleaned = {k: v for k, v in geometry.items() if k not in _GEOMETRY_COMPUTED}
+            return {**value, "geometry": cleaned}
+    return value
 
 # ---------------------------------------------------------------------------
 # /parse
@@ -198,13 +209,7 @@ class DesignRequest(BaseModel):
     @field_validator("spec", mode="before")
     @classmethod
     def _drop_computed_geometry(cls, value: Any) -> Any:
-        """Strip read-only computed geometry fields so a serialised spec re-validates."""
-        if isinstance(value, dict):
-            geometry = value.get("geometry")
-            if isinstance(geometry, dict) and any(k in geometry for k in _GEOMETRY_COMPUTED):
-                cleaned = {k: v for k, v in geometry.items() if k not in _GEOMETRY_COMPUTED}
-                return {**value, "geometry": cleaned}
-        return value
+        return _strip_computed_geometry(value)
 
 
 class StoredReport(BaseModel):
@@ -222,6 +227,78 @@ class DesignResponse(BaseModel):
 
     result: DesignResult
     report: StoredReport
+
+
+# ---------------------------------------------------------------------------
+# /compare-layouts  (topology, Path A — ways to frame the same building, ranked by steel)
+# ---------------------------------------------------------------------------
+
+
+class CompareLayoutsRequest(BaseModel):
+    """A confirmed FrameSpec whose building we re-frame with different bay counts to compare steel."""
+
+    spec: FrameSpec
+    cost_rate_zar_per_kg: float | None = Field(
+        default=None, gt=0, description="Override the default fabricated-steel cost rate."
+    )
+
+    @field_validator("spec", mode="before")
+    @classmethod
+    def _drop_computed_geometry(cls, value: Any) -> Any:
+        return _strip_computed_geometry(value)
+
+
+class LayoutOption(BaseModel):
+    """One framing of the building: a bay count + spacing, fully designed and costed."""
+
+    number_of_bays: int
+    bay_spacing_m: float
+    number_of_frames: int
+    feasible: bool
+    per_frame_mass_kg: float | None
+    total_primary_mass_kg: float | None
+    passed: bool
+    governing_utilisation: float
+    is_baseline: bool
+    sections: list[SectionChoice]
+
+
+class LayoutComparisonResponse(BaseModel):
+    """Every sensible framing of the building, ranked lightest-first, plus the baseline + notes."""
+
+    building_length_m: float
+    baseline_bays: int
+    lightest_passing_bays: int | None
+    options: list[LayoutOption]
+    notes: list[str]
+
+    @classmethod
+    def from_comparison(cls, comparison: BayLayoutComparison) -> LayoutComparisonResponse:
+        return cls(
+            building_length_m=comparison.building_length_m,
+            baseline_bays=comparison.baseline.number_of_bays,
+            lightest_passing_bays=(
+                comparison.lightest_passing.number_of_bays
+                if comparison.lightest_passing is not None
+                else None
+            ),
+            options=[
+                LayoutOption(
+                    number_of_bays=o.number_of_bays,
+                    bay_spacing_m=o.bay_spacing_m,
+                    number_of_frames=o.number_of_frames,
+                    feasible=o.feasible,
+                    per_frame_mass_kg=o.per_frame_mass_kg,
+                    total_primary_mass_kg=o.total_primary_mass_kg,
+                    passed=o.passed,
+                    governing_utilisation=o.governing_utilisation,
+                    is_baseline=o.is_baseline,
+                    sections=list(o.result.sections) if o.result is not None else [],
+                )
+                for o in comparison.options
+            ],
+            notes=list(comparison.notes),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -264,10 +341,4 @@ class AgentDesignRequest(BaseModel):
     @field_validator("spec", mode="before")
     @classmethod
     def _drop_computed_geometry(cls, value: Any) -> Any:
-        """Strip read-only computed geometry fields so a serialised spec re-validates."""
-        if isinstance(value, dict):
-            geometry = value.get("geometry")
-            if isinstance(geometry, dict) and any(k in geometry for k in _GEOMETRY_COMPUTED):
-                cleaned = {k: v for k, v in geometry.items() if k not in _GEOMETRY_COMPUTED}
-                return {**value, "geometry": cleaned}
-        return value
+        return _strip_computed_geometry(value)

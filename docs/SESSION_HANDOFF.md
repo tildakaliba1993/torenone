@@ -55,17 +55,39 @@ Full context for continuing work in a new session. Everything below is committed
      respects `prefers-reduced-motion` (animation tokens registered in `@theme`; verified in compiled
      CSS). Visually confirmed via a temp preview page + dev-server screenshot (since removed).
 
+3. **Topology — Path A (🟢), after founder pressed "is topology competitive vs Genia?"** Honest
+   answer: propose-frame is *smart intake + a fixed single-topology proposal*, NOT topology
+   *generation* (well behind Genia on that axis). Split the work into **Path A** (nail intake +
+   generate/compare within the designable system — all 🟢, ships live) and **Path B** (real topology
+   generation = engine designs MULTIPLE systems [multi-bay/lean-to] + agent generates/compares schemes;
+   🟡, needs the future Pr.Eng). **Key insight: real topology-gen is gated on multi-bay — can't propose
+   the best system if the engine knows only one.** Founder chose **Path A first, then B**. Shipped
+   Path A generate-and-compare:
+   - Kernel: `torenone_kernel/layout.py` (`compare_bay_layouts` + `enumerate_bay_counts`) — re-frames
+     the SAME building (same length; `building_length_m = bay_spacing × number_of_bays`) with different
+     bay counts, designs EACH via the validated `design()`, ranks by **total primary steel**
+     (per-frame mass × number of frames = bays+1). Infeasible spacings (`NoSectionFoundError`) surfaced,
+     not crashed. 🟢 (no new engineering number/method — pure orchestration over the validated engine).
+     `kernel/tests/test_layout.py` (5).
+   - Service: `POST /compare-layouts` (`CompareLayoutsRequest`/`LayoutComparisonResponse`,
+     `_strip_computed_geometry` extracted + shared). `service/tests/test_compare_layouts_route.py` (3).
+   - Web: `compareLayouts()` + `components/design/layout-compare.tsx` — a "Compare framing options"
+     table in the Review step's Geometry card; "Use" applies a layout's bay count + spacing. GA prompt
+     also strengthened for multi-sheet plan sets. `layout-compare.test.tsx` (2).
+
 ### Verified locally (all green)
-- Service: **313 passed**, 1 skipped (`PYTHONPATH=kernel/src:tools:service/src .venv/bin/pytest service`).
-- Web: **134 passed** (`npm run test`), `typecheck`/`lint`/`build` all clean. (Re-ran `npm ci` in the
+- Service: **316 passed**, 1 skipped (`PYTHONPATH=kernel/src:tools:service/src .venv/bin/pytest service`).
+- Kernel: **622 passed**, 1 skipped (`PYTHONPATH=kernel/src:tools .venv/bin/pytest kernel`).
+- Web: **136 passed** (`npm run test`), `typecheck`/`lint`/`build` all clean. (Re-ran `npm ci` in the
   worktree — disk had ~13 GB free, so local web checks work again this session.)
-- `mypy kernel/src tools service/src` clean (71 files); `ruff` clean.
+- `mypy kernel/src tools service/src` clean (72 files); `ruff` clean.
 
 ### DEPLOYED LIVE (2026-07-01)
 - **Propose-frame (item 1):** pushed to `main` (commit `b1fc0db`), CI green, **service deployed to Fly**
   (`/propose-frame` no-auth POST → 401 = live), **web auto-deployed via Netlify**.
-- **Web speed + loading (item 2):** web-only (no service change → no `fly deploy` needed); ships on the
-  next push to `main` via Netlify. Correctness boundary untouched (🟢 — no engineering numbers).
+- **Web speed + loading (item 2):** web-only, shipped on push (Netlify). 🟢.
+- **Topology Path A (item 3):** touches kernel + service + web → push (Netlify web) **AND `fly deploy`
+  from the worktree** for the service (`/compare-layouts` no-auth POST → 401 once live). 🟢.
   [[netlify-deploy-frugally]], [[deploy-targets]].
 
 ### What's next (priority — founder's call; keep it disciplined)
