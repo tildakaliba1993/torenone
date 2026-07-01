@@ -5,6 +5,65 @@ Full context for continuing work in a new session. Everything below is committed
 
 ---
 
+## 🔴🔴🔴 SESSION 10 → 11 HANDOFF — **READ THIS BEFORE ANYTHING ELSE** (2026-07-02) 🔴🔴🔴
+
+> Session 10 was VERY long; context filled up. This block is the definitive current state + the exact
+> next action. The detailed "what shipped this session" is in the SESSION 10 block just below. Read
+> my memory files too (loaded automatically) — especially [[competitive-positioning]],
+> [[ux-speed-and-polish-bar]], [[communicate-plainly]], [[cofounder-search]], [[strategy-and-roadmap]].
+> `main` HEAD `7561b80`, **CI-green, working tree clean.** Worktree
+> `.claude/worktrees/funny-jang-2151cd`; **venv + engineering service live in the MAIN checkout
+> `/Users/cash/TorenOne`.** Founder is NON-technical (Claude = CTO, founder = implementer).
+
+### ⭐ THE IMMEDIATE NEXT ACTION (founder's explicit instruction: check EVERY increment before the next)
+**Mono-pitch v2 is being built increment-by-increment. Increment 1 (the LAST MILE) is DONE + LIVE but
+NOT YET TESTED by the founder.** The founder wants to **TEST increment 1 in the new session FIRST**,
+then build **increment 2 = WIND** (SANS 10160-3 wind pressures + wind-on-frame for mono-pitch AND
+multi-span). Do NOT start the wind increment until the founder has tested + approved increment 1.
+
+**Test script for increment 1 (mono-pitch + multi-span LAST MILE — connections/baseplate/footing):**
+1. Hard-refresh torenone.com (Cmd+Shift+R) — everything below is LIVE (Fly + Netlify).
+2. New design → describe a **mono-pitch** frame (set roof type = mono-pitch on the Review screen).
+   On results, confirm a **Connections** section with **two eaves knees (low + high)** + a **Baseplate**
+   (previously these said "not modelled"). Download the PDF and confirm they're in it.
+3. New design → wide frame → on Review set **Number of spans = 2** (or use "Clear-span vs multi-span").
+   On results, confirm **Connections** shows an **external eaves + a valley connection** + a **Baseplate**.
+4. To see a **footing**, add an **allowable bearing pressure** on the Review screen before running.
+5. All multi-span/mono-pitch output stays clearly **PROVISIONAL** (banners + PDF warnings).
+
+### CURRENT LIVE STATE (all on `main`, CI-green, DEPLOYED — Fly + Netlify)
+- **Multi-span portal (Path B) — FULL end-to-end, 🟡 PROVISIONAL D13:** geometry (`number_of_spans`),
+  member design (`_design_multispan`, ext + valley columns + rafters), **the last mile (v2 increment 1,
+  just shipped)**, multi-span WebGL 3D, web `Number of spans` input + banner, topology
+  `compare_span_splits` + `POST /compare-spans` + web `span-compare.tsx` (on BOTH Review AND results).
+- **Mono-pitch (D12): member design + THE LAST MILE (v2 increment 1).** WIND still NOT modelled (= inc 2).
+- **Visuals:** interactive WebGL 3D building model (orbit, hover/click-to-inspect → `member-inspector`),
+  2D designed-frame heat-map (utilisation colour), draw-in motion. three.js code-split (`building-3d.tsx`,
+  `ssr:false`) — loads only on results. **Test gotcha: mock `@/components/design/building-3d` in jsdom
+  tests** (R3F needs WebGL/ResizeObserver) — see `results-step.test.tsx`/`layout-compare.test.tsx`.
+- **Topology intake:** architect-GA → `propose_frame_from_drawing` (`POST /propose-frame`).
+- Test counts: **kernel 640, service 318, web 143** (all pass alone). Sample GA drawing:
+  `~/Downloads/torenone-architect-GA-sample.pdf`.
+
+### COMPANY LAW (never violate): 🟢 build if it changes NO engineering number · 🟡 new engineering logic
+= PROVISIONAL, mark it + queue for the (to-be-hired) Pr.Eng, NEVER flip PROVISIONAL→VERIFIED · 🔴 never
+let the LLM compute an engineering number. Mono-pitch = D12, multi-span = D13 (both 🟡, gravity-only,
+wind pending). The validation gate is now blocked on **hiring a replacement Pr.Eng** ([[cofounder-search]]).
+
+### WORKFLOW / GOTCHAS (unchanged)
+- Tests (run kernel + service SEPARATELY — combined run can segfault):
+  `PYTHONPATH=kernel/src:tools:service/src /Users/cash/TorenOne/.venv/bin/pytest` (kernel / service).
+  ALWAYS full `mypy kernel/src tools service/src` + `ruff` (from the worktree). Web:
+  `npm --prefix <worktree>/web run typecheck|lint|test|build` (node_modules present).
+- Push `git push origin HEAD:main`; watch `gh run watch <id> --exit-status --compact` (nightly
+  Playwright is flaky/unrelated). **Deploy:** web auto-deploys on push (Netlify — deploy FRUGALLY,
+  batch [[netlify-deploy-frugally]]); kernel/service changes need **`fly deploy` from the WORKTREE**
+  (verify: no-auth POST → 401 live / 404 needs deploy). Prod migrations already applied.
+- Visual verification pattern: temp page under `web/src/app/design-system/<x>/page.tsx` (public via the
+  `/design-system` prefix) + `.claude/launch.json` + preview_start/screenshot, then DELETE the temp files.
+
+---
+
 ## ⏩⏩⏩⏩⏩⏩⏩⏩⏩ SESSION 10 (2026-07-01) — **READ THIS FIRST**, then Session 9 below
 
 > Tenth session. Worktree `.claude/worktrees/funny-jang-2151cd`; venv + engineering service live in
