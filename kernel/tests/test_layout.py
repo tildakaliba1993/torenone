@@ -13,13 +13,16 @@ from __future__ import annotations
 from torenone_kernel.layout import (
     BayLayoutComparison,
     compare_bay_layouts,
+    compare_span_splits,
     enumerate_bay_counts,
+    enumerate_span_counts,
 )
 from torenone_kernel.models.enums import TerrainCategory
 from torenone_kernel.models.frame_spec import (
     DeadLoadInputs,
     FrameGeometry,
     FrameSpec,
+    Restraints,
     WindContext,
 )
 
@@ -92,6 +95,51 @@ def test_baseline_is_kept_even_when_its_spacing_is_outside_the_offered_range() -
 def test_is_deterministic() -> None:
     a = compare_bay_layouts(_spec())
     b = compare_bay_layouts(_spec())
+    assert [o.total_primary_mass_kg for o in a.options] == [
+        o.total_primary_mass_kg for o in b.options
+    ]
+
+
+# --- Span-split (width) comparison — the clear-span vs multi-span topology choice ---
+
+def _wide_spec(number_of_spans: int = 1, span_m: float = 24.0) -> FrameSpec:
+    return FrameSpec(
+        geometry=FrameGeometry(
+            span_m=span_m, eaves_height_m=6.0, roof_pitch_deg=8.0,
+            bay_spacing_m=6.0, number_of_bays=4, number_of_spans=number_of_spans,
+        ),
+        dead=DeadLoadInputs(roof_kpa=0.20, services_kpa=0.05),
+        restraints=Restraints(rafter_restraint_spacing_m=1.5, column_restraint_spacing_m=2.0),
+        wind=WindContext(basic_wind_speed_ms=36.0, terrain_category=TerrainCategory.B),
+    )
+
+
+def test_enumerate_span_counts_splits_width() -> None:
+    # 24 m: n≥24/40→1 and n≤24/8→3 ⇒ 1×24, 2×12, 3×8.
+    counts = enumerate_span_counts(24.0)
+    assert [n for n, _ in counts] == [1, 2, 3]
+    for n, w in counts:
+        assert abs(w - 24.0 / n) < 1e-9
+
+
+def test_compare_span_splits_offers_clear_span_and_multispan() -> None:
+    cmp = compare_span_splits(_wide_spec(number_of_spans=1, span_m=24.0))
+    assert abs(cmp.building_width_m - 24.0) < 1e-9
+    assert {o.number_of_spans for o in cmp.options} == {1, 2, 3}
+    assert cmp.baseline.number_of_spans == 1
+
+    # Multi-span options are flagged PROVISIONAL; the single clear span is not.
+    for o in cmp.options:
+        assert o.provisional == (o.number_of_spans > 1)
+    # Ranked lightest-first.
+    masses = [o.total_primary_mass_kg for o in cmp.options if o.total_primary_mass_kg is not None]
+    assert masses == sorted(masses)
+    assert cmp.lightest_passing is not None
+
+
+def test_compare_span_splits_is_deterministic() -> None:
+    a = compare_span_splits(_wide_spec(1, 24.0))
+    b = compare_span_splits(_wide_spec(1, 24.0))
     assert [o.total_primary_mass_kg for o in a.options] == [
         o.total_primary_mass_kg for o in b.options
     ]

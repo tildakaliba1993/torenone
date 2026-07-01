@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 from torenone_ai import AgentConstraints, ParseResult, clarifying_questions
-from torenone_kernel.layout import BayLayoutComparison
+from torenone_kernel.layout import BayLayoutComparison, SpanSplitComparison
 from torenone_kernel.models.frame_spec import FrameGeometry, FrameSpec
 from torenone_kernel.models.results import DesignResult, SectionChoice
 from torenone_kernel.report.metadata import ReportMetadata
@@ -293,6 +293,61 @@ class LayoutComparisonResponse(BaseModel):
                     passed=o.passed,
                     governing_utilisation=o.governing_utilisation,
                     is_baseline=o.is_baseline,
+                    sections=list(o.result.sections) if o.result is not None else [],
+                )
+                for o in comparison.options
+            ],
+            notes=list(comparison.notes),
+        )
+
+
+class SpanOption(BaseModel):
+    """One way to split the building width: a span count + per-span width, designed and costed."""
+
+    number_of_spans: int
+    span_m: float
+    number_of_frames: int
+    feasible: bool
+    per_frame_mass_kg: float | None
+    total_primary_mass_kg: float | None
+    passed: bool
+    governing_utilisation: float
+    is_baseline: bool
+    provisional: bool
+    sections: list[SectionChoice]
+
+
+class SpanSplitResponse(BaseModel):
+    """Every sensible split of the building's width into spans, ranked lightest-first."""
+
+    building_width_m: float
+    baseline_spans: int
+    lightest_passing_spans: int | None
+    options: list[SpanOption]
+    notes: list[str]
+
+    @classmethod
+    def from_comparison(cls, comparison: SpanSplitComparison) -> SpanSplitResponse:
+        return cls(
+            building_width_m=comparison.building_width_m,
+            baseline_spans=comparison.baseline.number_of_spans,
+            lightest_passing_spans=(
+                comparison.lightest_passing.number_of_spans
+                if comparison.lightest_passing is not None
+                else None
+            ),
+            options=[
+                SpanOption(
+                    number_of_spans=o.number_of_spans,
+                    span_m=o.span_m,
+                    number_of_frames=o.number_of_frames,
+                    feasible=o.feasible,
+                    per_frame_mass_kg=o.per_frame_mass_kg,
+                    total_primary_mass_kg=o.total_primary_mass_kg,
+                    passed=o.passed,
+                    governing_utilisation=o.governing_utilisation,
+                    is_baseline=o.is_baseline,
+                    provisional=o.provisional,
                     sections=list(o.result.sections) if o.result is not None else [],
                 )
                 for o in comparison.options

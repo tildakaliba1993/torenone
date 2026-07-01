@@ -9,6 +9,7 @@ import { z } from "zod";
 import { FrameSketch } from "@/components/design/frame-sketch";
 import { KernelProgress } from "@/components/design/kernel-progress";
 import { LayoutCompare } from "@/components/design/layout-compare";
+import { SpanCompare } from "@/components/design/span-compare";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -59,6 +60,7 @@ const schema = z
       roof_pitch_deg: numberField({ message: "Pitch must be between 0 and 45°", gt: 0, max: 45 }),
       bay_spacing_m: numberField({ message: "Bay spacing must be greater than 0", gt: 0 }),
       number_of_bays: numberField({ message: "At least 1 (whole number)", int: true, min: 1 }),
+      number_of_spans: numberField({ message: "At least 1 (whole number)", int: true, min: 1 }),
       roof_type: z.enum(["duopitch", "monopitch"]),
     }),
     dead: z.object({
@@ -124,6 +126,7 @@ function defaultsFromSpec(spec: FrameSpec, doc?: ReportMetadata): FormValues {
       roof_pitch_deg: n(spec.geometry.roof_pitch_deg),
       bay_spacing_m: n(spec.geometry.bay_spacing_m),
       number_of_bays: n(spec.geometry.number_of_bays),
+      number_of_spans: n(spec.geometry.number_of_spans ?? 1),
       roof_type: spec.geometry.roof_type ?? "duopitch",
     },
     dead: {
@@ -175,6 +178,7 @@ function frameSpecFromValues(values: FormValues): FrameSpec {
       roof_pitch_deg: toNum(values.geometry.roof_pitch_deg),
       bay_spacing_m: toNum(values.geometry.bay_spacing_m),
       number_of_bays: toNum(values.geometry.number_of_bays),
+      number_of_spans: toNum(values.geometry.number_of_spans),
       roof_type: values.geometry.roof_type,
     },
     materials: { steel_grade: values.materials.steel_grade },
@@ -247,6 +251,8 @@ export function ReviewStep({
     Number(geometry?.span_m) * Math.tan((Number(geometry?.roof_pitch_deg) * Math.PI) / 180);
   const mode = useWatch({ control: form.control, name: "mode" });
   const confirmed = useWatch({ control: form.control, name: "confirmed" });
+  const nSpans = Number(geometry?.number_of_spans);
+  const isMultiSpan = Number.isFinite(nSpans) && nSpans > 1;
 
   // Build a spec from the current form values for the layout comparison — or null if the geometry /
   // loads / wind aren't all valid numbers yet (so we never send a half-filled spec to the engine).
@@ -352,7 +358,26 @@ export function ReviewStep({
               <NumberField name="geometry.roof_pitch_deg" label="Roof pitch" unit="°" />
               <NumberField name="geometry.bay_spacing_m" label="Bay spacing" unit="m" />
               <NumberField name="geometry.number_of_bays" label="Number of bays" />
+              {roofType === "monopitch" ? null : (
+                <NumberField name="geometry.number_of_spans" label="Number of spans (across width)" />
+              )}
             </div>
+
+            {isMultiSpan ? (
+              <div
+                role="note"
+                className="border-warning/40 bg-warning/10 rounded-md border px-4 py-3 text-sm"
+              >
+                <p className="text-foreground font-medium">Multi-span is provisional</p>
+                <p className="text-muted mt-1">
+                  A {nSpans}-span frame ({nSpans - 1} internal/valley column line
+                  {nSpans - 1 > 1 ? "s" : ""}) is new and <strong>awaiting registered-engineer
+                  validation</strong> — treat it as indicative only, not for construction, until your
+                  firm&rsquo;s engineer has reviewed and stamped it. Gravity is designed; wind and the
+                  connections/baseplates/footings are not yet modelled for multi-span.
+                </p>
+              </div>
+            ) : null}
 
             <LayoutCompare
               getSpec={specForCompare}
@@ -364,6 +389,19 @@ export function ReviewStep({
                 });
               }}
             />
+
+            {roofType === "monopitch" ? null : (
+              <SpanCompare
+                getSpec={specForCompare}
+                currentSpans={nSpans || 1}
+                onApply={(spans, spanM) => {
+                  form.setValue("geometry.number_of_spans", String(spans), { shouldValidate: true });
+                  form.setValue("geometry.span_m", String(Number(spanM.toFixed(3))), {
+                    shouldValidate: true,
+                  });
+                }}
+              />
+            )}
           </CardContent>
         </Card>
 

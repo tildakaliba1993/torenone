@@ -18,7 +18,7 @@ import type { CheckResult, FrameSpec, SectionChoice } from "@/lib/api/service";
  * on other pages and never blocks first paint.
  */
 
-type MemberKind = "column" | "rafter";
+type MemberKind = "column" | "internal column" | "rafter";
 type Band = "ok" | "tight" | "over" | "unknown";
 
 const BAND_COLOR: Record<Band, string> = {
@@ -69,42 +69,52 @@ function buildGeometry(spec: FrameSpec) {
   const highEaves = eaves + span * Math.tan((pitch * Math.PI) / 180);
   const topH = mono ? highEaves : apex;
 
-  const hx = span / 2;
+  const nSpans = mono ? 1 : Math.min(Math.max(g.number_of_spans ?? 1, 1), 12);
+  const totalW = span * nSpans;
+  const x0 = -totalW / 2; // leftmost gridline
   const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
   const segments: Segment[] = [];
   const zAt = (i: number) => -length / 2 + i * spacing;
+  // The cross-section's key (x, y) nodes for the longitudinal ties (eaves at each gridline + ridges).
+  const tieNodes: [number, number][] = [];
 
   for (let i = 0; i < nFrames; i++) {
     const z = zAt(i);
-    // columns
-    segments.push({ a: v(-hx, 0, z), b: v(-hx, eaves, z), kind: "column" });
-    segments.push({ a: v(hx, 0, z), b: v(hx, mono ? highEaves : eaves, z), kind: "column" });
-    // rafters
     if (mono) {
-      segments.push({ a: v(-hx, eaves, z), b: v(hx, highEaves, z), kind: "rafter" });
-    } else {
-      segments.push({ a: v(-hx, eaves, z), b: v(0, apex, z), kind: "rafter" });
-      segments.push({ a: v(0, apex, z), b: v(hx, eaves, z), kind: "rafter" });
+      segments.push({ a: v(x0, 0, z), b: v(x0, eaves, z), kind: "column" });
+      segments.push({ a: v(x0 + span, 0, z), b: v(x0 + span, highEaves, z), kind: "column" });
+      segments.push({ a: v(x0, eaves, z), b: v(x0 + span, highEaves, z), kind: "rafter" });
+      continue;
+    }
+    // Columns at every gridline (external at the two ends, internal/valley between spans).
+    for (let gi = 0; gi <= nSpans; gi++) {
+      const x = x0 + gi * span;
+      const external = gi === 0 || gi === nSpans;
+      segments.push({ a: v(x, 0, z), b: v(x, eaves, z), kind: external ? "column" : "internal column" });
+    }
+    // Two rafters per span, meeting at each span's ridge.
+    for (let s = 0; s < nSpans; s++) {
+      const xl = x0 + s * span;
+      const xr = xl + span;
+      const xa = xl + span / 2;
+      segments.push({ a: v(xl, eaves, z), b: v(xa, apex, z), kind: "rafter" });
+      segments.push({ a: v(xa, apex, z), b: v(xr, eaves, z), kind: "rafter" });
     }
   }
 
-  // Longitudinal ties (ridge + eaves lines) so the frames read as a building.
-  const nodes: [number, number][] = mono
-    ? [
-        [-hx, eaves],
-        [hx, highEaves],
-      ]
-    : [
-        [-hx, eaves],
-        [0, apex],
-        [hx, eaves],
-      ];
-  const ties = nodes.map(
+  // Longitudinal ties (eaves lines at every gridline + a ridge line per span).
+  if (mono) {
+    tieNodes.push([x0, eaves], [x0 + span, highEaves]);
+  } else {
+    for (let gi = 0; gi <= nSpans; gi++) tieNodes.push([x0 + gi * span, eaves]);
+    for (let s = 0; s < nSpans; s++) tieNodes.push([x0 + s * span + span / 2, apex]);
+  }
+  const ties = tieNodes.map(
     ([x, y]) => [v(x, y, zAt(0)), v(x, y, zAt(nFrames - 1))] as [THREE.Vector3, THREE.Vector3],
   );
 
-  const maxDim = Math.max(span, length, topH);
+  const maxDim = Math.max(totalW, length, topH);
   return {
     segments,
     ties,
@@ -198,7 +208,11 @@ function Scene({
         check: gc,
       };
     };
-    return { column: make("column"), rafter: make("rafter") };
+    return {
+      column: make("column"),
+      "internal column": make("internal column"),
+      rafter: make("rafter"),
+    };
   }, [sections, checks, uniformUtil]);
 
   const thickness = Math.max(0.14, geo.maxDim * 0.014);

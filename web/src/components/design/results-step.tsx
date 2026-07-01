@@ -74,7 +74,9 @@ export function ResultsStep({
   const [downloading, setDownloading] = useState(false);
   const [dlError, setDlError] = useState<string | null>(null);
   // Member selected (by clicking it in the 3D model or the 2D frame) → full clause breakdown.
-  const [selectedMember, setSelectedMember] = useState<"column" | "rafter" | null>(null);
+  const [selectedMember, setSelectedMember] = useState<
+    "column" | "internal column" | "rafter" | null
+  >(null);
 
   // Editable cost-per-tonne (FR-25/31). Default = the rate the kernel used
   // (indicative_cost / tonnage); recompute the indicative cost client-side as the
@@ -179,13 +181,15 @@ export function ResultsStep({
           <CardTitle>Your designed frame</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
-          <DesignedFrame
-            spec={design.frame_spec}
-            sections={design.sections}
-            checks={design.checks}
-            selected={selectedMember}
-            onSelect={setSelectedMember}
-          />
+          {(design.frame_spec.geometry.number_of_spans ?? 1) <= 1 ? (
+            <DesignedFrame
+              spec={design.frame_spec}
+              sections={design.sections}
+              checks={design.checks}
+              selected={selectedMember === "internal column" ? null : selectedMember}
+              onSelect={setSelectedMember}
+            />
+          ) : null}
           <div className="border-border flex flex-col gap-2 border-t pt-4">
             <p className="text-muted text-sm">
               The building — {design.frame_spec.geometry.number_of_bays + 1} portal frames. Drag to

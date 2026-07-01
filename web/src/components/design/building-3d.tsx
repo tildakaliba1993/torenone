@@ -20,7 +20,7 @@ export function Building3D(props: {
   sections: SectionChoice[];
   checks: CheckResult[];
   uniformUtil?: number | null;
-  onSelect?: (kind: "column" | "rafter") => void;
+  onSelect?: (kind: "column" | "internal column" | "rafter") => void;
   className?: string;
 }) {
   return <Model {...props} />;

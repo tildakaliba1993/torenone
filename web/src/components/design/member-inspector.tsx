@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
  * pass/advisory. Ties the picture to the audit — 🟢, pure presentation of kernel output.
  */
 
-type MemberKind = "column" | "rafter";
+type MemberKind = "column" | "internal column" | "rafter";
 
 function bandColor(util: number): string {
   if (util > 1.0) return "var(--danger)";

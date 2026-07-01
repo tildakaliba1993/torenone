@@ -115,6 +115,18 @@ Full context for continuing work in a new session. Everything below is committed
    (RoofType/spans on FrameGeometry or a MultiSpanGeometry), `_design_multispan` reusing the validated
    check pipeline (ext + int columns, rafters), valley-column bases, then report + web + topology
    (extend `compare_bay_layouts` to also vary #spans). Then mono-pitch v2.
+   **UPDATE — increments 2-6 DONE (🟡 PROVISIONAL, D13):** (2) geometry
+   `FrameGeometry.number_of_spans` (+ computed `building_width_m`); (3) `_design_multispan` +
+   `MultiSpanAnalysis` (ext + internal/valley columns + rafters, gravity); (4) valley
+   bases/connections DEFERRED + warned (same scope as mono-pitch — folds into the shared last-mile
+   phase); (5) report multi-span-safe (+ span-count row, single-bay golden byte-identical), web Review
+   `number_of_spans` input + PROVISIONAL banner, and the **WebGL 3D model now draws multi-span**
+   (internal columns + multiple gables; new "internal column" member kind; 2D heat-map shown for
+   single-span only); (6) topology `compare_span_splits` + `enumerate_span_counts` (clear-span vs
+   multi-span, holds width fixed, ranks by steel), `POST /compare-spans`, web `span-compare.tsx` in the
+   Review step. Kernel 639, service 318, web 143 tests; all gates clean. **Touches kernel+service+web →
+   needs `fly deploy` + Netlify.** NEXT: mono-pitch v2 (wind + last mile) — and the multi-span last mile
+   (valley bases/connections/wind) rides along with it.
 
 ### Verified locally (all green)
 - Service: **316 passed**, 1 skipped (`PYTHONPATH=kernel/src:tools:service/src .venv/bin/pytest service`).

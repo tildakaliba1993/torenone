@@ -38,6 +38,14 @@ MAX_BAY_SPACING_M: float = 9.0
 # Bound the compute / choice count regardless of building length.
 MAX_LAYOUT_OPTIONS: int = 6
 
+# Practice range for a single portal SPAN (m). Only bounds which width-splits we OFFER — every
+# option is still fully designed + checked. Splitting a wide building into more spans trades lighter
+# rafters/columns for extra internal-column lines; total steel has a real optimum. PROVISIONAL: any
+# option with >1 span uses the multi-span (D13) path, pending engineer validation.
+MIN_SPAN_M: float = 8.0
+MAX_SPAN_M: float = 40.0
+MAX_SPAN_OPTIONS: int = 5
+
 
 @dataclasses.dataclass(frozen=True)
 class BayLayoutOption:
@@ -64,6 +72,136 @@ class BayLayoutComparison:
     options: tuple[BayLayoutOption, ...]  # includes the baseline; sorted by total primary steel
     lightest_passing: BayLayoutOption | None
     notes: tuple[str, ...]
+
+
+@dataclasses.dataclass(frozen=True)
+class SpanSplitOption:
+    """One way to split the building WIDTH: a span count + per-span width, designed and costed."""
+
+    number_of_spans: int
+    span_m: float               # per-span width
+    number_of_frames: int       # portal frames along the length (= number_of_bays + 1)
+    feasible: bool
+    per_frame_mass_kg: float | None
+    total_primary_mass_kg: float | None
+    passed: bool
+    governing_utilisation: float
+    is_baseline: bool
+    provisional: bool           # True for any multi-span option (D13)
+    result: DesignResult | None
+
+
+@dataclasses.dataclass(frozen=True)
+class SpanSplitComparison:
+    building_width_m: float
+    baseline: SpanSplitOption
+    options: tuple[SpanSplitOption, ...]  # includes the baseline; sorted by total primary steel
+    lightest_passing: SpanSplitOption | None
+    notes: tuple[str, ...]
+
+
+def enumerate_span_counts(
+    building_width_m: float,
+    *,
+    min_span_m: float = MIN_SPAN_M,
+    max_span_m: float = MAX_SPAN_M,
+) -> list[tuple[int, float]]:
+    """Span counts whose equal split of ``building_width_m`` lies in the offered per-span range."""
+    if building_width_m <= 0:
+        return []
+    n_min = max(1, math.ceil(building_width_m / max_span_m - 1e-9))
+    n_max = max(1, math.floor(building_width_m / min_span_m + 1e-9))
+    return [(n, building_width_m / n) for n in range(n_min, n_max + 1)]
+
+
+def _with_spans(spec: FrameSpec, number_of_spans: int, span_m: float) -> FrameSpec:
+    new_geom = spec.geometry.model_copy(
+        update={"number_of_spans": number_of_spans, "span_m": span_m}
+    )
+    return spec.model_copy(update={"geometry": new_geom})
+
+
+def compare_span_splits(
+    spec: FrameSpec,
+    *,
+    cost_rate_zar_per_kg: float = DEFAULT_COST_RATE_ZAR_PER_KG,
+    code: DesignCode = DEFAULT_CODE,
+    min_span_m: float = MIN_SPAN_M,
+    max_span_m: float = MAX_SPAN_M,
+    max_options: int = MAX_SPAN_OPTIONS,
+) -> SpanSplitComparison:
+    """Design every sensible split of the building's WIDTH into equal spans; rank by total steel.
+
+    Holds the overall roofed width fixed (``span_m × number_of_spans``) and varies the number of
+    internal column lines — the real "clear-span vs multi-span" topology choice. The input's own
+    split is always the ``baseline``. Any option with >1 span is PROVISIONAL (multi-span, D13).
+    Duopitch only; a mono-pitch spec returns just its (single-span) baseline. Deterministic.
+    """
+    width_m = spec.geometry.building_width_m
+    base_spans = spec.geometry.number_of_spans
+
+    counts: dict[int, float] = {}
+    if spec.geometry.roof_type != "monopitch":
+        counts = dict(enumerate_span_counts(width_m, min_span_m=min_span_m, max_span_m=max_span_m))
+    counts.setdefault(base_spans, spec.geometry.span_m)
+
+    ordered = sorted(counts.items())
+    if len(ordered) > max_options:
+        keep = {0, len(ordered) - 1} | {i for i, (n, _) in enumerate(ordered) if n == base_spans}
+        for i in range(len(ordered)):
+            if len(keep) >= max_options:
+                break
+            keep.add(i)
+        ordered = [ordered[i] for i in sorted(keep)]
+
+    n_frames = spec.geometry.number_of_bays + 1
+    options: list[SpanSplitOption] = []
+    for n, span in ordered:
+        try:
+            result: DesignResult | None = design(
+                _with_spans(spec, n, span), cost_rate_zar_per_kg, code=code
+            )
+        except (NoSectionFoundError, SectionIneligibleError):
+            result = None
+        per_frame = result.total_steel_mass_kg if result is not None else None
+        total = per_frame * n_frames if per_frame is not None else None
+        options.append(
+            SpanSplitOption(
+                number_of_spans=n, span_m=span, number_of_frames=n_frames,
+                feasible=result is not None,
+                per_frame_mass_kg=per_frame, total_primary_mass_kg=total,
+                passed=result.passed if result is not None else False,
+                governing_utilisation=result.governing_utilisation if result is not None else 0.0,
+                is_baseline=(n == base_spans), provisional=(n > 1), result=result,
+            )
+        )
+
+    baseline = next(o for o in options if o.is_baseline)
+    options.sort(key=lambda o: o.total_primary_mass_kg if o.total_primary_mass_kg is not None else math.inf)
+    passing = [o for o in options if o.passed and o.total_primary_mass_kg is not None]
+    lightest_passing = passing[0] if passing else None
+
+    notes = [
+        "Total steel compares the PRIMARY frames only (all columns + rafters × number of frames). "
+        "Secondary steel, valley gutters and the extra internal-column foundations are not included.",
+        f"Splits the {width_m:.1f} m width into equal spans in the {min_span_m:g}–{max_span_m:g} m "
+        "range (a practice guide, not a code limit).",
+    ]
+    if any(o.provisional for o in options):
+        notes.append(
+            "Any option with more than one span is MULTI-SPAN — PROVISIONAL (D13), gravity-designed, "
+            "wind + last mile not yet modelled; needs registered-engineer validation before use."
+        )
+    if any(not o.feasible for o in options):
+        notes.append("Some splits have no adequate section (marked infeasible).")
+
+    return SpanSplitComparison(
+        building_width_m=width_m,
+        baseline=baseline,
+        options=tuple(options),
+        lightest_passing=lightest_passing,
+        notes=tuple(notes),
+    )
 
 
 def enumerate_bay_counts(

@@ -35,7 +35,7 @@ from torenone_ai import (
     propose_frame_from_drawing,
     run_design_agent,
 )
-from torenone_kernel.layout import compare_bay_layouts
+from torenone_kernel.layout import compare_bay_layouts, compare_span_splits
 
 from torenone_service.ai_runtime import (
     AIRuntime,
@@ -72,6 +72,7 @@ from torenone_service.schemas import (
     ParseRequest,
     ParseResponse,
     ProposeFrameRequest,
+    SpanSplitResponse,
     StampRequest,
     StampResponse,
 )
@@ -604,6 +605,46 @@ def create_app(
         response = LayoutComparisonResponse.from_comparison(comparison)
         logger.info(
             "compare_layouts",
+            extra={"user_id": user.user_id, "options": len(response.options)},
+        )
+        return response
+
+    @app.post("/compare-spans")
+    @limiter.limit(DESIGN_RATE_LIMIT)
+    def compare_spans_route(
+        request: Request,
+        body: CompareLayoutsRequest,
+        user: AuthenticatedUser = Depends(require_user),
+    ) -> SpanSplitResponse:
+        """Clear-span vs multi-span: ways to split the building WIDTH, ranked by steel (topology).
+
+        Holds the roofed width fixed and varies the number of internal column lines, designing each
+        via the unchanged kernel. Any >1-span option is PROVISIONAL (multi-span, D13). Bounded by the
+        kernel option cap + the wall-clock budget. No PDF; no engineering number produced outside the
+        kernel (see torenone_kernel.layout.compare_span_splits).
+        """
+        try:
+            cost = body.cost_rate_zar_per_kg
+            comparison = _run_with_timeout(
+                lambda: (
+                    compare_span_splits(body.spec, cost_rate_zar_per_kg=cost)
+                    if cost is not None
+                    else compare_span_splits(body.spec)
+                ),
+                design_timeout,
+            )
+        except DesignTimeoutError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                detail="the span comparison took too long and was aborted",
+            ) from exc
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
+            ) from exc
+        response = SpanSplitResponse.from_comparison(comparison)
+        logger.info(
+            "compare_spans",
             extra={"user_id": user.user_id, "options": len(response.options)},
         )
         return response

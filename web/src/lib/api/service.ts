@@ -35,10 +35,13 @@ export interface FrameGeometry {
   roof_pitch_deg: number;
   bay_spacing_m: number;
   number_of_bays: number;
+  /** Spans across the width (internal columns = number_of_spans − 1). Default 1 = single-bay portal. */
+  number_of_spans?: number;
   roof_type?: RoofType;
   apex_height_m?: number;
   high_eaves_height_m?: number;
   building_length_m?: number;
+  building_width_m?: number;
 }
 
 export type TerrainCategory = "A" | "B" | "C" | "D";
@@ -667,4 +670,65 @@ export async function compareLayouts(
   }
 
   return (await res.json()) as LayoutComparison;
+}
+
+export interface SpanOption {
+  number_of_spans: number;
+  span_m: number;
+  number_of_frames: number;
+  feasible: boolean;
+  per_frame_mass_kg: number | null;
+  total_primary_mass_kg: number | null;
+  passed: boolean;
+  governing_utilisation: number;
+  is_baseline: boolean;
+  provisional: boolean;
+  sections: SectionChoice[];
+}
+
+export interface SpanComparison {
+  building_width_m: number;
+  baseline_spans: number;
+  lightest_passing_spans: number | null;
+  options: SpanOption[];
+  notes: string[];
+}
+
+/**
+ * Clear-span vs multi-span: ways to split the building WIDTH into equal spans, each designed and
+ * ranked by total primary steel. Any >1-span option is PROVISIONAL (multi-span). Kernel-computed.
+ */
+export async function compareSpans(
+  spec: FrameSpec,
+  costRateZarPerKg?: number,
+): Promise<SpanComparison> {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) {
+    throw new ServiceError("Your session has expired — please sign in again.");
+  }
+
+  const res = await serviceFetch(`${serviceBaseUrl()}/compare-spans`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ spec, cost_rate_zar_per_kg: costRateZarPerKg ?? null }),
+  });
+
+  if (!res.ok) {
+    let detail = `Comparing span splits failed (${res.status}).`;
+    try {
+      const body = (await res.json()) as { detail?: unknown };
+      if (body?.detail) detail = String(body.detail);
+    } catch {
+      // keep status-based message
+    }
+    throw new ServiceError(detail);
+  }
+
+  return (await res.json()) as SpanComparison;
 }
