@@ -5,7 +5,117 @@ Full context for continuing work in a new session. Everything below is committed
 
 ---
 
-## ⏩⏩⏩⏩⏩⏩⏩ SESSION 8 CONTINUATION (2026-06-30) — **READ THIS FIRST**, then Session 7 below
+## ⏩⏩⏩⏩⏩⏩⏩⏩ SESSION 9 CONTINUATION (2026-07-01) — **READ THIS FIRST**, then Session 8 below
+
+> Ninth session (a very long one, 2026-06-30 → 07-01; the SESSION 8 block below covers only its
+> first slice — the agentic loop). `main` HEAD `537cf74`, **CI-green, working tree clean**. Web on
+> Netlify at **torenone.com**, engineering service on **Fly** (`torenone-engineering-service`), DB on
+> **Supabase**. Worktree `.claude/worktrees/elegant-grothendieck-c946e9`; **venv + service live in the
+> MAIN checkout `/Users/cash/TorenOne`**. Founder is **NON-technical** (Claude = CTO, founder =
+> implementer — [[communicate-plainly]]). Theme: **competitive positioning (vs Genia) + Tier-1 moat
+> features + first wedge-broadening (mono-pitch)**. Key memories: [[competitive-positioning]],
+> [[agentic-design-loop]], [[strategy-and-roadmap]], [[redbook-validation]], [[wind-analysis-provisional]].
+
+### EVERYTHING shipped this session (all on `main`, CI-green, DEPLOYED live)
+1. **Agentic design loop** (3rd agent capability) — `POST /design-agent`, `service/src/torenone_ai/
+   design_agent.py`. The LLM may ONLY call kernel tools (list_sections/run_design/run_check/stop),
+   never emits an engineering number; the plain `design()` baseline is always a candidate (never
+   worse); selection is deterministic code reading kernel masses. **Hardened** with deterministic
+   seed exploration (works with no LLM). Web **"Explore better options"** panel on results + saved-run
+   pages (`design-explore.tsx`, `run-results.tsx`), one-click, re-keyed per run. See [[agentic-design-loop]].
+2. **Report bug fix** — `renderer._compute_working` recomputed member buckling over the FULL member
+   length (ignoring restraints), 502-ing the PDF for a restraint-braced slender member. Now mirrors
+   `design()` via `DEFAULT_CODE.axial_resistance` (per-axis, restraint-aware). Regression test added.
+3. **Competitive analysis** — `docs/COMPETITIVE.md` + [[competitive-positioning]]. Main peer =
+   **Genia** (genia.design, US, $3M, ex-Arup engineer). **KEY: Genia uses the SAME architecture we do**
+   (generative AI proposes, deterministic rule engine validates) — validates our bet. See the deep
+   gap analysis in COMPETITIVE.md (updated this session).
+4. **Validation — Mahachi E5.2 LTB** (the last 2nd-source): mono-pitch... no — LTB beam reproduced
+   exactly (Mcr=381, Mr=343) from the kernel's OWN library data. Every member-design area now has BOTH
+   SA authorities. [[redbook-validation]].
+5. **T1-2 Submission-ready calc package** (🟢): `ReportMetadata` model + `render_pdf(result, metadata,
+   stamp)` cover "Document control" block; **project-level** `projects.report_metadata` (migration
+   `20260630120000`) so every run inherits client/project/engineer/revision; captured on the project
+   page (`DocumentDetails`) + Review step, pre-filled.
+6. **T1-1 Engineer review & e-stamp** (🟢, the strongest moat) — **WORKING LIVE**. Owner grants a
+   **registered-engineer** role + ECSA no + name on the dashboard (`EngineerManager`, admin-client
+   server action, migration `20260630130000`: `profiles.is_registered_engineer`/`ecsa_reg_no`,
+   `runs.stamp`). The engineer stamps a saved run → **`POST /stamp`** re-renders the calc package with
+   the stamp (name/reg/date + bound to the report fingerprint = tamper-evidence), re-stores it, records
+   `runs.stamp` + auditor. `stamp-panel.tsx`, `stamp_service.py` (re-runs the deterministic kernel from
+   stored inputs since the strict models reject the stored result's computed fields). Records
+   professional responsibility, NOT validation.
+7. **T1-3 Mono-pitch (single slope)** (🟡 PROVISIONAL — sign-off-pack **D12**, go-live needs
+   co-founder) — 4 increments, all live: (a) validated statics `solve_monopitch_udl` +
+   `test_plane_frame_monopitch` (equilibrium/pinned-base/asymmetry/converges-to-flat-portal — **caught
+   that duopitch applies roof gravity member-PERPENDICULAR `"Fy"` vs the correct global-vertical
+   `"FY"`**, ~1.5% at 10°, D12); (b) `_design_monopitch` + `MonopitchAnalysis.demand()` reuse the
+   validated check pipeline (gravity only; wind + connections/baseplate/footing NOT modelled → warned,
+   result fields None); `RoofType` enum + `FrameGeometry.roof_type`/`high_eaves_height_m` (default
+   duopitch, backward-compat; golden/determinism tests recompute); (c) mono-pitch-SAFE report (skips
+   duopitch sketch/BMD-SFD/show-your-working, shows high-eaves + a note; duopitch golden byte-identical);
+   (d) web roof-type toggle + PROVISIONAL banner + a **"Lateral restraint (optional)"** card (the
+   restraint inputs existed in the schema but were never rendered — a long single rafter needs purlins
+   or it's too slender). Multi-bay/lean-to/mezzanine still TODO.
+
+### ⚠️ Prod migrations — APPLIED THIS SESSION (directly, not via CLI)
+The founder's `supabase db push`/UI hit a wall, so I applied `20260630120000_project_report_metadata`
++ `20260630130000_engineer_stamp` **directly via `SUPABASE_DB_URL` (psycopg) from the main-checkout
+`.env`**, then `notify pgrst, 'reload schema'` (PostgREST caches the schema — else "column not found").
+Both are additive nullable columns, idempotent (`if not exists`) — a later `supabase db push` is
+harmless. **The Supabase CLI migration history was NOT updated.** Read-only schema check pattern:
+`curl "$SUPABASE_URL/rest/v1/<table>?select=<col>&limit=1"` with the service-role key (200=exists,
+400=missing). ALL earlier migrations (runs.result/label, paddle, pilot, payments) are already applied.
+
+### DEEP GAP ANALYSIS vs Genia (grounded in what we actually built — full version in COMPETITIVE.md)
+**We are ahead on:** jurisdiction (SANS/SA — Genia won't build it), auditable trust (clause-cited,
+dual-authority validated, sign-off pack, PROVISIONAL discipline) and now the **operational accredited
+e-stamp** (a moat Genia structurally can't issue in SA), submission-ready calc package, outcome-based
+pricing. **Real gaps (Genia leads):** (A) **topology/layout GENERATION** — Genia generates the
+structural system from an architect's drawing; we SIZE a frame the user defines (even our agentic loop
+only explores restraints/sections, not topology) — the biggest capability gap; (B) **architectural
+input** — Genia ingests real CAD/BIM/PDF GAs and auto-extracts elements; our "drawings-in" reads a
+LABELLED portal sketch; (C) **whole-building / multi-frame** — we do ONE single-bay frame (mono-pitch
+is still single-bay; no multi-bay, floors, cores, designed bracing systems); (D) **multi-material** —
+steel only (RC = Year-2); (E) **drawings output** — we output a calc package, not GA/fabrication
+drawings; (F) **optimisation breadth** — Genia's "20% less material" comes from generating 100s of
+layouts; ours is honest trade-off options (the auto-sizer is already optimal for fixed inputs); (G)
+team/capital + the **co-founder validation bottleneck** (the PROVISIONAL pile — now D1–D12 — grows
+faster than one busy Pr.Eng validates it: the #1 operational risk). **Strategic read (unchanged,
+reinforced): do NOT chase Genia's breadth. Win SANS-steel + trust + stamp.** The real blockers to live
+revenue remain **(1) the co-founder validation gate and (2) pilots** — NOT product.
+
+### What's next (priority — founder's call each time; keep it disciplined)
+- **Tier 0 (the actual blocker):** co-founder signs the sign-off pack (D1–D12) + land 1–3 SA pilots.
+  Co-founder-gated; in progress / waiting.
+- **In-wedge product (highest-leverage, mostly co-founder-independent to BUILD):** T1-3 continued —
+  **multi-bay** (biggest real-SA-market coverage gap within steel); then **architect-GA ingestion →
+  propose the frame** (a focused, in-wedge slice of Genia's topology gen — the real agent
+  differentiator); mono-pitch **v2** (wind + last-mile); a basic GA/member-schedule drawing output.
+- **What NOT to do:** whole-building multi-material generative design, US/AISC to fight Genia head-on,
+  full CAD/BIM drawing generation — all attack our own moat. RC is Year-2.
+
+### Carry-forward gotchas / workflow (unchanged unless noted)
+- Correctness boundary = **company law**: 🟢 build / 🟡 new engineering = PROVISIONAL + queue for
+  co-founder / 🔴 never flip PROVISIONAL→VERIFIED, invent a method, or let the LLM compute an
+  engineering number. New PROVISIONAL this session: mono-pitch (**D12**).
+- **Deploy:** web auto-deploys on push to `main` (Netlify — deploy FRUGALLY, batch [[netlify-deploy-frugally]]).
+  Service/kernel changes need **`fly deploy` from the WORKTREE** (fly authed as founder). Verify a route
+  with a no-auth POST → 401 = live, 404 = needs deploy.
+- **Web can be built locally now** — the founder freed disk + I ran `npm ci` in the worktree. Web gate:
+  `npm --prefix <worktree>/web run typecheck|lint|test|build` (126 tests). If disk fills again it breaks;
+  then route web through a PR (CI runs the web build on `pull_request`; Netlify only builds on push to main).
+- **Tests:** `PYTHONPATH=kernel/src:tools:service/src /Users/cash/TorenOne/.venv/bin/pytest` (run kernel
+  + service SEPARATELY — a combined run occasionally segfaults under disk pressure; both pass alone:
+  kernel 617, service 302). ALWAYS full `mypy kernel/src tools service/src` (run from the WORKTREE, or it
+  checks the behind main-checkout) + `ruff`. Supabase schema tests parse migrations with **sqlglot** —
+  keep migration SQL sqlglot-parseable (single-line string literals, no adjacent-string concatenation).
+  Watch CI `gh run watch <id> --exit-status --compact` (nightly Playwright E2E is flaky/unrelated).
+- Stack is **OpenAI gpt-5.5** (vision-capable) — one provider.
+
+---
+
+## ⏩⏩⏩⏩⏩⏩⏩ SESSION 8 CONTINUATION (2026-06-30) — then Session 7 below
 
 > Eighth session — theme: **the AGENTIC DESIGN LOOP** (the next agent step from Session 7). `main`
 > CI-green; web on Netlify, service on Fly (LIVE at torenone.com). Worktree

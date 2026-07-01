@@ -57,6 +57,49 @@ copilots." None are SANS/SA.
 3. **Outcome-based pricing** — adoption-friction killer; turns Check mode into lead-gen.
 4. **Local data** — SA designs, fabricator costs, section availability; compounds with every pilot.
 
+## Post-build gap analysis (2026-07-01) — grounded in what we've actually shipped
+After building the agentic loop, the submission-ready calc package, the **engineer e-stamp**, and
+**mono-pitch**, here is the honest, capability-level gap vs Genia (not marketing).
+
+**What TorenOne IS today:** single-bay SANS **steel** portal frames (duopitch + mono-pitch
+PROVISIONAL) with two front doors (plain-English brief + labelled-drawing vision), a clarify loop,
+an **agentic explore** (tries restraint/section trade-offs, kernel-costed), a deterministic
+clause-cited kernel dual-authority-validated (Red Book + Mahachi), a **submission-ready calc
+package**, project document metadata, and a **working accredited-engineer e-stamp** (re-renders the
+PDF, fingerprint-bound). Outcome-based pricing. Same core architecture as Genia (AI proposes →
+deterministic engine is truth).
+
+**Where Genia genuinely leads (real capability gaps):**
+- **A — Topology / layout GENERATION (the biggest gap).** Genia *generates* the structural system
+  (where columns/beams go) from an architect's drawing and returns 100s of layout options. TorenOne
+  *sizes* a frame the user already defined; even the agentic loop only explores restraints + section
+  choice, never topology. Closing a focused SA-shed version of this is our top "agent" differentiator.
+- **B — Architectural input ingestion.** Genia ingests real CAD/BIM/PDF architectural GAs and
+  auto-identifies walls/openings/columns/stairs. Our "drawings-in" reads a *labelled portal-frame
+  sketch* (transcribes dimensions), not a real architect's GA.
+- **C — Whole-building / multi-frame scope.** Genia does whole buildings. TorenOne = ONE single-bay
+  frame (mono-pitch is still single-bay). No multi-bay, floors, cores, or *designed* bracing systems.
+- **D — Multi-material.** Genia: steel / concrete / timber. TorenOne: steel only (RC = Year-2).
+- **E — Drawings output.** Genia outputs permit-ready *drawings* (GA + schedules). TorenOne outputs a
+  calc-package PDF (the SA rational-design deliverable) — no GA/fabrication drawings yet.
+- **F — Optimisation breadth.** Genia's "20% less material" comes from generating many layouts.
+  Ours is honest trade-off *options* (the kernel auto-sizer is already optimal for fixed inputs).
+- **G — Team / capital + the validation bottleneck.** Genia has $3M + an in-house engineer. Our only
+  Pr.Eng (co-founder) is the validation gate, and the PROVISIONAL pile (D1–D12, now incl. mono-pitch)
+  grows faster than one busy engineer signs it. **This is the #1 operational risk — not a product gap.**
+
+**Where we lead (reinforced this session):** jurisdiction (SANS/SA), auditable trust + validation
+discipline, and now an **operational accredited e-stamp Genia structurally cannot issue in SA** —
+the trust layer that gets designs actually *used*. That, plus submission-ready output, is the moat.
+
+**Disciplined gap-closing priority (do NOT chase breadth):**
+1. **Tier 0 first — validation gate (co-founder signs D1–D12) + pilots.** The real revenue blocker.
+2. **Multi-bay** — biggest real-SA-market coverage gap *within* steel.
+3. **Architect-GA ingestion → propose the frame** — a focused, in-wedge slice of Genia's topology
+   generation; our strongest agent differentiator.
+4. **Mono-pitch v2** (wind + last mile) + a **basic GA / member-schedule drawing** output.
+5. **NOT:** multi-material, US/AISC head-to-head, whole-building generative design — all attack our moat.
+
 ## Roadmap (tiers)
 
 **Tier 0 — the actual moat (do before features):**
