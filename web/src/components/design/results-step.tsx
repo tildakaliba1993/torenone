@@ -24,8 +24,11 @@ import {
 import {
   type CheckResult,
   type DesignResponse,
+  type FrameSpec,
   type ReportMetadata,
+  runDesign,
 } from "@/lib/api/service";
+import { SpanCompare } from "@/components/design/span-compare";
 import { getEntitledReportUrl } from "@/lib/billing/actions";
 import { createPackageCheckout } from "@/lib/payments/actions";
 import { beginCheckout } from "@/lib/payments/client";
@@ -117,6 +120,27 @@ export function ResultsStep({
       setDownloading(false);
     }
   }
+
+  // Re-design this building split a different way (from the results-page span comparison) and
+  // navigate to the new run — mirrors "Explore better options". No-op without a project to save to.
+  async function runWithSpans(spans: number, spanM: number) {
+    if (!projectId || !onUseAlternative) return;
+    const modifiedSpec: FrameSpec = {
+      ...design.frame_spec,
+      geometry: { ...design.frame_spec.geometry, number_of_spans: spans, span_m: spanM },
+    };
+    const response = await runDesign({
+      spec: modifiedSpec,
+      mode: "design",
+      project_id: projectId,
+      report_metadata: reportMetadata ?? null,
+    });
+    onUseAlternative(response);
+  }
+
+  const spanCompareAvailable =
+    Boolean(projectId && onUseAlternative) &&
+    (design.frame_spec.geometry.roof_type ?? "duopitch") !== "monopitch";
 
   return (
     <div className="flex flex-col gap-6">
@@ -224,6 +248,16 @@ export function ResultsStep({
           projectId={projectId}
           onUse={onUseAlternative}
           reportMetadata={reportMetadata}
+        />
+      ) : null}
+
+      {spanCompareAvailable ? (
+        <SpanCompare
+          key={report.run_id}
+          getSpec={() => design.frame_spec}
+          currentSpans={design.frame_spec.geometry.number_of_spans ?? 1}
+          onApply={runWithSpans}
+          applyLabel="Design this"
         />
       ) : null}
 

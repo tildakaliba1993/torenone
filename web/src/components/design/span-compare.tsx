@@ -31,14 +31,19 @@ export function SpanCompare({
   getSpec,
   currentSpans,
   onApply,
+  applyLabel = "Use",
 }: {
   getSpec: () => FrameSpec | null;
   currentSpans: number;
-  onApply: (numberOfSpans: number, spanM: number) => void;
+  /** Apply the chosen split. May be async (e.g. re-run the design on the results page). */
+  onApply: (numberOfSpans: number, spanM: number) => void | Promise<void>;
+  /** Verb for the apply button (e.g. "Use" on Review, "Design this" on results). */
+  applyLabel?: string;
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<SpanComparison | null>(null);
+  const [applying, setApplying] = useState<number | null>(null);
 
   async function run() {
     const spec = getSpec();
@@ -144,10 +149,22 @@ export function SpanCompare({
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => onApply(o.number_of_spans, o.span_m)}
-                          disabled={!o.feasible || isCurrent}
+                          loading={applying === o.number_of_spans}
+                          onClick={async () => {
+                            setApplying(o.number_of_spans);
+                            try {
+                              await onApply(o.number_of_spans, o.span_m);
+                            } finally {
+                              setApplying(null);
+                            }
+                          }}
+                          disabled={!o.feasible || isCurrent || applying !== null}
                         >
-                          {isCurrent ? "In use" : "Use"}
+                          {applying === o.number_of_spans
+                            ? "Designing…"
+                            : isCurrent
+                              ? "In use"
+                              : applyLabel}
                         </Button>
                       </td>
                     </tr>
