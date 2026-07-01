@@ -41,11 +41,12 @@ Full context for continuing work in a new session. Everything below is committed
   worktree — disk had ~13 GB free, so local web checks work again this session.)
 - `mypy kernel/src tools service/src` clean (71 files); `ruff` clean.
 
-### NOT yet deployed as of writing (do next)
-- Committed on branch `claude/funny-jang-2151cd`, **not yet pushed/deployed** (pending founder OK on
-  the deploy-triggering push — [[netlify-deploy-frugally]]). To ship: `git push origin HEAD:main`
-  (→ CI + Netlify web build), watch `gh run watch <id> --exit-status --compact`, then **`fly deploy`
-  from the WORKTREE** for the service (`/propose-frame` will be 404 until deployed, 401 once live).
+### DEPLOYED LIVE (2026-07-01)
+- Pushed to `main` (commit `b1fc0db`), **CI green** (web + kernel/service + Docker; Playwright E2E is
+  nightly-only). **Service deployed to Fly** from the worktree (`fly deploy`): `/health` 200,
+  `/propose-frame` no-auth POST → **401 (live)**. **Web auto-deployed via Netlify** on the push.
+  (Deploy-time "not listening on expected address" warning was transient — a machine scaling down
+  mid-rollout; health 200 confirms reachability.) [[netlify-deploy-frugally]], [[deploy-targets]].
 
 ### What's next (priority — founder's call; keep it disciplined)
 - Same as Session 9: Tier 0 (co-founder validation gate + pilots) is the real revenue blocker and is
