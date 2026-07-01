@@ -45,8 +45,10 @@ def run_design(body: DesignRequest) -> DesignResult:
         return design(body.spec, rate)
     except NoSectionFoundError as exc:
         raise DesignError(
-            "no section in the library satisfies this frame; "
-            "try a different geometry or use check mode"
+            "no section in the library satisfies this frame — the members would be too slender or "
+            "over-stressed. Add lateral restraint (a rafter/column restraint spacing for the "
+            "purlins/girts), reduce the loads, or adjust the geometry. A long single rafter "
+            "(e.g. a wide mono-pitch) needs a rafter restraint spacing."
         ) from exc
     except FrameUnstableError as exc:
         raise DesignError(

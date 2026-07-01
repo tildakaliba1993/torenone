@@ -339,6 +339,38 @@ export function ReviewStep({
 
         <Card>
           <CardHeader>
+            <CardTitle>Lateral restraint (optional)</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <p className="text-sm text-muted">
+              Purlin/girt spacing that braces the rafter and columns against lateral-torsional
+              buckling.{" "}
+              {roofType === "monopitch" ? (
+                <strong>
+                  A mono-pitch has one long rafter — set a rafter restraint spacing (e.g. your
+                  purlin spacing, say 1.5–2 m), or it may be too slender to design.
+                </strong>
+              ) : (
+                "Leave blank for an unrestrained member (conservative)."
+              )}
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <NumberField
+                name="restraints.rafter_restraint_spacing_m"
+                label="Rafter restraint spacing (purlins)"
+                unit="m"
+              />
+              <NumberField
+                name="restraints.column_restraint_spacing_m"
+                label="Column restraint spacing (girts)"
+                unit="m"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Loads</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
