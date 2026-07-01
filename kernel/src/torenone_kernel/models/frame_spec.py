@@ -35,6 +35,13 @@ class FrameGeometry(BaseModel):
         gt=0, description="Frame spacing = tributary width of one internal frame (m)."
     )
     number_of_bays: int = Field(ge=1, description="Number of bays along the building length.")
+    number_of_spans: int = Field(
+        default=1,
+        ge=1,
+        description="Number of spans ACROSS the width (internal/valley columns = number_of_spans − 1). "
+        "1 = single-bay portal (default). >1 = multi-span (PROVISIONAL — pending engineer validation). "
+        "Each span has width span_m.",
+    )
     roof_type: RoofType = Field(
         default=RoofType.DUOPITCH,
         description="Roof shape. DUOPITCH (symmetric, default) or MONOPITCH (single slope, "
@@ -59,6 +66,12 @@ class FrameGeometry(BaseModel):
     @property
     def building_length_m(self) -> float:
         return self.bay_spacing_m * self.number_of_bays
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def building_width_m(self) -> float:
+        # Overall roofed width across all spans (= span_m for a single-span portal).
+        return self.span_m * self.number_of_spans
 
 
 class Materials(BaseModel):

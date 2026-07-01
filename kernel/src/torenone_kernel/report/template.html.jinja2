@@ -376,6 +376,9 @@
   <tr><td>Roof pitch</td>        <td class="num">{{ geom.roof_pitch_deg }}&deg;</td></tr>
   <tr><td>Bay spacing</td>       <td class="num">{{ geom.bay_spacing_m }} m</td></tr>
   <tr><td>Number of bays</td>    <td class="num">{{ geom.number_of_bays }}</td></tr>
+  {% if geom.number_of_spans > 1 %}
+  <tr><td>Number of spans</td>   <td class="num">{{ geom.number_of_spans }} (multi-span, {{ geom.number_of_spans - 1 }} internal column line(s))</td></tr>
+  {% endif %}
   {% if is_monopitch %}
   <tr><td>Roof type</td>         <td>Mono-pitch (single slope)</td></tr>
   <tr><td>High eaves height</td> <td class="num">{{ "%.3f"|format(high_eaves_height_m) }} m</td></tr>

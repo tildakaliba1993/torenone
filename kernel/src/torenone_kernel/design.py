@@ -39,7 +39,11 @@ from collections.abc import Iterator
 from typing import NamedTuple
 
 from torenone_kernel.analysis.diagram_data import compute_frame_diagram
-from torenone_kernel.analysis.plane_frame import MonopitchAnalysis, PortalAnalysis
+from torenone_kernel.analysis.plane_frame import (
+    MonopitchAnalysis,
+    MultiSpanAnalysis,
+    PortalAnalysis,
+)
 from torenone_kernel.analysis.sway_check import FrameUnstableError, compute_sway_check
 from torenone_kernel.checks.autosize import (
     NoSectionFoundError,
@@ -336,6 +340,9 @@ def design(
     DesignResult — sections chosen, all checks with utilisations, rules_version, warnings.
     The result is deterministic: identical inputs → identical outputs (same library).
     """
+    if spec.geometry.number_of_spans > 1:
+        # Multi-span (internal-column) portal — a separate (PROVISIONAL) design path (Path B).
+        return _design_multispan(spec, cost_rate_zar_per_kg, code)
     if spec.geometry.roof_type == RoofType.MONOPITCH:
         # Mono-pitch is a separate (PROVISIONAL) design path — see _design_monopitch.
         return _design_monopitch(spec, cost_rate_zar_per_kg, code)
@@ -828,6 +835,182 @@ def _design_monopitch(
         total_steel_mass_kg=mass_kg,
         indicative_cost_zar=mass_kg * cost_rate_zar_per_kg,
         # wind / connections / baseplate / footing / diagram omitted — not modelled for mono-pitch v1.
+    )
+
+
+def _steel_mass_kg_multispan(
+    spec: FrameSpec,
+    raf: SectionProperties,
+    ext_col: SectionProperties,
+    int_col: SectionProperties,
+) -> float:
+    """Per-frame steel mass for a multi-span frame: all rafters + external + internal columns."""
+    geom = spec.geometry
+    n = geom.number_of_spans
+    raf_half_len_m = math.hypot(geom.span_m / 2.0, geom.apex_height_m - geom.eaves_height_m)
+    raf_total_len_m = 2.0 * n * raf_half_len_m
+    ext_len_m = 2.0 * geom.eaves_height_m
+    int_len_m = (n - 1) * geom.eaves_height_m
+    return (
+        raf.mass_per_metre_kg_m * raf_total_len_m
+        + ext_col.mass_per_metre_kg_m * ext_len_m
+        + int_col.mass_per_metre_kg_m * int_len_m
+    )
+
+
+def _design_multispan(
+    spec: FrameSpec, cost_rate_zar_per_kg: float, code: DesignCode
+) -> DesignResult:
+    """PROVISIONAL multi-span (internal-column) portal design (Path B, sign-off-pack D13).
+
+    Gravity (ULS-1) sizing of the rafters, external columns and internal (valley) columns, reusing
+    the validated SANS check pipeline on forces from the validated multi-span statics
+    (:class:`MultiSpanAnalysis`). Each column class is given the section adequate for the WORST of
+    its members. **Wind and the last mile (connections/baseplates/footings) are NOT modelled for
+    multi-span yet** (see warnings). Mono-pitch multi-span is out of scope.
+    """
+    if spec.geometry.roof_type == RoofType.MONOPITCH:
+        raise ValueError("multi-span mono-pitch frames are not supported")
+
+    library = code.section_library()
+    combos = {c.name.split()[0]: c for c in code.load_combinations(spec)}
+    uls1 = _combo_starting_with(combos, "ULS-1")
+    sls1 = _combo_starting_with(combos, "SLS-1")
+    gamma_G = uls1.factors["dead"]
+    gamma_Q = uls1.factors.get("imposed", 0.0)
+
+    geom = spec.geometry
+    span_mm = geom.span_m * 1_000.0
+    eaves_mm = geom.eaves_height_m * 1_000.0
+    apex_mm = geom.apex_height_m * 1_000.0
+    raf_half_len_mm = math.hypot(span_mm / 2.0, apex_mm - eaves_mm)
+
+    imposed = imposed_roof_loads(spec)
+
+    KL_col_mm = _K_EFFECTIVE * eaves_mm
+    KL_raf_mm = _K_EFFECTIVE * raf_half_len_mm
+    LTB_col_mm = (
+        spec.restraints.column_restraint_spacing_m * 1_000.0
+        if spec.restraints.column_restraint_spacing_m else eaves_mm
+    )
+    LTB_raf_mm = (
+        spec.restraints.rafter_restraint_spacing_m * 1_000.0
+        if spec.restraints.rafter_restraint_spacing_m else raf_half_len_mm
+    )
+
+    def _uls_rafter_udl(raf: SectionProperties, col: SectionProperties) -> float:
+        d = dead_loads(spec, rafter=raf, column=col)
+        return gamma_G * d.rafter_udl_kn_per_m + gamma_Q * imposed.roof_udl_kn_per_m
+
+    sections_ordered = library.by_increasing_mass()
+    raf_sec = ext_sec = int_sec = sections_ordered[0]
+    raf_result: AutosizeResult | None = None
+    ext_result: AutosizeResult | None = None
+    int_result: AutosizeResult | None = None
+
+    for _ in range(_MAX_ITERATIONS):
+        fy_raf = code.material_fy(spec.materials.steel_grade, raf_sec.flange_thickness_mm)
+        fy_ext = code.material_fy(spec.materials.steel_grade, ext_sec.flange_thickness_mm)
+        fy_int = code.material_fy(spec.materials.steel_grade, int_sec.flange_thickness_mm)
+        demand = MultiSpanAnalysis(spec, ext_sec, int_sec, raf_sec).demand(
+            _uls_rafter_udl(raf_sec, ext_sec)
+        )
+
+        raf_result = autosize_member(
+            library, fy_raf,
+            cu_kn=demand.rafter_cu_kn, vu_kn=demand.rafter_vu_kn, mu_knm=demand.rafter_mu_knm,
+            KL_mm=KL_raf_mm, LTB_mm=LTB_raf_mm, member="rafter", code=code,
+        )
+        ext_result = autosize_member(
+            library, fy_ext,
+            cu_kn=demand.ext_col_cu_kn, vu_kn=demand.ext_col_vu_kn, mu_knm=demand.ext_col_mu_knm,
+            KL_mm=KL_col_mm, LTB_mm=LTB_col_mm, member="column", code=code,
+        )
+        int_result = autosize_member(
+            library, fy_int,
+            cu_kn=demand.int_col_cu_kn, vu_kn=demand.int_col_vu_kn, mu_knm=demand.int_col_mu_knm,
+            KL_mm=KL_col_mm, LTB_mm=LTB_col_mm, member="internal column", code=code,
+        )
+        new_raf = library.get(raf_result.designation)
+        new_ext = library.get(ext_result.designation)
+        new_int = library.get(int_result.designation)
+        converged = (
+            new_raf.designation == raf_sec.designation
+            and new_ext.designation == ext_sec.designation
+            and new_int.designation == int_sec.designation
+        )
+        raf_sec, ext_sec, int_sec = new_raf, new_ext, new_int
+        if converged:
+            break
+
+    # ---- SLS-1 vertical deflection: max rafter sag over one span ---- #
+    gamma_G_sls = sls1.factors["dead"]
+    gamma_Q_sls = sls1.factors.get("imposed", 0.0)
+
+    def _sls_sag_mm(raf: SectionProperties) -> float:
+        d = dead_loads(spec, rafter=raf, column=ext_sec)
+        udl = gamma_G_sls * d.rafter_udl_kn_per_m + gamma_Q_sls * imposed.roof_udl_kn_per_m
+        return MultiSpanAnalysis(spec, ext_sec, int_sec, raf).demand(udl).rafter_sag_mm
+
+    deflection_check = vertical_deflection_check(
+        delta_mm=_sls_sag_mm(raf_sec), span_mm=span_mm,
+        limit_fraction=code.deflection_limit_fraction(),
+    )
+    if not deflection_check.passed:
+        for cand in library.by_increasing_mass():
+            if cand.mass_per_metre_kg_m <= raf_sec.mass_per_metre_kg_m:
+                continue
+            chk = vertical_deflection_check(
+                delta_mm=_sls_sag_mm(cand), span_mm=span_mm,
+                limit_fraction=code.deflection_limit_fraction(),
+            )
+            if not chk.passed:
+                continue
+            fy = code.material_fy(spec.materials.steel_grade, cand.flange_thickness_mm)
+            dem = MultiSpanAnalysis(spec, ext_sec, int_sec, cand).demand(_uls_rafter_udl(cand, ext_sec))
+            try:
+                new_raf_result = autosize_member(
+                    SectionLibrary([cand]), fy,
+                    cu_kn=dem.rafter_cu_kn, vu_kn=dem.rafter_vu_kn, mu_knm=dem.rafter_mu_knm,
+                    KL_mm=KL_raf_mm, LTB_mm=LTB_raf_mm, member="rafter", code=code,
+                )
+            except NoSectionFoundError:
+                continue
+            raf_sec, raf_result, deflection_check = cand, new_raf_result, chk
+            break
+
+    assert raf_result is not None and ext_result is not None and int_result is not None
+    all_checks = [*raf_result.checks, *ext_result.checks, *int_result.checks, deflection_check]
+    sections = [
+        SectionChoice(member="rafter", designation=raf_sec.designation),
+        SectionChoice(member="column", designation=ext_sec.designation),
+        SectionChoice(member="internal column", designation=int_sec.designation),
+    ]
+    n_spans = geom.number_of_spans
+    warnings = (
+        f"MULTI-SPAN portal ({n_spans} spans, {n_spans - 1} internal/valley column line(s)) — "
+        "PROVISIONAL geometry (Path B, sign-off-pack D13). The statics are validated but the method "
+        "awaits registered-engineer sign-off before it is used in construction.",
+        "Members are sized on GRAVITY (ULS-1) only. WIND actions and the wind-on-frame checks are "
+        "NOT modelled for multi-span yet.",
+        "The last mile (eaves/valley connections, column baseplates, pad footings) is NOT modelled "
+        "for multi-span yet — design these separately. Internal (valley) columns carry roughly twice "
+        "the axial of the external columns.",
+        "Each column class (external, internal) is given the section adequate for the WORST of its "
+        "members. K=1.0 (PROVISIONAL). Equal spans + pinned bases assumed.",
+        "Vertical deflection is the maximum rafter transverse sag under SLS-1 (first-order elastic "
+        "FEA); second-order amplification not included.",
+    )
+    mass_kg = _steel_mass_kg_multispan(spec, raf_sec, ext_sec, int_sec)
+    return DesignResult(
+        frame_spec=spec,
+        sections=sections,
+        checks=all_checks,
+        rules_version=code.rules_version(),
+        warnings=warnings,
+        total_steel_mass_kg=mass_kg,
+        indicative_cost_zar=mass_kg * cost_rate_zar_per_kg,
+        # wind / connections / baseplate / footing / diagram omitted — not modelled for multi-span v1.
     )
 
 

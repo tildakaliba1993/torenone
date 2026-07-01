@@ -478,6 +478,116 @@ class MonopitchAnalysis:
         )
 
 
+class MultiSpanDemand(NamedTuple):
+    """Governing member demands for a multi-span frame (kN / kN·m), plus max rafter sag (mm)."""
+
+    rafter_cu_kn: float
+    rafter_vu_kn: float
+    rafter_mu_knm: float
+    rafter_sag_mm: float
+    ext_col_cu_kn: float
+    ext_col_vu_kn: float
+    ext_col_mu_knm: float
+    int_col_cu_kn: float
+    int_col_vu_kn: float
+    int_col_mu_knm: float
+
+
+class MultiSpanAnalysis:
+    """Multi-span (internal-column) pinned-base portal frame — PROVISIONAL (Path B, sign-off D13).
+
+    ``n_spans`` equal duopitch spans sharing valley columns. ``demand()`` returns the governing
+    forces for the external columns, the internal (valley) columns, and the rafters (worst of all),
+    plus the max rafter sag — enough to size every member. Gravity is a GLOBAL-vertical load, as in
+    :func:`solve_multispan_udl`.
+    """
+
+    _N_SAMPLES = 21
+
+    def __init__(
+        self,
+        spec: FrameSpec,
+        ext_col_section: SectionProperties,
+        int_col_section: SectionProperties,
+        rafter_section: SectionProperties,
+    ) -> None:
+        self.spec = spec
+        self.ext_col_sec = ext_col_section
+        self.int_col_sec = int_col_section
+        self.raf_sec = rafter_section
+
+    def _build(self, w_raf_n_mm: float) -> tuple[FEModel3D, float, float, int]:
+        geom = self.spec.geometry
+        span_mm = geom.span_m * 1_000.0
+        eaves_mm = geom.eaves_height_m * 1_000.0
+        apex_mm = geom.apex_height_m * 1_000.0
+        n_spans = geom.number_of_spans
+        raf_half_len_mm = math.hypot(span_mm / 2.0, apex_mm - eaves_mm)
+
+        m = _new_model()
+        _add_section(m, "ext_col", self.ext_col_sec)
+        _add_section(m, "int_col", self.int_col_sec)
+        _add_section(m, "raf", self.raf_sec)
+        for i in range(n_spans + 1):
+            x = i * span_mm
+            m.add_node(f"B{i}", x, 0, 0)
+            m.add_node(f"E{i}", x, eaves_mm, 0)
+            _pin_support(m, f"B{i}")
+            _fix_out_of_plane(m, f"E{i}")
+        for s in range(n_spans):
+            m.add_node(f"R{s}", (s + 0.5) * span_mm, apex_mm, 0)
+            _fix_out_of_plane(m, f"R{s}")
+        for i in range(n_spans + 1):
+            sec = "ext_col" if (i == 0 or i == n_spans) else "int_col"
+            m.add_member(f"C{i}", f"B{i}", f"E{i}", "steel", sec)
+        for s in range(n_spans):
+            m.add_member(f"RL{s}", f"E{s}", f"R{s}", "steel", "raf")
+            m.add_member(f"RR{s}", f"R{s}", f"E{s + 1}", "steel", "raf")
+            m.add_member_dist_load(f"RL{s}", "FY", -w_raf_n_mm, -w_raf_n_mm, case="DL")
+            m.add_member_dist_load(f"RR{s}", "FY", -w_raf_n_mm, -w_raf_n_mm, case="DL")
+        _add_load_combo(m)
+        m.analyze_linear(log=False, check_stability=False)
+        return m, eaves_mm, raf_half_len_mm, n_spans
+
+    def demand(self, rafter_udl_kn_per_m: float) -> MultiSpanDemand:
+        """Return the governing member demands for *rafter_udl_kn_per_m* (kN/m, downward +)."""
+        m, eaves_mm, raf_half_len_mm, n_spans = self._build(rafter_udl_kn_per_m)
+
+        def _envelope(member: str, length_mm: float) -> tuple[float, float, float, float]:
+            cu = vu = mu = sag = 0.0
+            for i in range(self._N_SAMPLES):
+                x = length_mm * i / (self._N_SAMPLES - 1)
+                cu = max(cu, abs(m.members[member].axial(x, _COMBO)))
+                vu = max(vu, abs(m.members[member].shear("Fy", x, _COMBO)))
+                mu = max(mu, abs(m.members[member].moment("Mz", x, _COMBO)))
+                sag = max(sag, abs(m.members[member].deflection("dy", x, _COMBO)))
+            return cu / 1e3, vu / 1e3, mu / 1e6, sag
+
+        def _worst(members: list[str], length_mm: float) -> tuple[float, float, float, float]:
+            cu = vu = mu = sag = 0.0
+            for name in members:
+                c, v, mo, s = _envelope(name, length_mm)
+                cu, vu, mu, sag = max(cu, c), max(vu, v), max(mu, mo), max(sag, s)
+            return cu, vu, mu, sag
+
+        rafters = [f"RL{s}" for s in range(n_spans)] + [f"RR{s}" for s in range(n_spans)]
+        raf_cu, raf_vu, raf_mu, raf_sag = _worst(rafters, raf_half_len_mm)
+
+        ext_cols = [f"C{i}" for i in (0, n_spans)]
+        ext_cu, ext_vu, ext_mu, _ = _worst(ext_cols, eaves_mm)
+
+        int_cols = [f"C{i}" for i in range(1, n_spans)]
+        int_cu, int_vu, int_mu = 0.0, 0.0, 0.0
+        if int_cols:
+            int_cu, int_vu, int_mu, _ = _worst(int_cols, eaves_mm)
+
+        return MultiSpanDemand(
+            rafter_cu_kn=raf_cu, rafter_vu_kn=raf_vu, rafter_mu_knm=raf_mu, rafter_sag_mm=raf_sag,
+            ext_col_cu_kn=ext_cu, ext_col_vu_kn=ext_vu, ext_col_mu_knm=ext_mu,
+            int_col_cu_kn=int_cu, int_col_vu_kn=int_vu, int_col_mu_knm=int_mu,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Portal builder from FrameSpec
 # ---------------------------------------------------------------------------
