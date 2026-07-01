@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { BuildingFrames } from "@/components/design/building-frames";
+import { Building3D } from "@/components/design/building-3d";
 import { Button } from "@/components/ui/button";
 import {
   type FrameSpec,
@@ -86,7 +86,6 @@ export function LayoutCompare({
   }
 
   const [hoverBays, setHoverBays] = useState<number | null>(null);
-  const geo = usedSpec?.geometry;
   // Which layout the building preview shows: the hovered row, else the lightest passing option.
   const previewBays = hoverBays ?? data?.lightest_passing_bays ?? null;
   const preview =
@@ -124,22 +123,27 @@ export function LayoutCompare({
 
       {data ? (
         <div className="flex flex-col gap-2">
-          {preview && geo ? (
+          {preview && usedSpec ? (
             <div className="border-border bg-surface rounded-md border p-3">
               <p className="text-muted mb-1 text-xs">
                 {preview.number_of_bays === data.lightest_passing_bays
                   ? "Lightest option"
                   : "Previewing"}{" "}
-                — {preview.number_of_frames} frames · hover a row to preview
+                — {preview.number_of_frames} frames @ {preview.bay_spacing_m.toFixed(2)} m · drag to
+                orbit, hover a row to preview
               </p>
-              <BuildingFrames
-                key={preview.number_of_bays}
-                numberOfFrames={preview.number_of_frames}
-                span={geo.span_m}
-                eaves={geo.eaves_height_m}
-                pitch={geo.roof_pitch_deg}
-                roofType={geo.roof_type}
-                baySpacingM={preview.bay_spacing_m}
+              <Building3D
+                spec={{
+                  ...usedSpec,
+                  geometry: {
+                    ...usedSpec.geometry,
+                    number_of_bays: preview.number_of_bays,
+                    bay_spacing_m: preview.bay_spacing_m,
+                  },
+                }}
+                sections={preview.sections}
+                checks={[]}
+                uniformUtil={preview.governing_utilisation}
               />
             </div>
           ) : null}

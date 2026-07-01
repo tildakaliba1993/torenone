@@ -8,6 +8,7 @@ import { Building3D } from "@/components/design/building-3d";
 import { DesignExplore } from "@/components/design/design-explore";
 import { DesignedFrame } from "@/components/design/designed-frame";
 import { FrameDiagrams } from "@/components/design/frame-diagrams";
+import { MemberInspector } from "@/components/design/member-inspector";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,6 +73,8 @@ export function ResultsStep({
   const { result: design, report } = result;
   const [downloading, setDownloading] = useState(false);
   const [dlError, setDlError] = useState<string | null>(null);
+  // Member selected (by clicking it in the 3D model or the 2D frame) → full clause breakdown.
+  const [selectedMember, setSelectedMember] = useState<"column" | "rafter" | null>(null);
 
   // Editable cost-per-tonne (FR-25/31). Default = the rate the kernel used
   // (indicative_cost / tonnage); recompute the indicative cost client-side as the
@@ -180,18 +183,28 @@ export function ResultsStep({
             spec={design.frame_spec}
             sections={design.sections}
             checks={design.checks}
+            selected={selectedMember}
+            onSelect={setSelectedMember}
           />
           <div className="border-border flex flex-col gap-2 border-t pt-4">
             <p className="text-muted text-sm">
               The building — {design.frame_spec.geometry.number_of_bays + 1} portal frames. Drag to
-              orbit; hover a member to inspect its governing check.
+              orbit; hover a member to inspect, click it for every clause check.
             </p>
             <Building3D
               spec={design.frame_spec}
               sections={design.sections}
               checks={design.checks}
+              onSelect={setSelectedMember}
             />
           </div>
+          {selectedMember ? (
+            <MemberInspector
+              kind={selectedMember}
+              checks={design.checks}
+              onClose={() => setSelectedMember(null)}
+            />
+          ) : null}
         </CardContent>
       </Card>
 

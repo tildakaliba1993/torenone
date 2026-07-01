@@ -96,6 +96,13 @@ Full context for continuing work in a new session. Everything below is committed
    highlight + governing-check caption). **Test gotcha:** mock `@/components/design/building-3d` in
    jsdom tests (R3F needs ResizeObserver/WebGL). Web-only → one Netlify deploy. New deps in
    `web/package.json`. See [[ux-speed-and-polish-bar]].
+6. **Visuals pushed further (🟢).** Click a member (in the 3D model OR the 2D `designed-frame`) →
+   `member-inspector.tsx` shows that member's full clause-by-clause breakdown (each check: clause,
+   utilisation bar, pass/advisory). Selection state lifted to `results-step`. The layout compare now
+   uses the **full WebGL `Building3D`** (colours by the option's governing utilisation via new
+   `uniformUtil` prop; rebuilds live on row hover). `Building3D` gained `onSelect`+`uniformUtil`.
+   141 web tests, all gates clean. **Founder's next order: full focus on Path B (multi-bay), then
+   mono-pitch v2 — both 🟡, need the new Pr.Eng.** See [[ux-speed-and-polish-bar]], [[competitive-positioning]].
 
 ### Verified locally (all green)
 - Service: **316 passed**, 1 skipped (`PYTHONPATH=kernel/src:tools:service/src .venv/bin/pytest service`).

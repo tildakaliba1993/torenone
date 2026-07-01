@@ -12,6 +12,8 @@ vi.mock("@/lib/api/service", () => ({
   compareLayouts: (spec: FrameSpec, rate?: number) => compareLayouts(spec, rate),
   ServiceError,
 }));
+// The 3D preview needs a real browser (WebGL/ResizeObserver); stub it — this test covers the table.
+vi.mock("@/components/design/building-3d", () => ({ Building3D: () => null }));
 
 import { LayoutCompare } from "./layout-compare";
 
@@ -49,8 +51,8 @@ describe("LayoutCompare", () => {
     await userEvent.click(screen.getByRole("button", { name: /^compare$/i }));
     await waitFor(() => expect(screen.getByText(/IPE 450 \/ IPE 400/)).toBeTruthy());
 
-    // The lightest passing layout is flagged.
-    expect(screen.getByText(/lightest/i)).toBeTruthy();
+    // The lightest passing layout is flagged (badge + preview caption).
+    expect(screen.getAllByText(/lightest/i).length).toBeGreaterThan(0);
     // The current (baseline) layout's Use button is disabled ("In use").
     expect(screen.getByRole("button", { name: /in use/i })).toBeTruthy();
 

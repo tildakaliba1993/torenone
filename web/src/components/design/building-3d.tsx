@@ -19,6 +19,8 @@ export function Building3D(props: {
   spec: FrameSpec;
   sections: SectionChoice[];
   checks: CheckResult[];
+  uniformUtil?: number | null;
+  onSelect?: (kind: "column" | "rafter") => void;
   className?: string;
 }) {
   return <Model {...props} />;

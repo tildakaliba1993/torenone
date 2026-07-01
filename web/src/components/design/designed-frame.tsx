@@ -56,12 +56,17 @@ export function DesignedFrame({
   spec,
   sections,
   checks,
+  selected = null,
+  onSelect,
 }: {
   spec: FrameSpec;
   sections: SectionChoice[];
   checks: CheckResult[];
+  selected?: MemberKind | null;
+  onSelect?: (kind: MemberKind) => void;
 }) {
   const [hovered, setHovered] = useState<MemberKind | null>(null);
+  const emphasised = (k: MemberKind) => hovered === k || selected === k;
 
   const g = spec.geometry;
   const span = g.span_m;
@@ -168,11 +173,12 @@ export function DesignedFrame({
             x2={px(m.b[0])}
             y2={py(m.b[1])}
             stroke={BAND_COLOR[band(m.util)]}
-            strokeWidth={hovered === m.kind ? 10 : 7}
-            strokeOpacity={hovered && hovered !== m.kind ? 0.45 : 1}
+            strokeWidth={emphasised(m.kind) ? 10 : 7}
+            strokeOpacity={(hovered || selected) && !emphasised(m.kind) ? 0.45 : 1}
             strokeLinecap="round"
             onPointerEnter={() => setHovered(m.kind)}
             onPointerLeave={() => setHovered(null)}
+            onClick={() => onSelect?.(m.kind)}
           />
         ))}
         {/* pinned bases */}
@@ -213,17 +219,22 @@ export function DesignedFrame({
           kind="column"
           designation={colSec}
           check={colCheck}
-          hovered={hovered}
+          emphasised={emphasised("column")}
           onHover={setHovered}
+          onSelect={onSelect}
         />
         <MemberRow
           kind="rafter"
           designation={rafSec}
           check={rafCheck}
-          hovered={hovered}
+          emphasised={emphasised("rafter")}
           onHover={setHovered}
+          onSelect={onSelect}
         />
       </div>
+      {onSelect ? (
+        <p className="text-subtle text-xs">Tip: click a member to see all its clause checks.</p>
+      ) : null}
       <Legend />
     </div>
   );
@@ -233,24 +244,26 @@ function MemberRow({
   kind,
   designation,
   check,
-  hovered,
+  emphasised,
   onHover,
+  onSelect,
 }: {
   kind: MemberKind;
   designation: string | null;
   check: CheckResult | null;
-  hovered: MemberKind | null;
+  emphasised: boolean;
   onHover: (k: MemberKind | null) => void;
+  onSelect?: (k: MemberKind) => void;
 }) {
   const util = check?.utilisation ?? null;
-  const active = hovered === kind;
   return (
     <div
       onPointerEnter={() => onHover(kind)}
       onPointerLeave={() => onHover(null)}
+      onClick={() => onSelect?.(kind)}
       className={cn(
         "border-border flex cursor-pointer flex-col gap-0.5 rounded-md border p-3 text-sm transition-colors",
-        active ? "border-accent bg-surface-raised" : "bg-surface",
+        emphasised ? "border-accent bg-surface-raised" : "bg-surface",
       )}
     >
       <div className="flex items-center gap-2">

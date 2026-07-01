@@ -122,6 +122,7 @@ function Beam({
   highlighted,
   onOver,
   onOut,
+  onSelect,
 }: {
   seg: Segment;
   color: string;
@@ -129,6 +130,7 @@ function Beam({
   highlighted: boolean;
   onOver: () => void;
   onOut: () => void;
+  onSelect?: () => void;
 }) {
   const { position, quaternion, length } = useMemo(() => {
     const dir = new THREE.Vector3().subVectors(seg.b, seg.a);
@@ -150,6 +152,10 @@ function Beam({
         onOver();
       }}
       onPointerOut={onOut}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect?.();
+      }}
     >
       {/* slightly rectangular section to read as steel */}
       <boxGeometry args={[thickness, length, thickness * 1.4]} />
@@ -168,25 +174,32 @@ function Scene({
   spec,
   sections,
   checks,
+  uniformUtil,
   onHover,
+  onSelect,
 }: {
   spec: FrameSpec;
   sections: SectionChoice[];
   checks: CheckResult[];
+  uniformUtil?: number | null;
   onHover: (m: MemberMeta | null) => void;
+  onSelect?: (kind: MemberKind) => void;
 }) {
   const geo = useMemo(() => buildGeometry(spec), [spec]);
   const [hoveredKind, setHoveredKind] = useState<MemberKind | null>(null);
 
   const meta: Record<MemberKind, MemberMeta> = useMemo(() => {
-    const make = (kind: MemberKind): MemberMeta => ({
-      kind,
-      designation: sections.find((s) => s.member === kind)?.designation ?? null,
-      util: governingCheck(checks, kind)?.utilisation ?? null,
-      check: governingCheck(checks, kind),
-    });
+    const make = (kind: MemberKind): MemberMeta => {
+      const gc = governingCheck(checks, kind);
+      return {
+        kind,
+        designation: sections.find((s) => s.member === kind)?.designation ?? null,
+        util: gc?.utilisation ?? uniformUtil ?? null,
+        check: gc,
+      };
+    };
     return { column: make("column"), rafter: make("rafter") };
-  }, [sections, checks]);
+  }, [sections, checks, uniformUtil]);
 
   const thickness = Math.max(0.14, geo.maxDim * 0.014);
   const camPos: [number, number, number] = [geo.maxDim * 0.95, geo.maxDim * 0.75, geo.maxDim * 1.25];
@@ -222,6 +235,7 @@ function Scene({
           highlighted={hoveredKind === seg.kind}
           onOver={() => hover(seg.kind)}
           onOut={() => hover(null)}
+          onSelect={onSelect ? () => onSelect(seg.kind) : undefined}
         />
       ))}
 
@@ -251,11 +265,15 @@ export default function BuildingModel3D({
   spec,
   sections,
   checks,
+  uniformUtil,
+  onSelect,
   className,
 }: {
   spec: FrameSpec;
   sections: SectionChoice[];
   checks: CheckResult[];
+  uniformUtil?: number | null;
+  onSelect?: (kind: MemberKind) => void;
   className?: string;
 }) {
   const [hovered, setHovered] = useState<MemberMeta | null>(null);
@@ -269,7 +287,14 @@ export default function BuildingModel3D({
       <div className="border-border bg-surface-raised relative h-[360px] w-full overflow-hidden rounded-lg border sm:h-[440px]">
         <Canvas dpr={[1, 2]} gl={{ antialias: true }}>
           <color attach="background" args={["#0e1116"]} />
-          <Scene spec={spec} sections={sections} checks={checks} onHover={setHovered} />
+          <Scene
+            spec={spec}
+            sections={sections}
+            checks={checks}
+            uniformUtil={uniformUtil}
+            onHover={setHovered}
+            onSelect={onSelect}
+          />
         </Canvas>
 
         {/* hover inspector overlay */}
