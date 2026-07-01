@@ -103,6 +103,18 @@ Full context for continuing work in a new session. Everything below is committed
    `uniformUtil` prop; rebuilds live on row hover). `Building3D` gained `onSelect`+`uniformUtil`.
    141 web tests, all gates clean. **Founder's next order: full focus on Path B (multi-bay), then
    mono-pitch v2 — both 🟡, need the new Pr.Eng.** See [[ux-speed-and-polish-bar]], [[competitive-positioning]].
+7. **Path B — multi-span portal, Increment 1: validated statics (🟡 PROVISIONAL, D13).** Founder
+   confirmed multi-bay = **multi-SPAN portal (wide building split by internal/valley column lines)**.
+   Following the mono-pitch playbook: validate the statics foundation BEFORE any member design.
+   `solve_multispan_udl` + `MultiSpanStatics` in `kernel/src/torenone_kernel/analysis/plane_frame.py` —
+   N equal duopitch spans sharing pinned-base valley columns; gravity as true global-vertical `"FY"`
+   (the corrected convention). `kernel/tests/test_plane_frame_multispan.py` (7): equilibrium
+   (vertical+horizontal), 2-/3-span symmetry, internal-column ≈2× load share, converges to
+   `solve_portal_udl` at zero pitch. Kernel **629 tests**, mypy+ruff clean. **NOT wired into
+   design()/service/web yet → no deploy.** Sign-off pack **D13** added. NEXT increments: geometry model
+   (RoofType/spans on FrameGeometry or a MultiSpanGeometry), `_design_multispan` reusing the validated
+   check pipeline (ext + int columns, rafters), valley-column bases, then report + web + topology
+   (extend `compare_bay_layouts` to also vary #spans). Then mono-pitch v2.
 
 ### Verified locally (all green)
 - Service: **316 passed**, 1 skipped (`PYTHONPATH=kernel/src:tools:service/src .venv/bin/pytest service`).

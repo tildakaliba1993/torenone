@@ -288,6 +288,109 @@ def solve_monopitch_udl(
     }
 
 
+class MultiSpanStatics(NamedTuple):
+    """Statics of a multi-span portal solve — enough to verify equilibrium + load share.
+
+    Reactions are per base, left→right (index 0 = leftmost). Moments are magnitudes (N·mm).
+    """
+
+    V_N: tuple[float, ...]           # vertical reaction at each base (signed: up +)
+    H_N: tuple[float, ...]           # horizontal reaction at each base (signed)
+    M_eaves_ext_Nmm: float           # bending moment at an external eaves (top of end column)
+    M_eaves_int_Nmm: float | None    # ...at an internal (valley) eaves; None for a single span
+    M_ridge_Nmm: float               # bending moment at a ridge
+    total_vertical_N: float          # total applied gravity (w × Σ rafter length)
+
+    @property
+    def sum_V_N(self) -> float:
+        return sum(self.V_N)
+
+    @property
+    def sum_H_N(self) -> float:
+        return sum(self.H_N)
+
+
+def solve_multispan_udl(
+    span_mm: float,
+    eaves_mm: float,
+    apex_mm: float,
+    n_spans: int,
+    w_n_per_mm: float,
+    ext_col_section: SectionProperties,
+    int_col_section: SectionProperties,
+    raf_section: SectionProperties,
+) -> MultiSpanStatics:
+    """Solve a pinned-base **multi-span** (duopitch) portal frame under a vertical UDL.
+
+    PROVISIONAL — new geometry (Path B), pending registered-engineer validation. ``n_spans`` equal
+    duopitch spans side by side share internal (valley) columns; every base is pinned. Gravity is
+    applied as a GLOBAL vertical load (``"FY"``, per unit rafter length) — the physically correct
+    convention (as in :func:`solve_monopitch_udl`), so at zero pitch it coincides with the flat
+    :func:`solve_portal_udl`.
+
+    Geometry (equal spans of width ``span_mm``), for i in 0..n_spans:
+        base   Bi at (i·span, 0)          eaves/valley  Ei at (i·span, eaves)
+    and for each span s in 0..n_spans-1:
+        ridge  Rs at ((s+0.5)·span, apex)
+
+    Columns C0 and C{n_spans} are external; the rest are internal. Rafters run Es→Rs→E{s+1}.
+    """
+    if n_spans < 1:
+        raise ValueError("n_spans must be >= 1")
+
+    raf_half_len_mm = math.hypot(span_mm / 2.0, apex_mm - eaves_mm)
+
+    m = _new_model()
+    _add_section(m, "ext_col", ext_col_section)
+    _add_section(m, "int_col", int_col_section)
+    _add_section(m, "raf", raf_section)
+
+    # Nodes: bases + eaves at each gridline, ridge at each span mid-point.
+    for i in range(n_spans + 1):
+        x = i * span_mm
+        m.add_node(f"B{i}", x, 0, 0)
+        m.add_node(f"E{i}", x, eaves_mm, 0)
+        _pin_support(m, f"B{i}")
+        _fix_out_of_plane(m, f"E{i}")
+    for s in range(n_spans):
+        m.add_node(f"R{s}", (s + 0.5) * span_mm, apex_mm, 0)
+        _fix_out_of_plane(m, f"R{s}")
+
+    # Columns (external at the two ends, internal between spans).
+    for i in range(n_spans + 1):
+        sec = "ext_col" if (i == 0 or i == n_spans) else "int_col"
+        m.add_member(f"C{i}", f"B{i}", f"E{i}", "steel", sec)
+    # Rafters: two per span (eaves→ridge, ridge→eaves).
+    for s in range(n_spans):
+        m.add_member(f"RL{s}", f"E{s}", f"R{s}", "steel", "raf")
+        m.add_member(f"RR{s}", f"R{s}", f"E{s + 1}", "steel", "raf")
+        m.add_member_dist_load(f"RL{s}", "FY", -w_n_per_mm, -w_n_per_mm, case="DL")
+        m.add_member_dist_load(f"RR{s}", "FY", -w_n_per_mm, -w_n_per_mm, case="DL")
+
+    _add_load_combo(m)
+    m.analyze_linear(log=False, check_stability=False)
+
+    v_reactions = tuple(float(m.nodes[f"B{i}"].RxnFY[_COMBO]) for i in range(n_spans + 1))
+    h_reactions = tuple(float(m.nodes[f"B{i}"].RxnFX[_COMBO]) for i in range(n_spans + 1))
+
+    # Moment at the top of the leftmost (external) column; and an internal column if present.
+    m_eaves_ext = abs(m.members["C0"].moment("Mz", eaves_mm, _COMBO))
+    m_eaves_int = (
+        abs(m.members["C1"].moment("Mz", eaves_mm, _COMBO)) if n_spans >= 2 else None
+    )
+    m_ridge = abs(m.members["RL0"].moment("Mz", raf_half_len_mm, _COMBO))
+    total_vertical = w_n_per_mm * raf_half_len_mm * 2.0 * n_spans
+
+    return MultiSpanStatics(
+        V_N=v_reactions,
+        H_N=h_reactions,
+        M_eaves_ext_Nmm=m_eaves_ext,
+        M_eaves_int_Nmm=m_eaves_int,
+        M_ridge_Nmm=m_ridge,
+        total_vertical_N=total_vertical,
+    )
+
+
 class MonopitchDemand(NamedTuple):
     """Governing member demands for a mono-pitch frame under one gravity combination (kN / kN·m).
 
