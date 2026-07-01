@@ -148,7 +148,7 @@ function DiagramPanel({
         viewBox={`0 0 ${W} ${H}`}
         role="img"
         aria-label={`${title}: peak ${peak ? peak.text : "0"} ${unit}`}
-        className="w-full rounded-md border border-border bg-surface"
+        className="animate-fade-in w-full rounded-md border border-border bg-surface"
       >
         {diagram.members.map((m) => (
           <polygon

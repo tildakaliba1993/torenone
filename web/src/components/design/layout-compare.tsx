@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { BuildingFrames } from "@/components/design/building-frames";
 import { Button } from "@/components/ui/button";
 import {
   type FrameSpec,
@@ -63,6 +64,7 @@ export function LayoutCompare({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<LayoutComparison | null>(null);
+  const [usedSpec, setUsedSpec] = useState<FrameSpec | null>(null);
 
   async function run() {
     const spec = getSpec();
@@ -75,12 +77,19 @@ export function LayoutCompare({
     setError(null);
     try {
       setData(await compareLayouts(spec));
+      setUsedSpec(spec);
     } catch (e) {
       setError(e instanceof ServiceError ? e.message : "Couldn’t compare framing options.");
     } finally {
       setPending(false);
     }
   }
+
+  const recommended =
+    data && data.lightest_passing_bays != null
+      ? data.options.find((o) => o.number_of_bays === data.lightest_passing_bays)
+      : undefined;
+  const geo = usedSpec?.geometry;
 
   return (
     <div className="border-border bg-surface-raised flex flex-col gap-3 rounded-lg border p-4">
@@ -112,6 +121,21 @@ export function LayoutCompare({
 
       {data ? (
         <div className="flex flex-col gap-2">
+          {recommended && geo ? (
+            <div className="border-border bg-surface rounded-md border p-3">
+              <p className="text-muted mb-1 text-xs">
+                Lightest option — {recommended.number_of_frames} frames
+              </p>
+              <BuildingFrames
+                numberOfFrames={recommended.number_of_frames}
+                span={geo.span_m}
+                eaves={geo.eaves_height_m}
+                pitch={geo.roof_pitch_deg}
+                roofType={geo.roof_type}
+                baySpacingM={recommended.bay_spacing_m}
+              />
+            </div>
+          ) : null}
           <div className="border-border overflow-x-auto rounded-md border">
             <table className="w-full min-w-[36rem] text-left text-sm">
               <thead className="bg-surface text-subtle text-xs">

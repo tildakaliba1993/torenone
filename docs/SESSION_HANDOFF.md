@@ -75,10 +75,22 @@ Full context for continuing work in a new session. Everything below is committed
      table in the Review step's Geometry card; "Use" applies a layout's bay count + spacing. GA prompt
      also strengthened for multi-sheet plan sets. `layout-compare.test.tsx` (2).
 
+4. **Design visuals — phased pass (🟢), after founder: "make it more visual / alive, like Genia."**
+   Posture: yes, but NOT Genia's whole-building 3D — make OUR portal frame tangible + legible; all draw
+   existing kernel outputs (no new engineering). All in `web/src/components/design/`:
+   - **Phase 1 — designed-frame heat-map** (`designed-frame.tsx`): the frame drawn to scale, members
+     coloured by governing utilisation (green<85%/amber/red>100%; read off check-name prefixes
+     `column:`/`rafter:`, advisory excluded) + per-member summary + gravity load arrows. On results.
+   - **Phase 2 — building/topology picture** (`building-frames.tsx`): pseudo-3D of the building as its
+     row of N frames (N=bays+1). On results + in the layout compare (shows the lightest option).
+   - **Phase 3 — polish**: SVG draw-in (`.animate-draw` + `pathLength={1}`, reduced-motion safe),
+     `animate-fade-in`, BMD/SFD fade-in. Tests: `designed-frame.test.tsx`, `building-frames.test.tsx`.
+   Web-only → one Netlify deploy, no `fly deploy`. See [[ux-speed-and-polish-bar]].
+
 ### Verified locally (all green)
 - Service: **316 passed**, 1 skipped (`PYTHONPATH=kernel/src:tools:service/src .venv/bin/pytest service`).
 - Kernel: **622 passed**, 1 skipped (`PYTHONPATH=kernel/src:tools .venv/bin/pytest kernel`).
-- Web: **136 passed** (`npm run test`), `typecheck`/`lint`/`build` all clean. (Re-ran `npm ci` in the
+- Web: **141 passed** (`npm run test`), `typecheck`/`lint`/`build` all clean. (Re-ran `npm ci` in the
   worktree — disk had ~13 GB free, so local web checks work again this session.)
 - `mypy kernel/src tools service/src` clean (72 files); `ruff` clean.
 

@@ -102,8 +102,9 @@ describe("ResultsStep", () => {
     render(<ResultsStep result={RESP} onRestart={vi.fn()} />);
     expect(screen.getByText("Some checks fail")).toBeTruthy();
     expect(screen.getAllByText("1.14").length).toBeGreaterThan(0); // governing + the failing check
-    expect(screen.getByText("IPE 400")).toBeTruthy();
-    expect(screen.getByText("IPE 450")).toBeTruthy();
+    // Member sizes appear in both the summary and the designed-frame visual.
+    expect(screen.getAllByText("IPE 400").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("IPE 450").length).toBeGreaterThan(0);
     expect(screen.getByText("1.23 t")).toBeTruthy();
     expect(screen.getByText("R 56,789")).toBeTruthy();
   });

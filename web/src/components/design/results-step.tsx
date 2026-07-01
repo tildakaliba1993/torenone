@@ -4,7 +4,9 @@ import { useState } from "react";
 
 import Link from "next/link";
 
+import { BuildingFrames } from "@/components/design/building-frames";
 import { DesignExplore } from "@/components/design/design-explore";
+import { DesignedFrame } from "@/components/design/designed-frame";
 import { FrameDiagrams } from "@/components/design/frame-diagrams";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -165,6 +167,29 @@ export function ResultsStep({
                 {dlError}
               </p>
             ) : null}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Your designed frame</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-6">
+          <DesignedFrame
+            spec={design.frame_spec}
+            sections={design.sections}
+            checks={design.checks}
+          />
+          <div className="border-border border-t pt-4">
+            <BuildingFrames
+              numberOfFrames={design.frame_spec.geometry.number_of_bays + 1}
+              span={design.frame_spec.geometry.span_m}
+              eaves={design.frame_spec.geometry.eaves_height_m}
+              pitch={design.frame_spec.geometry.roof_pitch_deg}
+              roofType={design.frame_spec.geometry.roof_type}
+              baySpacingM={design.frame_spec.geometry.bay_spacing_m}
+            />
           </div>
         </CardContent>
       </Card>

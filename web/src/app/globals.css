@@ -127,6 +127,20 @@ html {
     transform: translateX(100%) scaleX(0.4);
   }
 }
+/* SVG stroke "draw-in": pair with pathLength="1" on the element. */
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.animate-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw 0.9s ease-out forwards;
+}
 /* animate-fade-in / animate-shimmer / animate-indeterminate are generated from the @theme tokens
    above (so they compose with variants like after:animate-shimmer). Keyframes are defined here. */
 
@@ -136,8 +150,13 @@ html {
   .animate-blink,
   .animate-fade-in,
   .animate-shimmer,
-  .animate-indeterminate {
+  .animate-indeterminate,
+  .animate-draw {
     animation: none;
+  }
+  /* Draw-in must show fully (not stay hidden at offset 1) when motion is disabled. */
+  .animate-draw {
+    stroke-dashoffset: 0;
   }
   html {
     scroll-behavior: auto;
