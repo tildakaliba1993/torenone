@@ -36,7 +36,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterator
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 from torenone_kernel.analysis.diagram_data import compute_frame_diagram
 from torenone_kernel.analysis.plane_frame import (
@@ -63,7 +63,7 @@ from torenone_kernel.loads.combinations import (
 from torenone_kernel.loads.dead import dead_loads
 from torenone_kernel.loads.imposed import imposed_roof_loads
 from torenone_kernel.loads.wind_loads import wind_loads
-from torenone_kernel.models.enums import RoofType
+from torenone_kernel.models.enums import RoofType, SteelGrade
 from torenone_kernel.models.frame_spec import FrameSpec
 from torenone_kernel.models.results import (
     AutosizeResult,
@@ -806,35 +806,48 @@ def _design_monopitch(
             break
 
     assert raf_result is not None and col_result is not None
-    all_checks = [*raf_result.checks, *col_result.checks, deflection_check]
+    connections, baseplate, footing = _design_last_mile_monopitch(spec, raf_sec, col_sec, code)
+    all_checks = [
+        *raf_result.checks, *col_result.checks, deflection_check,
+        *_last_mile_checks(connections, baseplate, footing),
+    ]
     sections = [
         SectionChoice(member="rafter", designation=raf_sec.designation),
         SectionChoice(member="column", designation=col_sec.designation),
     ]
-    warnings = (
+    warnings_list = [
         "MONO-PITCH (single-slope) frame — PROVISIONAL geometry (T1-3, sign-off-pack D12). The "
         "statics are validated but the method awaits registered-engineer sign-off before it is "
         "used in construction.",
         "Members are sized on GRAVITY (ULS-1) only. WIND actions and the wind-on-frame checks are "
         "NOT modelled for mono-pitch yet.",
-        "The last mile (eaves connections, column baseplates, pad footing) is NOT modelled for "
-        "mono-pitch yet — design these separately.",
+        "The last mile (both eaves-knee connections, column baseplate, pad footing) is now designed "
+        "for mono-pitch (v2, PROVISIONAL) — on GRAVITY (ULS-1) joint/base forces. The baseplate + "
+        "footing use the WORSE (higher-axial) of the two column bases (conservative single design).",
         "Both columns are given the section adequate for the WORSE of the two different-height "
         "columns (conservative). K=1.0 (PROVISIONAL); columns use the high-eaves height. The roof "
         "imposed-load area uses the duopitch half-span basis (minor, conservative).",
         "Vertical deflection is the maximum rafter transverse sag under SLS-1 (first-order elastic "
         "FEA); second-order amplification not included.",
-    )
+    ]
+    if footing is None and spec.foundation.allowable_bearing_kpa is None:
+        warnings_list.append(
+            "Pad footing NOT designed — no allowable bearing pressure supplied "
+            "(spec.foundation.allowable_bearing_kpa). Provide the site value to complete it."
+        )
     mass_kg = _steel_mass_kg_monopitch(spec, raf_sec, col_sec)
     return DesignResult(
         frame_spec=spec,
         sections=sections,
         checks=all_checks,
         rules_version=code.rules_version(),
-        warnings=warnings,
+        warnings=tuple(warnings_list),
         total_steel_mass_kg=mass_kg,
         indicative_cost_zar=mass_kg * cost_rate_zar_per_kg,
-        # wind / connections / baseplate / footing / diagram omitted — not modelled for mono-pitch v1.
+        connections=connections,
+        baseplate=baseplate,
+        footing=footing,
+        # wind / diagram omitted — wind not modelled for mono-pitch v2 yet.
     )
 
 
@@ -980,37 +993,50 @@ def _design_multispan(
             break
 
     assert raf_result is not None and ext_result is not None and int_result is not None
-    all_checks = [*raf_result.checks, *ext_result.checks, *int_result.checks, deflection_check]
+    connections, baseplate, footing = _design_last_mile_multispan(spec, raf_sec, ext_sec, int_sec, code)
+    all_checks = [
+        *raf_result.checks, *ext_result.checks, *int_result.checks, deflection_check,
+        *_last_mile_checks(connections, baseplate, footing),
+    ]
     sections = [
         SectionChoice(member="rafter", designation=raf_sec.designation),
         SectionChoice(member="column", designation=ext_sec.designation),
         SectionChoice(member="internal column", designation=int_sec.designation),
     ]
     n_spans = geom.number_of_spans
-    warnings = (
+    warnings_list = [
         f"MULTI-SPAN portal ({n_spans} spans, {n_spans - 1} internal/valley column line(s)) — "
         "PROVISIONAL geometry (Path B, sign-off-pack D13). The statics are validated but the method "
         "awaits registered-engineer sign-off before it is used in construction.",
         "Members are sized on GRAVITY (ULS-1) only. WIND actions and the wind-on-frame checks are "
         "NOT modelled for multi-span yet.",
-        "The last mile (eaves/valley connections, column baseplates, pad footings) is NOT modelled "
-        "for multi-span yet — design these separately. Internal (valley) columns carry roughly twice "
-        "the axial of the external columns.",
+        "The last mile (an external eaves + a valley connection, column baseplate, pad footing) is now "
+        "designed for multi-span (v2, PROVISIONAL) — on GRAVITY (ULS-1) joint/base forces. The "
+        "baseplate + footing use the WORSE column base (the valley column carries ~2× the axial of "
+        "the external columns), applied as a conservative single design.",
         "Each column class (external, internal) is given the section adequate for the WORST of its "
         "members. K=1.0 (PROVISIONAL). Equal spans + pinned bases assumed.",
         "Vertical deflection is the maximum rafter transverse sag under SLS-1 (first-order elastic "
         "FEA); second-order amplification not included.",
-    )
+    ]
+    if footing is None and spec.foundation.allowable_bearing_kpa is None:
+        warnings_list.append(
+            "Pad footing NOT designed — no allowable bearing pressure supplied "
+            "(spec.foundation.allowable_bearing_kpa). Provide the site value to complete it."
+        )
     mass_kg = _steel_mass_kg_multispan(spec, raf_sec, ext_sec, int_sec)
     return DesignResult(
         frame_spec=spec,
         sections=sections,
         checks=all_checks,
         rules_version=code.rules_version(),
-        warnings=warnings,
+        warnings=tuple(warnings_list),
         total_steel_mass_kg=mass_kg,
         indicative_cost_zar=mass_kg * cost_rate_zar_per_kg,
-        # wind / connections / baseplate / footing / diagram omitted — not modelled for multi-span v1.
+        connections=connections,
+        baseplate=baseplate,
+        footing=footing,
+        # wind / diagram omitted — wind not modelled for multi-span v2 yet.
     )
 
 
@@ -1337,6 +1363,115 @@ def _design_last_mile(
         )
 
     return (eaves, apex), baseplate, footing
+
+
+# --- shared last-mile primitives (geometry-agnostic: fed joint/base forces from any analysis) ---
+
+def _connection_from_forces(
+    location: str, f: Any, member_sec: SectionProperties, grade: SteelGrade, code: DesignCode
+) -> ConnectionDesignResult:
+    return code.design_connection(
+        location=location,
+        moment_knm=abs(f.moment_knm),
+        shear_kn=abs(f.shear_kn),
+        axial_kn=-abs(f.axial_kn),  # compression: no bolt tension from axial
+        member_depth_mm=member_sec.depth_mm,
+        member_flange_width_mm=member_sec.width_mm,
+        member_flange_thickness_mm=member_sec.flange_thickness_mm,
+        steel_grade=grade,
+    )
+
+
+def _baseplate_from_forces(
+    f: Any, col_sec: SectionProperties, spec: FrameSpec, grade: SteelGrade, code: DesignCode
+) -> BaseplateDesignResult:
+    return code.design_baseplate(
+        base_fixity=spec.base_fixity.value,
+        axial_kn=abs(f.axial_kn),
+        shear_kn=abs(f.shear_kn),
+        moment_knm=abs(f.moment_knm),
+        column_depth_mm=col_sec.depth_mm,
+        column_flange_width_mm=col_sec.width_mm,
+        steel_grade=grade,
+        fc_mpa=spec.foundation.concrete_fcu_mpa,
+    )
+
+
+def _footing_from_forces(
+    uls_f: Any, sls_f: Any, col_sec: SectionProperties, spec: FrameSpec, code: DesignCode
+) -> PadFootingDesignResult | None:
+    if spec.foundation.allowable_bearing_kpa is None:
+        return None
+    return code.design_footing(
+        service_axial_kn=abs(sls_f.axial_kn),
+        factored_axial_kn=abs(uls_f.axial_kn),
+        allowable_bearing_kpa=spec.foundation.allowable_bearing_kpa,
+        column_size_mm=max(col_sec.depth_mm, col_sec.width_mm),
+        fcu_mpa=spec.foundation.concrete_fcu_mpa,
+    )
+
+
+def _last_mile_udls(
+    spec: FrameSpec, raf_sec: SectionProperties, col_sec: SectionProperties, code: DesignCode
+) -> tuple[float, float]:
+    """The ULS-1 and SLS-1 rafter UDLs (kN/m) used to derive last-mile joint/base forces."""
+    combos = {c.name.split()[0]: c for c in code.load_combinations(spec)}
+    uls1 = _combo_starting_with(combos, "ULS-1")
+    imposed = imposed_roof_loads(spec)
+    dead = dead_loads(spec, rafter=raf_sec, column=col_sec)
+    gamma_G = uls1.factors["dead"]
+    gamma_Q = uls1.factors.get("imposed", 0.0)
+    uls = gamma_G * dead.rafter_udl_kn_per_m + gamma_Q * imposed.roof_udl_kn_per_m
+    sls = GAMMA_G_SLS_UNFAVOURABLE * dead.rafter_udl_kn_per_m + GAMMA_Q_SLS * imposed.roof_udl_kn_per_m
+    return uls, sls
+
+
+def _design_last_mile_monopitch(
+    spec: FrameSpec, raf_sec: SectionProperties, col_sec: SectionProperties, code: DesignCode
+) -> tuple[tuple[ConnectionDesignResult, ...], BaseplateDesignResult, PadFootingDesignResult | None]:
+    """Last mile for a mono-pitch frame: the two eaves-knee connections + a (worst-base) baseplate
+    and footing. PROVISIONAL (D12). Reuses the geometry-agnostic connection/baseplate/footing design.
+    """
+    grade = spec.materials.steel_grade
+    uls_udl, sls_udl = _last_mile_udls(spec, raf_sec, col_sec, code)
+    uls_f = MonopitchAnalysis(spec, col_sec, raf_sec).last_mile_forces(uls_udl)
+    sls_f = MonopitchAnalysis(spec, col_sec, raf_sec).last_mile_forces(sls_udl)
+
+    conn_low = _connection_from_forces("eaves (low)", uls_f["eaves_low"], raf_sec, grade, code)
+    conn_high = _connection_from_forces("eaves (high)", uls_f["eaves_high"], raf_sec, grade, code)
+    worse = "base_high" if abs(uls_f["base_high"].axial_kn) >= abs(uls_f["base_low"].axial_kn) else "base_low"
+    baseplate = _baseplate_from_forces(uls_f[worse], col_sec, spec, grade, code)
+    footing = _footing_from_forces(uls_f[worse], sls_f[worse], col_sec, spec, code)
+    return (conn_low, conn_high), baseplate, footing
+
+
+def _design_last_mile_multispan(
+    spec: FrameSpec,
+    raf_sec: SectionProperties,
+    ext_sec: SectionProperties,
+    int_sec: SectionProperties,
+    code: DesignCode,
+) -> tuple[tuple[ConnectionDesignResult, ...], BaseplateDesignResult, PadFootingDesignResult | None]:
+    """Last mile for a multi-span frame: an external eaves + a valley connection, plus a
+    (worst-base) baseplate + footing. PROVISIONAL (D13). Geometry-agnostic last-mile design reused.
+    """
+    grade = spec.materials.steel_grade
+    uls_udl, sls_udl = _last_mile_udls(spec, raf_sec, ext_sec, code)
+    uls_f = MultiSpanAnalysis(spec, ext_sec, int_sec, raf_sec).last_mile_forces(uls_udl)
+    sls_f = MultiSpanAnalysis(spec, ext_sec, int_sec, raf_sec).last_mile_forces(sls_udl)
+
+    conns = [_connection_from_forces("eaves (external)", uls_f["eaves_ext"], raf_sec, grade, code)]
+    if "eaves_int" in uls_f:
+        conns.append(_connection_from_forces("valley (internal)", uls_f["eaves_int"], raf_sec, grade, code))
+
+    # The valley column carries ~2× axial (pinned base ⇒ moment 0), so it governs the base.
+    if "base_int" in uls_f and abs(uls_f["base_int"].axial_kn) >= abs(uls_f["base_ext"].axial_kn):
+        base_key, base_sec = "base_int", int_sec
+    else:
+        base_key, base_sec = "base_ext", ext_sec
+    baseplate = _baseplate_from_forces(uls_f[base_key], base_sec, spec, grade, code)
+    footing = _footing_from_forces(uls_f[base_key], sls_f[base_key], base_sec, spec, code)
+    return tuple(conns), baseplate, footing
 
 
 def _last_mile_checks(

@@ -44,14 +44,18 @@ def test_designs_rafter_external_and_internal_columns() -> None:
     assert r.total_steel_mass_kg and r.total_steel_mass_kg > 0
 
 
-def test_marked_provisional_gravity_only() -> None:
+def test_marked_provisional_with_last_mile_but_no_wind() -> None:
+    # v2: last mile (external eaves + valley connection + baseplate) designed; wind still deferred.
     r = design(_multispan_spec(2))
     blob = " ".join(r.warnings).lower()
     assert "provisional" in blob and "multi-span" in blob
     assert "wind" in blob and "gravity" in blob
-    # Last mile deferred, like mono-pitch.
-    assert r.wind is None and r.baseplate is None and r.footing is None
-    assert not r.connections
+    assert r.wind is None  # wind still not modelled for multi-span
+    # The last mile IS designed now — an external eaves + a valley connection + a baseplate.
+    assert r.baseplate is not None
+    locations = {c.location for c in r.connections}
+    assert locations == {"eaves (external)", "valley (internal)"}
+    assert r.footing is None  # no allowable bearing supplied
 
 
 def test_internal_column_carries_more_axial() -> None:
@@ -83,6 +87,16 @@ def test_multispan_monopitch_is_rejected() -> None:
     spec = _multispan_spec(2, roof_type=RoofType.MONOPITCH)
     with pytest.raises(ValueError, match="mono-pitch"):
         design(spec)
+
+
+def test_footing_designed_when_bearing_supplied() -> None:
+    from torenone_kernel.models.frame_spec import FoundationInputs
+
+    spec = _multispan_spec(2)
+    spec = spec.model_copy(update={"foundation": FoundationInputs(allowable_bearing_kpa=200.0)})
+    r = design(spec)
+    assert r.footing is not None
+    assert r.baseplate is not None
 
 
 def test_single_span_uses_the_normal_path() -> None:

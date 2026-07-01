@@ -102,6 +102,19 @@ def _reaction(model: FEModel3D, node: str, dof: str) -> float:
     return float(model.nodes[node].__dict__[dof][_COMBO])
 
 
+def _forces_at(model: FEModel3D, location: str, member_name: str, x_mm: float) -> MemberForces:
+    """Axial (kN), shear (kN, "Fy") and moment (kN·m, "Mz") at *x_mm* on a member.
+
+    The shared last-mile convention (matches PortalAnalysis force extraction): N→kN, N·mm→kN·m.
+    """
+    return MemberForces(
+        location=location,
+        axial_kn=model.members[member_name].axial(x_mm, _COMBO) / 1_000.0,
+        shear_kn=model.members[member_name].shear("Fy", x_mm, _COMBO) / 1_000.0,
+        moment_knm=model.members[member_name].moment("Mz", x_mm, _COMBO) / 1_000_000.0,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Validation helpers — exact determinate cases
 # ---------------------------------------------------------------------------
@@ -477,6 +490,20 @@ class MonopitchAnalysis:
             rafter_sag_mm=raf_sag,
         )
 
+    def last_mile_forces(self, rafter_udl_kn_per_m: float) -> dict[str, MemberForces]:
+        """Joint + base forces for the last mile (both eaves knees + both bases).
+
+        Keys: ``eaves_low``/``eaves_high`` (the two knee connections) and ``base_low``/``base_high``
+        (the two column bases). Forces are read off the same validated model as :meth:`demand`.
+        """
+        m, low_mm, high_mm, _ = self._build(rafter_udl_kn_per_m)
+        return {
+            "base_low": _forces_at(m, "base_low", "COL_L", 0.0),
+            "eaves_low": _forces_at(m, "eaves_low", "COL_L", low_mm),
+            "eaves_high": _forces_at(m, "eaves_high", "COL_H", 0.0),  # COL_H i-end = high eaves
+            "base_high": _forces_at(m, "base_high", "COL_H", high_mm),
+        }
+
 
 class MultiSpanDemand(NamedTuple):
     """Governing member demands for a multi-span frame (kN / kN·m), plus max rafter sag (mm)."""
@@ -586,6 +613,22 @@ class MultiSpanAnalysis:
             ext_col_cu_kn=ext_cu, ext_col_vu_kn=ext_vu, ext_col_mu_knm=ext_mu,
             int_col_cu_kn=int_cu, int_col_vu_kn=int_vu, int_col_mu_knm=int_mu,
         )
+
+    def last_mile_forces(self, rafter_udl_kn_per_m: float) -> dict[str, MemberForces]:
+        """Joint + base forces for the last mile: an external and (if present) an internal line.
+
+        Keys: ``eaves_ext``/``base_ext`` (an external column line) and, for >1 span,
+        ``eaves_int``/``base_int`` (a valley column line). Columns run base(x=0)→eaves(x=eaves).
+        """
+        m, eaves_mm, _, n_spans = self._build(rafter_udl_kn_per_m)
+        out = {
+            "base_ext": _forces_at(m, "base_ext", "C0", 0.0),
+            "eaves_ext": _forces_at(m, "eaves_ext", "C0", eaves_mm),
+        }
+        if n_spans >= 2:
+            out["base_int"] = _forces_at(m, "base_int", "C1", 0.0)
+            out["eaves_int"] = _forces_at(m, "eaves_int", "C1", eaves_mm)
+        return out
 
 
 # ---------------------------------------------------------------------------

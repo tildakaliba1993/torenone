@@ -70,18 +70,22 @@ def test_monopitch_reuses_full_member_check_set() -> None:
     assert all(c.clause for c in result.checks)
 
 
-def test_monopitch_is_flagged_provisional_and_omits_unmodelled_parts() -> None:
+def test_monopitch_is_flagged_provisional_with_last_mile_but_no_wind() -> None:
+    # v2: the last mile (both eaves-knee connections + a baseplate) is now designed; wind still isn't.
     result = design(_monopitch_spec())
     blob = " ".join(result.warnings).lower()
     assert "mono-pitch" in blob and "provisional" in blob
-    assert "wind" in blob and "not modelled" in blob  # wind not modelled
-    assert "last mile" in blob or "baseplate" in blob  # last mile not modelled
-    # The unmodelled parts are actually absent from the result (not silently reused from duopitch).
+    assert "wind" in blob and "not modelled" in blob  # wind still not modelled
     assert result.wind is None
     assert result.diagram is None
-    assert result.connections == ()
-    assert result.baseplate is None
+    # The last mile IS designed now — two eaves-knee connections + a (worst-base) baseplate.
+    assert len(result.connections) == 2
+    locations = {c.location for c in result.connections}
+    assert locations == {"eaves (low)", "eaves (high)"}
+    assert result.baseplate is not None
+    # No footing without an allowable bearing pressure (never assumed).
     assert result.footing is None
+    assert any("pad footing not designed" in w.lower() for w in result.warnings)
 
 
 def test_monopitch_is_deterministic() -> None:
