@@ -376,7 +376,12 @@
   <tr><td>Roof pitch</td>        <td class="num">{{ geom.roof_pitch_deg }}&deg;</td></tr>
   <tr><td>Bay spacing</td>       <td class="num">{{ geom.bay_spacing_m }} m</td></tr>
   <tr><td>Number of bays</td>    <td class="num">{{ geom.number_of_bays }}</td></tr>
+  {% if is_monopitch %}
+  <tr><td>Roof type</td>         <td>Mono-pitch (single slope)</td></tr>
+  <tr><td>High eaves height</td> <td class="num">{{ "%.3f"|format(high_eaves_height_m) }} m</td></tr>
+  {% else %}
   <tr><td>Apex height</td>       <td class="num">{{ "%.3f"|format(geom.apex_height_m) }} m</td></tr>
+  {% endif %}
   <tr><td>Base fixity</td>       <td>{{ base_fixity }}</td></tr>
   <tr><td>Steel grade</td>       <td>{{ steel_grade }}</td></tr>
   <tr><td>Dead load (roof)</td>  <td class="num">{{ dead.roof_kpa }} kPa</td></tr>
@@ -390,6 +395,14 @@
 <!-- ================================================================ -->
 <h2>3. Frame Diagrams</h2>
 
+{% if is_monopitch %}
+<div class="box box-warn">
+  Frame geometry sketch and bending-moment / shear-force diagrams are not yet available for
+  mono-pitch frames (PROVISIONAL, T1-3). The member forces are computed by the validated
+  mono-pitch plane-frame analysis and are reflected in the code checks (§5); the diagrams are a
+  later increment.
+</div>
+{% else %}
 <h3>Frame Geometry</h3>
 <div style="text-align:center; margin-bottom:10pt;">
   <img src="data:image/png;base64,{{ geom_png_b64 }}"
@@ -408,6 +421,7 @@
        alt="Bending moment diagram and shear force diagram"
        style="max-width:100%; height:auto; border:0.5pt solid var(--color-border);">
 </div>
+{% endif %}
 
 <!-- ================================================================ -->
 <!-- 4. DESIGN RESULTS SUMMARY                                        -->
@@ -605,6 +619,14 @@
 <!-- 8. SHOW YOUR WORKING — Line-by-line audit (PRD FR-26)            -->
 <!-- ================================================================ -->
 <h2>11. Show Your Working — Line-by-Line Audit</h2>
+{% if is_monopitch %}
+<div class="box box-warn">
+  The detailed line-by-line working is not yet available for mono-pitch frames (PROVISIONAL,
+  T1-3). The governing member forces are computed by the validated mono-pitch plane-frame
+  analysis, and every code check — with its SANS clause and utilisation — is listed in §5
+  (Member Code Checks).
+</div>
+{% else %}
 <div class="box" style="font-size:8.5pt; margin-bottom:8pt;">
   <strong>FR-26 provenance:</strong> Every number in this section is
   <strong>computed by the TorenOne deterministic kernel</strong> — not by an AI language model.
@@ -845,6 +867,7 @@
   </tr>
 </table>
 {% endfor %}
+{% endif %}
 
 <!-- ================================================================ -->
 <!-- 9. AUDIT METADATA (PRD FR-20)                                    -->
@@ -881,7 +904,12 @@
   <tr><td>Roof pitch</td>              <td class="num">{{ geom.roof_pitch_deg }}&deg;</td></tr>
   <tr><td>Bay spacing</td>             <td class="num">{{ geom.bay_spacing_m }} m</td></tr>
   <tr><td>Number of bays</td>          <td class="num">{{ geom.number_of_bays }}</td></tr>
+  {% if is_monopitch %}
+  <tr><td>Roof type</td>               <td>mono-pitch</td></tr>
+  <tr><td>High eaves height (computed)</td><td class="num">{{ "%.3f"|format(high_eaves_height_m) }} m</td></tr>
+  {% else %}
   <tr><td>Apex height (computed)</td>  <td class="num">{{ "%.3f"|format(geom.apex_height_m) }} m</td></tr>
+  {% endif %}
 
   <tr><th colspan="2" style="background:var(--color-brand-light);">Dead Loads (characteristic)</th></tr>
   <tr><td>Roof area load</td>          <td class="num">{{ dead.roof_kpa }} kPa</td></tr>

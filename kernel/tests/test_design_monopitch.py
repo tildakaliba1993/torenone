@@ -21,6 +21,7 @@ from torenone_kernel.models.frame_spec import (
     WindContext,
 )
 from torenone_kernel.models.results import SectionChoice
+from torenone_kernel.report.renderer import render_html
 
 
 def _monopitch_spec(**geom_over: object) -> FrameSpec:
@@ -88,6 +89,18 @@ def test_monopitch_is_deterministic() -> None:
     b = design(_monopitch_spec())
     assert [s.designation for s in a.sections] == [s.designation for s in b.sections]
     assert a.governing_utilisation == pytest.approx(b.governing_utilisation, rel=1e-12)
+
+
+def test_monopitch_report_is_safe() -> None:
+    """The calc-package report skips the duopitch-derived working/diagrams for mono-pitch and
+    shows the high-eaves geometry + a clear note (never a misleading duopitch derivation)."""
+    html = render_html(design(_monopitch_spec()))
+    assert "High eaves height" in html            # mono-pitch geometry
+    assert "Apex height</td>" not in html         # no duopitch apex row
+    assert "not yet available for mono-pitch" in html  # working section noted, not re-derived
+    assert "FR-26 provenance" not in html         # the duopitch show-your-working is skipped
+    # The validated member checks (with clauses) are still present.
+    assert "SANS 10162" in html
 
 
 def test_check_mode_rejects_monopitch() -> None:

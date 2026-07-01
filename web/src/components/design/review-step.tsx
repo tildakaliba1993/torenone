@@ -58,6 +58,7 @@ const schema = z
       roof_pitch_deg: numberField({ message: "Pitch must be between 0 and 45°", gt: 0, max: 45 }),
       bay_spacing_m: numberField({ message: "Bay spacing must be greater than 0", gt: 0 }),
       number_of_bays: numberField({ message: "At least 1 (whole number)", int: true, min: 1 }),
+      roof_type: z.enum(["duopitch", "monopitch"]),
     }),
     dead: z.object({
       roof_kpa: numberField({ message: "Cannot be negative", min: 0 }),
@@ -122,6 +123,7 @@ function defaultsFromSpec(spec: FrameSpec, doc?: ReportMetadata): FormValues {
       roof_pitch_deg: n(spec.geometry.roof_pitch_deg),
       bay_spacing_m: n(spec.geometry.bay_spacing_m),
       number_of_bays: n(spec.geometry.number_of_bays),
+      roof_type: spec.geometry.roof_type ?? "duopitch",
     },
     dead: {
       roof_kpa: n(spec.dead?.roof_kpa),
@@ -201,6 +203,11 @@ export function ReviewStep({
   });
 
   const geometry = useWatch({ control: form.control, name: "geometry" });
+  const roofType = geometry?.roof_type ?? "duopitch";
+  // Mono-pitch high eaves = low eaves + span·tan(pitch) (informational preview).
+  const highEavesM =
+    Number(geometry?.eaves_height_m) +
+    Number(geometry?.span_m) * Math.tan((Number(geometry?.roof_pitch_deg) * Math.PI) / 180);
   const mode = useWatch({ control: form.control, name: "mode" });
   const confirmed = useWatch({ control: form.control, name: "confirmed" });
 
@@ -213,6 +220,7 @@ export function ReviewStep({
         roof_pitch_deg: toNum(values.geometry.roof_pitch_deg),
         bay_spacing_m: toNum(values.geometry.bay_spacing_m),
         number_of_bays: toNum(values.geometry.number_of_bays),
+        roof_type: values.geometry.roof_type,
       },
       materials: { steel_grade: values.materials.steel_grade },
       base_fixity: "pinned",
@@ -268,14 +276,60 @@ export function ReviewStep({
             <CardTitle>Geometry</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <FrameSketch
-              span={Number(geometry?.span_m)}
-              eaves={Number(geometry?.eaves_height_m)}
-              pitch={Number(geometry?.roof_pitch_deg)}
-            />
+            <div className="flex flex-col gap-2">
+              <span className="text-sm text-muted">Roof type</span>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={roofType === "duopitch" ? "primary" : "secondary"}
+                  onClick={() => form.setValue("geometry.roof_type", "duopitch")}
+                >
+                  Duopitch (symmetric)
+                </Button>
+                <Button
+                  type="button"
+                  variant={roofType === "monopitch" ? "primary" : "secondary"}
+                  onClick={() => form.setValue("geometry.roof_type", "monopitch")}
+                >
+                  Mono-pitch (single slope)
+                </Button>
+              </div>
+            </div>
+
+            {roofType === "monopitch" ? (
+              <div
+                role="note"
+                className="border-warning/40 bg-warning/10 rounded-md border px-4 py-3 text-sm"
+              >
+                <p className="text-foreground font-medium">Mono-pitch is provisional</p>
+                <p className="text-muted mt-1">
+                  Single-slope design is new and <strong>awaiting registered-engineer
+                  validation</strong> — treat it as indicative only, not for construction, until
+                  your firm&rsquo;s engineer has reviewed and stamped it. Gravity is designed; wind
+                  and the connections/baseplate/footing are not yet modelled for mono-pitch.
+                  {Number.isFinite(highEavesM) ? (
+                    <>
+                      {" "}Low eaves is {Number(geometry?.eaves_height_m)} m; the high eaves rises to
+                      about <strong>{highEavesM.toFixed(2)} m</strong>.
+                    </>
+                  ) : null}
+                </p>
+              </div>
+            ) : (
+              <FrameSketch
+                span={Number(geometry?.span_m)}
+                eaves={Number(geometry?.eaves_height_m)}
+                pitch={Number(geometry?.roof_pitch_deg)}
+              />
+            )}
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <NumberField name="geometry.span_m" label="Span" unit="m" />
-              <NumberField name="geometry.eaves_height_m" label="Eaves height" unit="m" />
+              <NumberField
+                name="geometry.eaves_height_m"
+                label={roofType === "monopitch" ? "Low eaves height" : "Eaves height"}
+                unit="m"
+              />
               <NumberField name="geometry.roof_pitch_deg" label="Roof pitch" unit="°" />
               <NumberField name="geometry.bay_spacing_m" label="Bay spacing" unit="m" />
               <NumberField name="geometry.number_of_bays" label="Number of bays" />

@@ -38,6 +38,7 @@ from torenone_kernel.codes import DEFAULT_CODE
 from torenone_kernel.loads.combinations import load_combinations
 from torenone_kernel.loads.dead import dead_loads
 from torenone_kernel.loads.imposed import imposed_roof_loads
+from torenone_kernel.models.enums import RoofType
 from torenone_kernel.models.results import DesignResult
 from torenone_kernel.report.diagrams import bmd_sfd_png, frame_geometry_png
 from torenone_kernel.report.metadata import ReportMetadata, Stamp
@@ -358,12 +359,21 @@ def render_html(
     # fy from rules_version if present, else standard S355 value
     fy_mpa = 355  # S355JR t<=16mm (from EN 10025-2, PROVISIONAL)
 
-    # Diagrams — rendered as base64-encoded PNG data URIs for embedding in HTML/PDF
-    geom_png_b64  = base64.b64encode(frame_geometry_png(result.frame_spec)).decode("ascii")
-    bmd_sfd_b64   = base64.b64encode(bmd_sfd_png(result)).decode("ascii")
+    # Mono-pitch (PROVISIONAL): the geometry sketch, BMD/SFD diagrams and the "show your working"
+    # re-derivation are all duopitch-specific, so they are SKIPPED for mono-pitch (the template
+    # shows a clear note instead). The member checks (§5) are the validated mono-pitch output.
+    is_monopitch = result.frame_spec.geometry.roof_type == RoofType.MONOPITCH
 
-    # Show-your-working data (FR-26)
-    working = _compute_working(result)
+    # Diagrams — rendered as base64-encoded PNG data URIs for embedding in HTML/PDF
+    if is_monopitch:
+        geom_png_b64 = ""
+        bmd_sfd_b64 = ""
+        working: dict[str, Any] = {}
+    else:
+        geom_png_b64 = base64.b64encode(frame_geometry_png(result.frame_spec)).decode("ascii")
+        bmd_sfd_b64  = base64.b64encode(bmd_sfd_png(result)).decode("ascii")
+        # Show-your-working data (FR-26)
+        working = _compute_working(result)
 
     # Audit metadata (PRD FR-20)
     generated_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -425,6 +435,8 @@ def render_html(
         # cover unchanged. Never engineering data.
         "doc": metadata,
         "has_doc_metadata": metadata is not None and metadata.has_any(),
+        "is_monopitch": is_monopitch,
+        "high_eaves_height_m": result.frame_spec.geometry.high_eaves_height_m,
         # Registered-engineer e-stamp (None unless the run has been stamped). When present, the
         # sign-off block is filled and the cover affirms the stamp instead of "not yet stamped".
         "stamp": stamp,

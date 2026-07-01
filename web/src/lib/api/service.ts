@@ -27,13 +27,17 @@ export interface ParseQuestion {
 /** A flat set of FrameSpecExtraction inputs (read values + clarified answers). */
 export type FrameSpecInputs = Record<string, boolean | number | string | null>;
 
+export type RoofType = "duopitch" | "monopitch";
+
 export interface FrameGeometry {
   span_m: number;
   eaves_height_m: number;
   roof_pitch_deg: number;
   bay_spacing_m: number;
   number_of_bays: number;
+  roof_type?: RoofType;
   apex_height_m?: number;
+  high_eaves_height_m?: number;
   building_length_m?: number;
 }
 
