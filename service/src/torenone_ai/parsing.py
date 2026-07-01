@@ -600,6 +600,50 @@ def coerce_drawing_to_image_url(image_url: str) -> str:
     return coerce_drawing_to_images(image_url, max_pages=1)[0]
 
 
+def _run_vision_extraction(
+    image_url: str,
+    *,
+    client: Any,
+    model: str,
+    system_prompt: str,
+    default_instruction: str,
+    note: str | None,
+    max_output_tokens: int | None,
+    unparseable_reason: str,
+) -> ParseResult:
+    """Shared plumbing for every vision front door (:func:`parse_drawing`, :func:`propose_frame_from_drawing`).
+
+    Coerces the upload to image(s), builds the note+image(s) user message under *system_prompt*, calls
+    the same OpenAI Responses API with the SAME nullable :class:`FrameSpecExtraction` target, and hands
+    the response to the deterministic :func:`_result_from_parse_response`. Only the system prompt +
+    default instruction differ between front doors — so the safety contract (the model fills nullable
+    fields; the kernel/confirm-gate do the rest) is identical for all of them.
+    """
+    images = coerce_drawing_to_images(image_url)
+    cap = _default_max_output_tokens() if max_output_tokens is None else max_output_tokens
+    extra: dict[str, Any] = {"max_output_tokens": cap} if cap and cap > 0 else {}
+
+    instruction = note.strip() if note and note.strip() else default_instruction
+    if len(images) > 1:
+        instruction += (
+            f"\n\n(There are {len(images)} pages/sheets attached — read whichever show the structure "
+            "and its labelled dimensions; ignore cover sheets and unrelated sheets.)"
+        )
+    user_content: list[dict[str, Any]] = [{"type": "input_text", "text": instruction}]
+    for img in images:
+        user_content.append({"type": "input_image", "image_url": img})
+    response = client.responses.parse(
+        model=model,
+        input=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content},
+        ],
+        text_format=FrameSpecExtraction,
+        **extra,
+    )
+    return _result_from_parse_response(response, unparseable_reason=unparseable_reason)
+
+
 def parse_drawing(
     image_url: str,
     *,
@@ -610,11 +654,12 @@ def parse_drawing(
 ) -> ParseResult:
     """Parse a frame DRAWING/sketch into a :class:`ParseResult` using a vision model.
 
-    The new "drawings-in" front door. The LLM reads labelled dimensions from the image and fills
-    the SAME nullable :class:`FrameSpecExtraction` that :func:`parse_description` uses — so it never
-    produces an engineering number (it transcribes labelled values, it does not scale-measure), and
-    every downstream step (missing-field flagging, documented defaults, validation, the confirm
-    gate) is shared and unchanged.
+    The "drawings-in" front door. The LLM reads labelled dimensions from a sketch OF THE PORTAL FRAME
+    ITSELF and fills the SAME nullable :class:`FrameSpecExtraction` that :func:`parse_description`
+    uses — so it never produces an engineering number (it transcribes labelled values, it does not
+    scale-measure), and every downstream step (missing-field flagging, documented defaults,
+    validation, the confirm gate) is shared and unchanged. For an ARCHITECT'S general-arrangement
+    drawing (a building, frame not drawn) use :func:`propose_frame_from_drawing` instead.
 
     Parameters
     ----------
@@ -629,26 +674,96 @@ def parse_drawing(
     few pages, since a plan set's frame sheet may not be page 1; a malformed PDF raises
     :class:`DrawingDecodeError`.
     """
-    images = coerce_drawing_to_images(image_url)
-    cap = _default_max_output_tokens() if max_output_tokens is None else max_output_tokens
-    extra: dict[str, Any] = {"max_output_tokens": cap} if cap and cap > 0 else {}
-
-    instruction = note.strip() if note and note.strip() else _DEFAULT_DRAWING_INSTRUCTION
-    if len(images) > 1:
-        instruction += (
-            f"\n\n(There are {len(images)} pages/sheets attached — read whichever shows the portal "
-            "frame and its labelled dimensions; ignore cover sheets and unrelated sheets.)"
-        )
-    user_content: list[dict[str, Any]] = [{"type": "input_text", "text": instruction}]
-    for img in images:
-        user_content.append({"type": "input_image", "image_url": img})
-    response = client.responses.parse(
+    return _run_vision_extraction(
+        image_url,
+        client=client,
         model=model,
-        input=[
-            {"role": "system", "content": VISION_SYSTEM_PROMPT},
-            {"role": "user", "content": user_content},
-        ],
-        text_format=FrameSpecExtraction,
-        **extra,
+        system_prompt=VISION_SYSTEM_PROMPT,
+        default_instruction=_DEFAULT_DRAWING_INSTRUCTION,
+        note=note,
+        max_output_tokens=max_output_tokens,
+        unparseable_reason="drawing could not be parsed",
     )
-    return _result_from_parse_response(response, unparseable_reason="drawing could not be parsed")
+
+
+# ---------------------------------------------------------------------------
+# Architect GA -> propose the frame (vision) — the "propose from a building drawing" front door
+# ---------------------------------------------------------------------------
+
+# Unlike parse_drawing (which transcribes a sketch OF THE FRAME), this front door is given an
+# architect's general-arrangement drawing of a BUILDING — the portal frame is usually not drawn — and
+# PROPOSES the frame geometry that suits the building envelope. It still only proposes GEOMETRY (the
+# same dimensional inputs the user types by hand today, all confirmed at the gate before the
+# deterministic kernel sizes anything); the model NEVER proposes a member size or any engineering
+# quantity. So it fills the SAME nullable FrameSpecExtraction and reuses the whole safety pipeline.
+PROPOSE_FROM_GA_SYSTEM_PROMPT = (
+    "You are a structural-layout assistant for a steel portal-frame design tool. The user provides an "
+    "ARCHITECT'S general-arrangement (GA) drawing — plans and/or elevations of a BUILDING. The steel "
+    "portal frame itself is usually NOT drawn. Your job is to PROPOSE the single-bay steel portal "
+    "frame that would suit this building, using ONLY the architect's labelled dimensions.\n\n"
+    "HARD RULES:\n"
+    "1. Base every proposal on LABELLED dimensions the architect has written (grid dimensions, level "
+    "annotations, roof-pitch notes, overall lengths). NEVER measure by scale, estimate, or invent a "
+    "dimension. If a value cannot be read from a label, set it to null.\n"
+    "2. Propose the portal-frame geometry from the building envelope:\n"
+    "   - span_m: the clear width the portal spans — the distance between the two external column "
+    "grid lines the frame sits on (usually the SHORTER plan dimension).\n"
+    "   - eaves_height_m: floor level up to the eaves (top of column), from the elevation's level "
+    "annotations.\n"
+    "   - roof_pitch_deg: the roof pitch as labelled.\n"
+    "   - bay_spacing_m: the spacing between adjacent portal frames along the building length — use "
+    "the labelled structural grid spacing if the drawing shows one; otherwise null (do not guess).\n"
+    "   - number_of_bays: count the bays (the spacings between grid lines) along the length if the "
+    "structural grid is drawn and labelled; otherwise null.\n"
+    "3. Do NOT perform any structural ENGINEERING calculation. NEVER propose a member size, section, "
+    "steel mass/tonnage, load capacity, utilisation, or pass/fail — a deterministic engine computes "
+    "those later and a registered engineer confirms them. You propose GEOMETRY only.\n"
+    "4. Loads and wind (roof_dead_load_kpa, basic_wind_speed_ms, terrain_category, etc.) are almost "
+    "never on an architectural GA — leave them null unless the drawing's notes explicitly state them.\n"
+    "5. Convert all lengths to metres (GA dimensions are usually in mm) and pitch to degrees.\n"
+    "6. If you are unsure about any field, it MUST be null — a clarifying question is always better "
+    "than a guess. If a quantity is labelled inconsistently, set it to null.\n"
+    "7. SCOPE: this tool designs only single-bay symmetric steel portal frames. If the building "
+    "cannot sensibly be framed as a single-bay portal (multi-storey, a large multi-span/multi-bay "
+    "layout needing internal columns, a concrete/timber structure, a bridge, etc.), set "
+    "in_scope=false with a short out_of_scope_reason. Otherwise leave in_scope null."
+)
+
+_DEFAULT_GA_INSTRUCTION = (
+    "This is an architect's general-arrangement drawing of a building. Propose the single-bay steel "
+    "portal frame that suits it, reading only the labelled dimensions."
+)
+
+
+def propose_frame_from_drawing(
+    image_url: str,
+    *,
+    client: Any,
+    model: str,
+    note: str | None = None,
+    max_output_tokens: int | None = None,
+) -> ParseResult:
+    """Propose a portal-frame :class:`ParseResult` from an architect's GA drawing (vision).
+
+    The "propose from a building drawing" front door — a focused, in-wedge slice of topology
+    generation. Given an architect's general-arrangement drawing (plans/elevations of a building,
+    the frame usually not drawn), the vision model PROPOSES the single-bay portal-frame geometry
+    (span, eaves height, pitch, bay spacing, bay count) that fits the labelled building envelope.
+
+    Safety contract (identical to every other front door): the model fills the SAME nullable
+    :class:`FrameSpecExtraction`; it proposes only GEOMETRY (the dimensional inputs the user types by
+    hand today), NEVER a member size or any engineering number; anything it cannot read from a label
+    stays null and becomes a clarifying question; and every proposed value flows through the existing
+    confirm gate before the deterministic kernel sizes anything. A PDF is rendered to image(s) first
+    (:func:`coerce_drawing_to_images`); a malformed PDF raises :class:`DrawingDecodeError`.
+    """
+    return _run_vision_extraction(
+        image_url,
+        client=client,
+        model=model,
+        system_prompt=PROPOSE_FROM_GA_SYSTEM_PROMPT,
+        default_instruction=_DEFAULT_GA_INSTRUCTION,
+        note=note,
+        max_output_tokens=max_output_tokens,
+        unparseable_reason="drawing could not be parsed",
+    )

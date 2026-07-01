@@ -50,6 +50,7 @@ from torenone_ai.parsing import (
     parse_drawing,
     pdf_to_image_data_url,
     pdf_to_image_data_urls,
+    propose_frame_from_drawing,
 )
 
 __all__ = [
@@ -69,6 +70,7 @@ __all__ = [
     "parse_description_from_env",
     # Drawings/plans-in (vision)
     "parse_drawing",
+    "propose_frame_from_drawing",
     "image_data_url",
     "pdf_to_image_data_url",
     "pdf_to_image_data_urls",

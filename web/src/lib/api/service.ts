@@ -161,15 +161,19 @@ export async function parseDescription(description: string): Promise<ParseRespon
 }
 
 /**
- * Drawings-in: parse an uploaded drawing/sketch of a portal frame into a draft FrameSpec.
+ * Shared plumbing for the two vision front doors ({@link parseDrawing}, {@link proposeFrame}).
  *
- * Mirrors {@link parseDescription} exactly — same auth, same retry, same `ParseResponse` — so the
- * confirm/clarification UI is shared. The image is sent as a `data:` URL. The vision model only
- * transcribes labelled dimensions; the kernel does all engineering and the user confirms downstream.
+ * Both POST an image `data:` URL + optional note to a vision endpoint and get back the SAME
+ * `ParseResponse`, so the confirm/clarification UI is shared. The only difference is the endpoint
+ * (and its safety contract): `/parse-drawing` transcribes a labelled frame sketch; `/propose-frame`
+ * proposes a frame from an architect's building drawing. Neither lets the model produce an
+ * engineering number — the kernel does all engineering and the user confirms downstream.
  */
-export async function parseDrawing(
+async function postDrawing(
+  endpoint: "/parse-drawing" | "/propose-frame",
   imageDataUrl: string,
-  note?: string,
+  note: string | undefined,
+  failVerb: string,
 ): Promise<ParseResponse> {
   const supabase = createClient();
   const {
@@ -179,7 +183,7 @@ export async function parseDrawing(
     throw new ServiceError("Your session has expired — please sign in again.");
   }
 
-  const res = await serviceFetch(`${serviceBaseUrl()}/parse-drawing`, {
+  const res = await serviceFetch(`${serviceBaseUrl()}${endpoint}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -189,7 +193,7 @@ export async function parseDrawing(
   });
 
   if (!res.ok) {
-    let detail = `Reading the drawing failed (${res.status}).`;
+    let detail = `${failVerb} failed (${res.status}).`;
     try {
       const body = (await res.json()) as { detail?: unknown };
       if (body?.detail) detail = String(body.detail);
@@ -200,6 +204,35 @@ export async function parseDrawing(
   }
 
   return (await res.json()) as ParseResponse;
+}
+
+/**
+ * Drawings-in: parse an uploaded drawing/sketch of a portal frame into a draft FrameSpec.
+ *
+ * Mirrors {@link parseDescription} exactly — same auth, same retry, same `ParseResponse` — so the
+ * confirm/clarification UI is shared. The image is sent as a `data:` URL. The vision model only
+ * transcribes labelled dimensions; the kernel does all engineering and the user confirms downstream.
+ */
+export async function parseDrawing(
+  imageDataUrl: string,
+  note?: string,
+): Promise<ParseResponse> {
+  return postDrawing("/parse-drawing", imageDataUrl, note, "Reading the drawing");
+}
+
+/**
+ * Propose-from-GA: read an architect's general-arrangement drawing (the building, not the frame)
+ * and propose the single-bay portal frame that suits it — our in-wedge slice of topology generation.
+ *
+ * Same auth/retry/`ParseResponse` as {@link parseDrawing}, so the confirm/clarification UI is shared.
+ * The vision model proposes only GEOMETRY (the dimensional inputs the user types by hand today, all
+ * confirmed at the gate); it never produces a member size or any engineering number.
+ */
+export async function proposeFrame(
+  imageDataUrl: string,
+  note?: string,
+): Promise<ParseResponse> {
+  return postDrawing("/propose-frame", imageDataUrl, note, "Reading the drawing");
 }
 
 /**

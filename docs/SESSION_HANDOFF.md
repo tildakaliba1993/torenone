@@ -5,6 +5,56 @@ Full context for continuing work in a new session. Everything below is committed
 
 ---
 
+## ⏩⏩⏩⏩⏩⏩⏩⏩⏩ SESSION 10 (2026-07-01) — **READ THIS FIRST**, then Session 9 below
+
+> Tenth session. Worktree `.claude/worktrees/funny-jang-2151cd`; venv + engineering service live in
+> the MAIN checkout `/Users/cash/TorenOne`. Founder is NON-technical (Claude = CTO). Theme: the next
+> in-wedge agent differentiator — **architect general-arrangement (GA) drawing → propose the frame**
+> (Tier 2, COMPETITIVE.md). Key memories: [[competitive-positioning]], [[ai-agent-drawings-in]],
+> [[strategy-and-roadmap]].
+
+### What this session shipped
+1. **Architect-GA → propose the frame (T2-1, 🟢)** — a NEW vision front door. Where "drawings-in"
+   ([[ai-agent-drawings-in]]) transcribes a labelled sketch OF THE FRAME, this reads an architect's
+   general-arrangement drawing (the BUILDING; the frame usually isn't drawn) and **proposes** the
+   single-bay portal frame that fits the labelled envelope (span/eaves/pitch/bay/bay-count).
+   - Service: `torenone_ai.propose_frame_from_drawing` + `PROPOSE_FROM_GA_SYSTEM_PROMPT` in
+     `service/src/torenone_ai/parsing.py` (refactored the shared vision plumbing into
+     `_run_vision_extraction`, reused by both `parse_drawing` and the new fn). `POST /propose-frame`
+     in `app.py` (mirrors `/parse-drawing`: same auth/rate-limit/image-size-cap; DrawingDecodeError→422,
+     OpenAIError→502). `ProposeFrameRequest` (subclass of `ParseDrawingRequest`) in `schemas.py`.
+     Tests: `service/tests/test_propose_frame.py` + `test_propose_frame_route.py` (11 new).
+   - Web: `proposeFrame()` in `web/src/lib/api/service.ts` (refactored shared `postDrawing` helper);
+     `describe-step.tsx` upload gained a **mode toggle** — "A drawing of the frame" (transcribe, the
+     existing path) vs "An architect's building drawing — propose the frame for me" — with
+     mode-aware copy. New test in `describe-step.test.tsx`.
+   - **Company-law read (🟢, founder owns the call):** the agent proposes only GEOMETRY — the same
+     dimensional inputs the user types by hand today, all edited/confirmed at the gate before the
+     deterministic kernel sizes anything. It NEVER produces an engineering number, member size, or
+     code check. No engineering method/number changed → **not** a sign-off-pack item. Same reusable
+     pattern: a new front door fills the SAME nullable `FrameSpecExtraction` → same clarify/confirm
+     gate → same kernel. Loads/wind aren't on a GA → they become clarifying questions (never guessed).
+
+### Verified locally (all green)
+- Service: **313 passed**, 1 skipped (`PYTHONPATH=kernel/src:tools:service/src .venv/bin/pytest service`).
+- Web: **127 passed** (`npm run test`), `typecheck`/`lint`/`build` all clean. (Re-ran `npm ci` in the
+  worktree — disk had ~13 GB free, so local web checks work again this session.)
+- `mypy kernel/src tools service/src` clean (71 files); `ruff` clean.
+
+### NOT yet deployed as of writing (do next)
+- Committed on branch `claude/funny-jang-2151cd`, **not yet pushed/deployed** (pending founder OK on
+  the deploy-triggering push — [[netlify-deploy-frugally]]). To ship: `git push origin HEAD:main`
+  (→ CI + Netlify web build), watch `gh run watch <id> --exit-status --compact`, then **`fly deploy`
+  from the WORKTREE** for the service (`/propose-frame` will be 404 until deployed, 401 once live).
+
+### What's next (priority — founder's call; keep it disciplined)
+- Same as Session 9: Tier 0 (co-founder validation gate + pilots) is the real revenue blocker and is
+  now **blocked on landing a replacement Pr.Eng** ([[cofounder-search]]). In-wedge build options:
+  **multi-bay frames** (biggest real-SA steel-market gap), **mono-pitch v2** (wind + last mile, D12),
+  a basic GA/member-schedule drawing output. NOT: whole-building/multi-material, US/AISC, full CAD.
+
+---
+
 ## ⏩⏩⏩⏩⏩⏩⏩⏩ SESSION 9 CONTINUATION (2026-07-01) — **READ THIS FIRST**, then Session 8 below
 
 > Ninth session (a very long one, 2026-06-30 → 07-01; the SESSION 8 block below covers only its

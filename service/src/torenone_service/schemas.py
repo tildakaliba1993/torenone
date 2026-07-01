@@ -59,6 +59,15 @@ class ParseDrawingRequest(BaseModel):
         return v
 
 
+class ProposeFrameRequest(ParseDrawingRequest):
+    """An architect's general-arrangement drawing to PROPOSE a portal frame from.
+
+    Same payload shape and validation as :class:`ParseDrawingRequest` (image/PDF/https), but the
+    intent differs: the drawing is the *building*, not the frame, and the agent proposes the frame
+    geometry that suits it (see torenone_ai.propose_frame_from_drawing).
+    """
+
+
 class ParseAssumption(BaseModel):
     """A documented default applied because the user did not state the value."""
 

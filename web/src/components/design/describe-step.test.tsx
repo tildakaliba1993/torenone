@@ -4,12 +4,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ParseResponse } from "@/lib/api/service";
 
-const { parseDescription, ServiceError } = vi.hoisted(() => {
+const { parseDescription, parseDrawing, proposeFrame, buildSpec, ServiceError } = vi.hoisted(() => {
   class ServiceError extends Error {}
-  return { parseDescription: vi.fn(), ServiceError };
+  return {
+    parseDescription: vi.fn(),
+    parseDrawing: vi.fn(),
+    proposeFrame: vi.fn(),
+    buildSpec: vi.fn(),
+    ServiceError,
+  };
 });
 vi.mock("@/lib/api/service", () => ({
   parseDescription: (description: string) => parseDescription(description),
+  parseDrawing: (dataUrl: string, note?: string) => parseDrawing(dataUrl, note),
+  proposeFrame: (dataUrl: string, note?: string) => proposeFrame(dataUrl, note),
+  buildSpec: (values: unknown) => buildSpec(values),
   ServiceError,
 }));
 
@@ -92,6 +101,20 @@ describe("DescribeStep", () => {
     await userEvent.type(screen.getByLabelText("Describe your portal frame"), "a suspension bridge");
     await userEvent.click(screen.getByRole("button", { name: /parse description/i }));
     expect(await screen.findByText("Multi-bay frames are not supported yet.")).toBeTruthy();
+  });
+
+  it("offers a frame-sketch and an architect-drawing upload mode, defaulting to frame", async () => {
+    render(<DescribeStep onComplete={vi.fn()} />);
+    const frame = screen.getByRole("radio", { name: /a drawing of the frame/i });
+    const ga = screen.getByRole("radio", { name: /architect.s building drawing/i });
+    expect(frame.getAttribute("aria-checked")).toBe("true");
+    expect(ga.getAttribute("aria-checked")).toBe("false");
+
+    await userEvent.click(ga);
+    expect(ga.getAttribute("aria-checked")).toBe("true");
+    expect(frame.getAttribute("aria-checked")).toBe("false");
+    // GA mode reframes the copy from "read my labels" to "propose the frame".
+    expect(screen.getByText(/it never sizes a member or computes any engineering value/i)).toBeTruthy();
   });
 
   it("shows a friendly error when the service is unreachable", async () => {

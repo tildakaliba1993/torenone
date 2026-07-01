@@ -11,7 +11,16 @@ import {
   buildSpec,
   parseDescription,
   parseDrawing,
+  proposeFrame,
 } from "@/lib/api/service";
+
+/**
+ * Two ways to read an upload:
+ *  - "frame": a drawing/sketch OF THE PORTAL FRAME — we transcribe the dimensions you've labelled.
+ *  - "ga":    an architect's general-arrangement drawing of the BUILDING — we propose the frame that
+ *             suits it. Both only ever produce GEOMETRY you confirm; the kernel does all engineering.
+ */
+type DrawingMode = "frame" | "ga";
 
 const EXAMPLES = [
   "20 m clear-span warehouse in Pretoria, 6 m to eaves, 10° roof pitch, 6 m bay spacing, 5 bays.",
@@ -29,6 +38,7 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
   const [feedback, setFeedback] = useState<ParseResponse | null>(null);
   const [drawingName, setDrawingName] = useState<string | null>(null);
   const [drawingPreview, setDrawingPreview] = useState<string | null>(null);
+  const [drawingMode, setDrawingMode] = useState<DrawingMode>("frame");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const trimmed = description.trim();
@@ -54,6 +64,13 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
     } finally {
       setPending(false);
     }
+  }
+
+  // Read an upload according to the chosen mode: transcribe a frame sketch, or propose a frame from
+  // an architect's building drawing. Both hand back the SAME ParseResponse → the same confirm gate.
+  function readDrawing(dataUrl: string): Promise<ParseResponse> {
+    const context = trimmed || undefined;
+    return drawingMode === "ga" ? proposeFrame(dataUrl, context) : parseDrawing(dataUrl, context);
   }
 
   function readAsDataUrl(file: File): Promise<string> {
@@ -93,7 +110,7 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
       const dataUrl = await readAsDataUrl(file);
       setDrawingPreview(dataUrl);
       // Any text typed above is passed along as extra context for the drawing.
-      handleResult(await parseDrawing(dataUrl, trimmed || undefined));
+      handleResult(await readDrawing(dataUrl));
     } catch (e) {
       setError(e instanceof ServiceError ? e.message : "Something went wrong reading the drawing.");
     } finally {
@@ -110,7 +127,7 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
     setError(null);
     setFeedback(null);
     try {
-      handleResult(await parseDrawing(drawingPreview, trimmed || undefined));
+      handleResult(await readDrawing(drawingPreview));
     } catch (e) {
       setError(e instanceof ServiceError ? e.message : "Something went wrong reading the drawing.");
     } finally {
@@ -167,16 +184,62 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
       </div>
 
       <div className="flex flex-col gap-2">
-        <p className="text-sm text-muted">
-          Upload a drawing, plan, or sketch (image or PDF). We read only the dimensions you’ve
-          labelled on it — anything not shown becomes a question, never a guess. You confirm
-          everything before any engineering runs.
-        </p>
-        <p className="text-xs text-subtle">
-          Tip: best results when the span, eaves height, pitch and bay spacing are labelled — and a
-          notes block gives the roof dead load, wind speed and terrain category, so nothing is left
-          to ask.
-        </p>
+        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="What kind of drawing is this?">
+          {(
+            [
+              { mode: "frame", title: "A drawing of the frame", hint: "Read my labelled dimensions" },
+              { mode: "ga", title: "An architect’s building drawing", hint: "Propose the frame for me" },
+            ] as const
+          ).map(({ mode, title, hint }) => {
+            const active = drawingMode === mode;
+            return (
+              <button
+                key={mode}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => setDrawingMode(mode)}
+                disabled={pending}
+                className={`flex flex-col gap-0.5 rounded-md border px-3 py-2 text-left transition-colors disabled:opacity-60 ${
+                  active
+                    ? "border-accent bg-surface-raised text-foreground"
+                    : "border-border bg-surface text-muted hover:border-border-strong hover:text-foreground"
+                }`}
+              >
+                <span className="text-sm font-medium">{title}</span>
+                <span className="text-xs text-subtle">{hint}</span>
+              </button>
+            );
+          })}
+        </div>
+        {drawingMode === "ga" ? (
+          <>
+            <p className="text-sm text-muted">
+              Upload an architect’s general-arrangement drawing (plans/elevations, image or PDF). The
+              frame usually isn’t drawn — so the agent <strong>proposes</strong> the single-bay portal
+              frame that fits, reading only the labelled dimensions (grids, levels, roof pitch). Every
+              proposed value is shown for you to check and edit — nothing is designed until you
+              confirm.
+            </p>
+            <p className="text-xs text-subtle">
+              The agent proposes geometry only — it never sizes a member or computes any engineering
+              value. Loads and wind aren’t on an architectural drawing, so it’ll ask you for those.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-muted">
+              Upload a drawing, plan, or sketch (image or PDF). We read only the dimensions you’ve
+              labelled on it — anything not shown becomes a question, never a guess. You confirm
+              everything before any engineering runs.
+            </p>
+            <p className="text-xs text-subtle">
+              Tip: best results when the span, eaves height, pitch and bay spacing are labelled — and a
+              notes block gives the roof dead load, wind speed and terrain category, so nothing is left
+              to ask.
+            </p>
+          </>
+        )}
         <input
           ref={fileInputRef}
           type="file"
@@ -193,7 +256,9 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
           disabled={pending}
           className="flex flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border-strong bg-surface px-3 py-6 text-sm text-muted transition-colors hover:border-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <span className="font-medium text-foreground">Choose a drawing or plan…</span>
+          <span className="font-medium text-foreground">
+            {drawingMode === "ga" ? "Choose an architect’s drawing…" : "Choose a drawing or plan…"}
+          </span>
           <span className="text-xs text-subtle">PNG, JPG or PDF, up to 10 MB</span>
         </button>
         {drawingPreview ? (
@@ -242,7 +307,13 @@ export function DescribeStep({ onComplete }: { onComplete: (result: ParseRespons
       <div>
         {drawingPreview ? (
           <Button onClick={() => void onReadDrawingAgain()} loading={pending} disabled={pending}>
-            {pending ? "Reading…" : "Read drawing again with these details"}
+            {pending
+              ? drawingMode === "ga"
+                ? "Proposing…"
+                : "Reading…"
+              : drawingMode === "ga"
+                ? "Propose frame again with these details"
+                : "Read drawing again with these details"}
           </Button>
         ) : (
           <Button onClick={onParse} loading={pending} disabled={disabled}>

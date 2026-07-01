@@ -32,6 +32,7 @@ from torenone_ai import (
     build_frame_spec,
     parse_description,
     parse_drawing,
+    propose_frame_from_drawing,
     run_design_agent,
 )
 
@@ -67,6 +68,7 @@ from torenone_service.schemas import (
     ParseDrawingRequest,
     ParseRequest,
     ParseResponse,
+    ProposeFrameRequest,
     StampRequest,
     StampResponse,
 )
@@ -255,10 +257,10 @@ def create_app(
         A FrameSpec / description payload is small (a few KB); the cap is generous but
         bounded. Enforced via the Content-Length header (clients must send it).
         """
-        # The drawings-in endpoint carries an image, so it gets a larger (still bounded) cap.
+        # The image endpoints carry a drawing, so they get a larger (still bounded) cap.
         limit = (
             MAX_IMAGE_REQUEST_BYTES
-            if request.url.path == "/parse-drawing"
+            if request.url.path in ("/parse-drawing", "/propose-frame")
             else MAX_REQUEST_BYTES
         )
         content_length = request.headers.get("content-length")
@@ -377,6 +379,48 @@ def create_app(
         response = ParseResponse.from_result(result)
         logger.info(
             "parse_drawing",
+            extra={"user_id": user.user_id, "status": response.status},
+        )
+        return response
+
+    @app.post("/propose-frame")
+    @limiter.limit(PARSE_RATE_LIMIT)
+    def propose_frame_route(
+        request: Request,
+        body: ProposeFrameRequest,
+        user: AuthenticatedUser = Depends(require_user),
+        ai: AIRuntime = Depends(get_ai_runtime),
+    ) -> ParseResponse:
+        """Propose a portal frame from an architect's general-arrangement drawing.
+
+        The "propose from a building drawing" front door — our in-wedge slice of topology generation.
+        Same protection, rate limit, and ``ParseResponse`` shape as ``/parse-drawing`` (so the web
+        confirm gate is reused unchanged) and the same safety contract: the vision model proposes only
+        GEOMETRY into the nullable extraction — never a member size or any engineering number — and
+        every proposed value flows through the confirm gate before the deterministic kernel sizes
+        anything (see torenone_ai.propose_frame_from_drawing).
+        """
+        try:
+            result = propose_frame_from_drawing(
+                body.image_data_url, client=ai.client, model=ai.model, note=body.note
+            )
+        except DrawingDecodeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="couldn't read that file — please upload a clear image or a valid PDF",
+            ) from exc
+        except OpenAIError as exc:
+            logger.warning(
+                "ai_upstream_error",
+                extra={"user_id": user.user_id, "error_type": type(exc).__name__},
+            )
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="the AI parsing service is temporarily unavailable",
+            ) from exc
+        response = ParseResponse.from_result(result)
+        logger.info(
+            "propose_frame",
             extra={"user_id": user.user_id, "status": response.status},
         )
         return response

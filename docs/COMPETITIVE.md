@@ -110,7 +110,14 @@ the trust layer that gets designs actually *used*. That, plus submission-ready o
 **Tier 1 — highest-leverage, in-wedge, mostly co-founder-independent (build NOW):** see tickets below.
 
 **Tier 2 — agent differentiators, still in-wedge:**
-- Ingest a real architect's shed GA (not just a labelled portal sketch) → propose the frame.
+- ✅ **SHIPPED (2026-07-01, T2-1, 🟢):** ingest a real architect's general-arrangement drawing (not
+  just a labelled portal sketch) → **propose the frame**. `POST /propose-frame` +
+  `torenone_ai.propose_frame_from_drawing` (a new vision front door reusing the whole safety
+  pipeline); web upload gained a **"A drawing of the frame" vs "An architect's building drawing —
+  propose the frame for me"** mode toggle. The agent proposes **geometry only** (the dimensional
+  inputs the user types by hand today, all confirmed at the gate); it never sizes a member or
+  computes any engineering number, so no engineering method/number changed → 🟢, not sign-off-gated.
+  Our focused, in-wedge slice of Genia's topology generation.
 - Cost/material optimisation with **real SA fabricator rates + section availability** (data moat).
 
 **Tier 3 — only post-traction:** AISC (US) *to follow SA firms doing international work*, not to fight
