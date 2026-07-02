@@ -360,7 +360,23 @@ export function ReviewStep({
               <NumberField name="geometry.bay_spacing_m" label="Bay spacing" unit="m" />
               <NumberField name="geometry.number_of_bays" label="Number of bays" />
               {roofType === "monopitch" ? null : (
-                <NumberField name="geometry.number_of_spans" label="Number of spans (across width)" />
+                <div>
+                  <NumberField name="geometry.number_of_spans" label="Number of spans" />
+                  {Number.isFinite(Number(geometry?.span_m)) &&
+                  Number.isFinite(nSpans) &&
+                  nSpans >= 1 ? (
+                    <p className="text-muted mt-1 text-xs">
+                      Each span is {Number(geometry?.span_m)} m wide → total building width{" "}
+                      <strong>{(Number(geometry?.span_m) * nSpans).toFixed(1)} m</strong>
+                      {nSpans > 1
+                        ? ` (${nSpans} spans, ${nSpans - 1} internal column line${
+                            nSpans - 1 > 1 ? "s" : ""
+                          })`
+                        : ""}
+                      . For a wide building, set the width of ONE span here, not the total.
+                    </p>
+                  ) : null}
+                </div>
               )}
             </div>
 
