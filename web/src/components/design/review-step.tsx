@@ -330,8 +330,9 @@ export function ReviewStep({
                 <p className="text-muted mt-1">
                   Single-slope design is new and <strong>awaiting registered-engineer
                   validation</strong> — treat it as indicative only, not for construction, until
-                  your firm&rsquo;s engineer has reviewed and stamped it. Gravity is designed; wind
-                  and the connections/baseplate/footing are not yet modelled for mono-pitch.
+                  your firm&rsquo;s engineer has reviewed and stamped it. Gravity, the eaves-knee
+                  connections, the baseplate and the footing are designed (provisional); wind is not
+                  yet modelled for mono-pitch.
                   {Number.isFinite(highEavesM) ? (
                     <>
                       {" "}Low eaves is {Number(geometry?.eaves_height_m)} m; the high eaves rises to
@@ -373,8 +374,9 @@ export function ReviewStep({
                   A {nSpans}-span frame ({nSpans - 1} internal/valley column line
                   {nSpans - 1 > 1 ? "s" : ""}) is new and <strong>awaiting registered-engineer
                   validation</strong> — treat it as indicative only, not for construction, until your
-                  firm&rsquo;s engineer has reviewed and stamped it. Gravity is designed; wind and the
-                  connections/baseplates/footings are not yet modelled for multi-span.
+                  firm&rsquo;s engineer has reviewed and stamped it. Gravity, the eaves and valley
+                  connections, the baseplate and the footing are designed (provisional); wind is not
+                  yet modelled for multi-span.
                 </p>
               </div>
             ) : null}
