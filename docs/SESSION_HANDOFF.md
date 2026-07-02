@@ -16,20 +16,30 @@ Full context for continuing work in a new session. Everything below is committed
 > `/Users/cash/TorenOne`.** Founder is NON-technical (Claude = CTO, founder = implementer).
 
 ### ⭐ THE IMMEDIATE NEXT ACTION (founder's explicit instruction: check EVERY increment before the next)
-**Mono-pitch v2 is being built increment-by-increment. Increment 1 (the LAST MILE) is DONE + LIVE but
-NOT YET TESTED by the founder.** The founder wants to **TEST increment 1 in the new session FIRST**,
-then build **increment 2 = WIND** (SANS 10160-3 wind pressures + wind-on-frame for mono-pitch AND
-multi-span). Do NOT start the wind increment until the founder has tested + approved increment 1.
+**SESSION 11 UPDATE (2026-07-02):** Increment 1 (the LAST MILE) was **TESTED + APPROVED live** by the
+founder. **Increment 2 = WIND is now CODE-COMPLETE (committed locally, NOT yet deployed)** for BOTH
+mono-pitch (D12) and multi-span (D13). It models SANS 10160-3 wind (mono-pitch roof cpe from Table 8;
+duopitch-per-span for multi-span, conservative), runs wind-on-frame, and reports ULS-2/3 member +
+SLS-2 sway checks as **ADVISORY / non-gating** (exactly like the existing duopitch wind — members stay
+gravity-sized). All 🟡 PROVISIONAL, queued for the Pr.Eng (D4–D7 + D12/D13). Kernel/service/web gates
+green; dead-only wind reproduces the validated gravity statics (strong equivalence check).
+**NEXT: push to `main` + `fly deploy` (engine) + Netlify (web), then the founder TESTS increment 2 live**
+(founder chose "build multi-span wind first, deploy both together"). After wind: remaining Tier 2 =
+SA-cost optimisation.
 
-**Test script for increment 1 (mono-pitch + multi-span LAST MILE — connections/baseplate/footing):**
-1. Hard-refresh torenone.com (Cmd+Shift+R) — everything below is LIVE (Fly + Netlify).
-2. New design → describe a **mono-pitch** frame (set roof type = mono-pitch on the Review screen).
-   On results, confirm a **Connections** section with **two eaves knees (low + high)** + a **Baseplate**
-   (previously these said "not modelled"). Download the PDF and confirm they're in it.
-3. New design → wide frame → on Review set **Number of spans = 2** (or use "Clear-span vs multi-span").
-   On results, confirm **Connections** shows an **external eaves + a valley connection** + a **Baseplate**.
-4. To see a **footing**, add an **allowable bearing pressure** on the Review screen before running.
-5. All multi-span/mono-pitch output stays clearly **PROVISIONAL** (banners + PDF warnings).
+**Test script for increment 2 (WIND — advisory, mono-pitch + multi-span):**
+1. Hard-refresh torenone.com. Run a mono-pitch design (roof type = mono-pitch, set a rafter restraint
+   spacing e.g. 1.5). On results → **Checks** table, confirm rows suffixed **`[ULS-2 wind]` /
+   `[ULS-3 wind]`** and a **`[SLS-2 wind]`** sway row, all shown **amber "ADVISORY"** (they never turn
+   the design red / never change the chosen sections). The provisional banner should now say wind is
+   "checked as an advisory, non-gating action".
+2. Repeat for a multi-span frame (Number of spans = 2) — advisory wind rows appear for the external
+   column, the valley (internal) column, and the rafters.
+3. Confirm the overall result still **passes on gravity** and the sections are unchanged vs before wind.
+
+**(Increment 1 test script — kept for reference; already PASSED):** mono-pitch → 2 eaves knees +
+baseplate; multi-span (spans=2) → external + valley connection + baseplate; add an allowable bearing
+pressure to see a footing; all PROVISIONAL.
 
 ### CURRENT LIVE STATE (all on `main`, CI-green, DEPLOYED — Fly + Netlify)
 - **Multi-span portal (Path B) — FULL end-to-end, 🟡 PROVISIONAL D13:** geometry (`number_of_spans`),
