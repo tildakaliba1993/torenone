@@ -98,6 +98,56 @@ def duopitch_roof_pressure_coefficients(pitch_deg: float) -> RoofPressureCoeffic
     )
 
 
+# --- Mono-pitch roof (SANS 10160-3:2019 Table 8) ----------------------------------------------
+# PROVISIONAL (D12 wind). A mono-pitch has ONE roof plane, so — unlike a duopitch — the two
+# transverse wind directions are NOT symmetric and BOTH must be considered:
+#   θ = 0°   : wind blows UP the slope (low eaves windward). Zone H has two branches for pitch
+#              5°–45° (Table 8 NOTE 1): a suction (uplift) case and a pressure (downforce) case.
+#   θ = 180° : wind blows over the high side (high eaves windward). Zone H is suction only.
+# For the internal-frame 2D line load we use the BULK zone H (roof away from the windward edge) —
+# the same simplification the duopitch path uses (zones H/I). Local edge zones F/G (Table 8
+# cols 1–4, for cladding/fixings) are out of the 2D-frame scope. Zone H, cpe,10, transcribed:
+_MONOPITCH_PITCH_DEG: tuple[float, ...] = (5.0, 15.0, 30.0, 45.0)
+_MONO_H_THETA0_SUCTION: tuple[float, ...] = (-0.6, -0.3, -0.2, -0.0)  # θ=0° zone H, negative branch
+_MONO_H_THETA0_PRESSURE: tuple[float, ...] = (0.0, 0.2, 0.4, 0.6)  # θ=0° zone H, positive branch
+_MONO_H_THETA180_SUCTION: tuple[float, ...] = (-0.8, -0.9, -0.8, -0.7)  # θ=180° zone H (suction)
+
+
+class MonopitchRoofPressureCoefficients(BaseModel):
+    """cpe,10 (bulk zone H) for a mono-pitch roof's single plane (SANS 10160-3:2019 Table 8).
+
+    θ=0° (wind up the slope) gives two branches per Table 8 NOTE 1 — suction and pressure —
+    which cannot act together. θ=180° (wind over the high side) gives a suction-only case. The
+    frame-loads stage enumerates all three into wind load cases; the analysis takes the worst.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    theta0_cpe_suction: float = Field(description="θ=0° zone H, negative (uplift) branch.")
+    theta0_cpe_pressure: float = Field(description="θ=0° zone H, positive (downforce) branch.")
+    theta180_cpe_suction: float = Field(description="θ=180° zone H, suction (high side windward).")
+    pitch_deg: float = Field(gt=0)
+    clause: str = Field(min_length=1)
+
+
+def monopitch_roof_pressure_coefficients(pitch_deg: float) -> MonopitchRoofPressureCoefficients:
+    """cpe,10 for a mono-pitch roof (bulk zone H), by pitch (SANS 10160-3:2019 Table 8).
+
+    PROVISIONAL (D12 wind). Interpolates linearly between same-sign tabulated values (NOTE 2).
+    """
+    if not (5.0 <= pitch_deg <= 45.0):
+        raise NotImplementedError(
+            "Mono-pitch roof cpe is implemented for pitch 5°–45° (typical portal range). "
+            "Near-flat (<5°) and steep (>45°) roofs are out of MVP scope."
+        )
+    return MonopitchRoofPressureCoefficients(
+        theta0_cpe_suction=_interp(pitch_deg, _MONOPITCH_PITCH_DEG, _MONO_H_THETA0_SUCTION),
+        theta0_cpe_pressure=_interp(pitch_deg, _MONOPITCH_PITCH_DEG, _MONO_H_THETA0_PRESSURE),
+        theta180_cpe_suction=_interp(pitch_deg, _MONOPITCH_PITCH_DEG, _MONO_H_THETA180_SUCTION),
+        pitch_deg=pitch_deg,
+        clause="SANS 10160-3:2019 Table 8 (mono-pitch, zone H, θ=0° & θ=180°)",
+    )
+
+
 # --- Internal pressure, cpi (SANS 10160-3:2019 cl. 8.3.9) -------------------------------------
 # Enclosed (no dominant wall): cl. 8.3.9.6 NOTE 2 — where μ is not estimated, take cpi as the more
 # onerous of +0.2 and −0.3 (both cases considered). The μ/Figure-16 refinement is deferred post-MVP.

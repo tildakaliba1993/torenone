@@ -11,6 +11,7 @@ from torenone_kernel.loads.wind_pressure import (
     dominant_opening_internal_pressure,
     duopitch_roof_pressure_coefficients,
     enclosed_internal_pressure,
+    monopitch_roof_pressure_coefficients,
     wall_pressure_coefficients,
 )
 
@@ -88,6 +89,56 @@ def test_duopitch_roof_windward_has_both_uplift_and_downforce() -> None:
 def test_duopitch_roof_out_of_scope_raises(pitch: float) -> None:
     with pytest.raises(NotImplementedError):
         duopitch_roof_pressure_coefficients(pitch)
+
+
+# --- Mono-pitch roof (SANS 10160-3:2019 Table 8, bulk zone H, θ = 0° & 180°) ---
+
+
+@pytest.mark.parametrize(
+    "pitch,t0_suction,t0_pressure,t180_suction",
+    [
+        (5.0, -0.6, 0.0, -0.8),   # Table 8 row α = 5°  (zone H)
+        (15.0, -0.3, 0.2, -0.9),  # row α = 15°
+        (30.0, -0.2, 0.4, -0.8),  # row α = 30°
+        (45.0, -0.0, 0.6, -0.7),  # row α = 45°
+    ],
+)
+def test_monopitch_roof_cpe_matches_table_8(
+    pitch: float, t0_suction: float, t0_pressure: float, t180_suction: float
+) -> None:
+    r = monopitch_roof_pressure_coefficients(pitch)
+    assert r.theta0_cpe_suction == pytest.approx(t0_suction)
+    assert r.theta0_cpe_pressure == pytest.approx(t0_pressure)
+    assert r.theta180_cpe_suction == pytest.approx(t180_suction)
+
+
+def test_monopitch_roof_interpolates_within_pitch() -> None:
+    # 10°, between 5° and 15°: θ0 suction −0.45, θ0 pressure +0.1, θ180 suction −0.85.
+    r = monopitch_roof_pressure_coefficients(10.0)
+    assert r.theta0_cpe_suction == pytest.approx(-0.45)
+    assert r.theta0_cpe_pressure == pytest.approx(0.1)
+    assert r.theta180_cpe_suction == pytest.approx(-0.85)
+
+
+def test_monopitch_theta0_has_both_uplift_and_downforce() -> None:
+    r = monopitch_roof_pressure_coefficients(15.0)
+    assert r.theta0_cpe_suction < 0 < r.theta0_cpe_pressure
+
+
+def test_monopitch_theta180_is_always_suction() -> None:
+    # Wind over the high side lifts the whole plane at every tabulated pitch.
+    for pitch in (5.0, 15.0, 30.0, 45.0):
+        assert monopitch_roof_pressure_coefficients(pitch).theta180_cpe_suction < 0
+
+
+@pytest.mark.parametrize("pitch", [4.9, 0.5, 45.1, 60.0])
+def test_monopitch_roof_out_of_scope_raises(pitch: float) -> None:
+    with pytest.raises(NotImplementedError):
+        monopitch_roof_pressure_coefficients(pitch)
+
+
+def test_monopitch_carries_clause_citation() -> None:
+    assert "Table 8" in monopitch_roof_pressure_coefficients(10.0).clause
 
 
 # --- Internal pressure cpi (SANS 10160-3:2019 cl. 8.3.9) ---
