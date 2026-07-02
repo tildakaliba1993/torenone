@@ -62,7 +62,7 @@ from torenone_kernel.loads.combinations import (
 )
 from torenone_kernel.loads.dead import dead_loads
 from torenone_kernel.loads.imposed import imposed_roof_loads
-from torenone_kernel.loads.wind_loads import wind_loads
+from torenone_kernel.loads.wind_loads import monopitch_wind_loads, wind_loads
 from torenone_kernel.models.enums import RoofType, SteelGrade
 from torenone_kernel.models.frame_spec import FrameSpec
 from torenone_kernel.models.results import (
@@ -310,6 +310,136 @@ def _wind_sway_check(
             f"PROVISIONAL advisory (non-gating). Worst eaves drift "
             f"{worst_drift_mm:.1f} mm vs H/400 = {limit_mm:.1f} mm "
             f"(practice limit H/150 = {eaves_h_mm / 150.0:.1f} mm). Serviceability only; "
+            "wind-on-frame model pending registered-engineer validation."
+        ),
+    )
+
+
+def _monopitch_wind_combination_checks(
+    spec: FrameSpec,
+    *,
+    col_sec: SectionProperties,
+    raf_sec: SectionProperties,
+    dead: DeadLoadResult,
+    combos: dict[str, LoadCombination],
+    fy_col: float,
+    fy_raf: float,
+    kl_col_mm: float,
+    ltb_col_mm: float,
+    kl_raf_mm: float,
+    ltb_raf_mm: float,
+) -> list[CheckResult]:
+    """Check the mono-pitch members under wind combinations ULS-2/3 — INFORMATIONAL (non-gating).
+
+    Mirrors :func:`_wind_combination_checks` for the mono-pitch geometry (both wind directions via
+    :func:`monopitch_wind_loads`, forces via :meth:`MonopitchAnalysis.run_wind_combination`). The
+    columns are checked at the worse of the low/high column demands. PROVISIONAL (D12 wind): sized
+    on gravity only, wind reported as advisory until registered-engineer validation.
+    """
+    wind = monopitch_wind_loads(spec)
+    col_dead = dead.column_self_weight_kn_per_m + dead.wall_cladding_udl_kn_per_m
+    best_per_key: dict[str, tuple[float, list[CheckResult]]] = {}
+    for key in ("ULS-2", "ULS-3"):
+        combo = combos.get(key)
+        if combo is None:
+            continue
+        g_g = combo.factors.get("dead", 1.0)
+        g_w = combo.factors.get("wind", 1.0)
+        for case in wind.cases:
+            dem = MonopitchAnalysis(spec, col_sec, raf_sec).run_wind_combination(
+                rafter_dead_udl_kn_per_m=g_g * dead.rafter_udl_kn_per_m,
+                column_dead_udl_kn_per_m=g_g * col_dead,
+                low_column_wind_udl_kn_per_m=g_w * case.low_column_udl_kn_per_m,
+                high_column_wind_udl_kn_per_m=g_w * case.high_column_udl_kn_per_m,
+                rafter_wind_udl_kn_per_m=g_w * case.rafter_udl_kn_per_m,
+            )
+            col_cu = max(dem.low_col_cu_kn, dem.high_col_cu_kn)
+            col_vu = max(dem.low_col_vu_kn, dem.high_col_vu_kn)
+            col_mu = max(dem.low_col_mu_knm, dem.high_col_mu_knm)
+            try:
+                checks = run_member_checks(
+                    col_sec, fy_col, col_cu, col_vu, col_mu, kl_col_mm, ltb_col_mm, member="column",
+                ) + run_member_checks(
+                    raf_sec, fy_raf, dem.rafter_cu_kn, dem.rafter_vu_kn, dem.rafter_mu_knm,
+                    kl_raf_mm, ltb_raf_mm, member="rafter",
+                )
+            except SectionIneligibleError:
+                continue
+            util = max((c.utilisation for c in checks), default=0.0)
+            prev = best_per_key.get(key)
+            if prev is None or util > prev[0]:
+                best_per_key[key] = (util, checks)
+
+    out: list[CheckResult] = []
+    for key in ("ULS-2", "ULS-3"):
+        entry = best_per_key.get(key)
+        if entry is None:
+            continue
+        combo = combos[key]
+        for c in entry[1]:
+            detail = (
+                f"PROVISIONAL advisory (non-gating). Mono-pitch wind-combination check "
+                f"({combo.name}). {c.detail or ''}"
+            ).strip()
+            out.append(
+                CheckResult(
+                    name=f"{c.name} [{key} wind]",
+                    clause=c.clause,
+                    utilisation=c.utilisation,
+                    passed=c.passed,
+                    informational=True,
+                    detail=detail,
+                )
+            )
+    return out
+
+
+def _monopitch_wind_sway_check(
+    spec: FrameSpec,
+    *,
+    col_sec: SectionProperties,
+    raf_sec: SectionProperties,
+    dead: DeadLoadResult,
+    combos: dict[str, LoadCombination],
+) -> CheckResult | None:
+    """SLS-2 eaves wind-sway (lateral drift) for a mono-pitch — INFORMATIONAL (advisory-only).
+
+    Worst lateral drift of either eaves node (low or high) over all wind cases under SLS-2,
+    vs H/400 measured at the taller (high) eaves. PROVISIONAL (D12 wind); mirrors
+    :func:`_wind_sway_check`. Returns ``None`` if there is no SLS-2 combination.
+    """
+    combo = combos.get("SLS-2")
+    if combo is None:
+        return None
+    wind = monopitch_wind_loads(spec)
+    col_dead = dead.column_self_weight_kn_per_m + dead.wall_cladding_udl_kn_per_m
+    g_g = combo.factors.get("dead", 1.0)
+    g_w = combo.factors.get("wind", 1.0)
+    high_mm = spec.geometry.high_eaves_height_m * 1_000.0
+
+    worst_drift_mm = 0.0
+    for case in wind.cases:
+        disp = MonopitchAnalysis(spec, col_sec, raf_sec).wind_combination_displacements(
+            rafter_dead_udl_kn_per_m=g_g * dead.rafter_udl_kn_per_m,
+            column_dead_udl_kn_per_m=g_g * col_dead,
+            low_column_wind_udl_kn_per_m=g_w * case.low_column_udl_kn_per_m,
+            high_column_wind_udl_kn_per_m=g_w * case.high_column_udl_kn_per_m,
+            rafter_wind_udl_kn_per_m=g_w * case.rafter_udl_kn_per_m,
+        )
+        worst_drift_mm = max(worst_drift_mm, abs(disp["EL"]["DX"]), abs(disp["EH"]["DX"]))
+
+    base = horizontal_sway_check(worst_drift_mm, high_mm)
+    limit_mm = high_mm / 400.0
+    return CheckResult(
+        name=f"{base.name} [SLS-2 wind]",
+        clause=base.clause,
+        utilisation=base.utilisation,
+        passed=base.passed,
+        informational=True,
+        detail=(
+            f"PROVISIONAL advisory (non-gating). Mono-pitch worst eaves drift "
+            f"{worst_drift_mm:.1f} mm vs H/400 = {limit_mm:.1f} mm "
+            f"(practice limit H/150 = {high_mm / 150.0:.1f} mm). Serviceability only; "
             "wind-on-frame model pending registered-engineer validation."
         ),
     )
@@ -701,8 +831,9 @@ def _design_monopitch(
     Gravity (ULS-1) sizing of the single rafter + the two (different-height) columns, reusing
     the validated SANS check pipeline (``autosize_member`` + per-code checks) on forces from the
     validated mono-pitch statics (:class:`MonopitchAnalysis`). The two columns are given the
-    section adequate for the WORSE of the two (conservative single section). **Wind and the last
-    mile (connections/baseplate/footing) are NOT modelled for mono-pitch yet** (see warnings).
+    section adequate for the WORSE of the two (conservative single section). The last mile
+    (connections/baseplate/footing) is designed (v2 inc 1) and WIND (SANS 10160-3 Table 8) is
+    CHECKED as an ADVISORY / non-gating action (v2 inc 2) — both PROVISIONAL (see warnings).
     """
     library = code.section_library()
     combos = {c.name.split()[0]: c for c in code.load_combinations(spec)}
@@ -807,9 +938,23 @@ def _design_monopitch(
 
     assert raf_result is not None and col_result is not None
     connections, baseplate, footing = _design_last_mile_monopitch(spec, raf_sec, col_sec, code)
+    # Wind (ULS-2/3 member checks + SLS-2 eaves sway) — INFORMATIONAL / PROVISIONAL (D12 wind).
+    final_dead = dead_loads(spec, rafter=raf_sec, column=col_sec)
+    fy_raf_final = code.material_fy(spec.materials.steel_grade, raf_sec.flange_thickness_mm)
+    fy_col_final = code.material_fy(spec.materials.steel_grade, col_sec.flange_thickness_mm)
+    monopitch_wind_checks = _monopitch_wind_combination_checks(
+        spec, col_sec=col_sec, raf_sec=raf_sec, dead=final_dead, combos=combos,
+        fy_col=fy_col_final, fy_raf=fy_raf_final,
+        kl_col_mm=KL_col_mm, ltb_col_mm=LTB_col_mm, kl_raf_mm=KL_raf_mm, ltb_raf_mm=LTB_raf_mm,
+    )
+    monopitch_sway = _monopitch_wind_sway_check(
+        spec, col_sec=col_sec, raf_sec=raf_sec, dead=final_dead, combos=combos
+    )
     all_checks = [
         *raf_result.checks, *col_result.checks, deflection_check,
         *_last_mile_checks(connections, baseplate, footing),
+        *monopitch_wind_checks,
+        *([monopitch_sway] if monopitch_sway is not None else []),
     ]
     sections = [
         SectionChoice(member="rafter", designation=raf_sec.designation),
@@ -819,8 +964,11 @@ def _design_monopitch(
         "MONO-PITCH (single-slope) frame — PROVISIONAL geometry (T1-3, sign-off-pack D12). The "
         "statics are validated but the method awaits registered-engineer sign-off before it is "
         "used in construction.",
-        "Members are sized on GRAVITY (ULS-1) only. WIND actions and the wind-on-frame checks are "
-        "NOT modelled for mono-pitch yet.",
+        "Members are sized on GRAVITY (ULS-1). WIND (SANS 10160-3 Table 8, both transverse "
+        "directions θ=0°/θ=180°) is now CHECKED for mono-pitch (v2, PROVISIONAL) as an ADVISORY, "
+        "NON-GATING action — reported with the ULS-2/3 member checks and the SLS-2 eaves-sway. It "
+        "does not size members or gate the result until registered-engineer validation of the "
+        "wind-on-frame method (sign conventions + governing case).",
         "The last mile (both eaves-knee connections, column baseplate, pad footing) is now designed "
         "for mono-pitch (v2, PROVISIONAL) — on GRAVITY (ULS-1) joint/base forces. The baseplate + "
         "footing use the WORSE (higher-axial) of the two column bases (conservative single design).",

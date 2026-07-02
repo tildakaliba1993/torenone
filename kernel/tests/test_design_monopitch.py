@@ -70,13 +70,17 @@ def test_monopitch_reuses_full_member_check_set() -> None:
     assert all(c.clause for c in result.checks)
 
 
-def test_monopitch_is_flagged_provisional_with_last_mile_but_no_wind() -> None:
-    # v2: the last mile (both eaves-knee connections + a baseplate) is now designed; wind still isn't.
+def test_monopitch_is_flagged_provisional_with_last_mile_and_advisory_wind() -> None:
+    # v2: the last mile (both eaves-knee connections + a baseplate) is designed, and wind is now
+    # CHECKED as an advisory (non-gating) action — increment 2.
     result = design(_monopitch_spec())
     blob = " ".join(result.warnings).lower()
     assert "mono-pitch" in blob and "provisional" in blob
-    assert "wind" in blob and "not modelled" in blob  # wind still not modelled
-    assert result.wind is None
+    assert "wind" in blob and "advisory" in blob  # wind now checked, advisory / non-gating
+    # Advisory wind member checks are present (suffixed [ULS-2 wind]/[ULS-3 wind]) and non-gating.
+    wind_checks = [c for c in result.checks if "wind" in c.name.lower()]
+    assert wind_checks, "expected advisory wind checks on the mono-pitch result"
+    assert all(c.informational for c in wind_checks)
     assert result.diagram is None
     # The last mile IS designed now — two eaves-knee connections + a (worst-base) baseplate.
     assert len(result.connections) == 2

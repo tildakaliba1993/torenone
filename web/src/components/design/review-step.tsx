@@ -331,8 +331,8 @@ export function ReviewStep({
                   Single-slope design is new and <strong>awaiting registered-engineer
                   validation</strong> — treat it as indicative only, not for construction, until
                   your firm&rsquo;s engineer has reviewed and stamped it. Gravity, the eaves-knee
-                  connections, the baseplate and the footing are designed (provisional); wind is not
-                  yet modelled for mono-pitch.
+                  connections, the baseplate and the footing are designed, and wind (SANS 10160-3) is
+                  now checked as an advisory, non-gating action (all provisional) for mono-pitch.
                   {Number.isFinite(highEavesM) ? (
                     <>
                       {" "}Low eaves is {Number(geometry?.eaves_height_m)} m; the high eaves rises to

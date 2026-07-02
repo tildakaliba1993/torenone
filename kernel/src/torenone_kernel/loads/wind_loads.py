@@ -19,11 +19,14 @@ Assumptions (surfaced in the report's assumptions block, FR-27):
 
 from __future__ import annotations
 
+from typing import NamedTuple
+
 from torenone_kernel.loads.wind import air_density, peak_velocity_pressure_kpa, peak_wind_speed
 from torenone_kernel.loads.wind_pressure import (
     dominant_opening_internal_pressure,
     duopitch_roof_pressure_coefficients,
     enclosed_internal_pressure,
+    monopitch_roof_pressure_coefficients,
     wall_pressure_coefficients,
 )
 from torenone_kernel.models.frame_spec import FrameSpec
@@ -82,4 +85,104 @@ def wind_loads(spec: FrameSpec) -> WindLoadResult:
         scenario=internal.scenario,
         cases=tuple(cases),
         clause="SANS 10160-3:2019 cl. 7–8 — net = qp·(cpe − cpi)",
+    )
+
+
+class MonopitchWindCase(NamedTuple):
+    """One mono-pitch wind load case: per-member UDLs + the net coefficients used.
+
+    UDL sign conventions match :meth:`MonopitchAnalysis._build_wind_model`: column UDLs +ve =
+    pressure (resolved to the correct inward/outward direction per column in the model); rafter
+    UDL +ve = pressure onto the roof, −ve = uplift.
+    """
+
+    name: str
+    cpi: float
+    net_cp_low_wall: float
+    net_cp_high_wall: float
+    net_cp_roof: float
+    low_column_udl_kn_per_m: float
+    high_column_udl_kn_per_m: float
+    rafter_udl_kn_per_m: float
+
+
+class MonopitchWindResult(NamedTuple):
+    """Characteristic mono-pitch wind actions (SANS 10160-3): qp + per-case per-member loads."""
+
+    peak_velocity_pressure_kpa: float
+    reference_height_m: float
+    scenario: str
+    cases: tuple[MonopitchWindCase, ...]
+    clause: str
+
+
+def monopitch_wind_loads(spec: FrameSpec) -> MonopitchWindResult:
+    """Mono-pitch wind load cases (per-member UDLs), transverse wind — SANS 10160-3:2019.
+
+    PROVISIONAL (D12 wind). A mono-pitch is asymmetric, so BOTH transverse directions are
+    enumerated: θ=0° (wind up the slope — low wall windward, two roof branches per Table 8 NOTE 1)
+    and θ=180° (wind over the high side — high wall windward, roof in suction). Each is crossed with
+    every internal-pressure (cpi) case; the downstream analysis takes the worst per member.
+    """
+    g = spec.geometry
+    w = spec.wind
+
+    ze = g.high_eaves_height_m  # highest point of the single-slope roof
+    vp = peak_wind_speed(ze, w.terrain_category, w.basic_wind_speed_ms)
+    qp = peak_velocity_pressure_kpa(vp, air_density(w.site_altitude_m))
+    tributary_m = g.bay_spacing_m
+
+    walls = wall_pressure_coefficients(ze / g.span_m)
+    roof = monopitch_roof_pressure_coefficients(g.roof_pitch_deg)
+
+    if w.has_dominant_opening:
+        internal = dominant_opening_internal_pressure(walls.cpe_windward)
+    else:
+        internal = enclosed_internal_pressure()
+
+    cases: list[MonopitchWindCase] = []
+    for cpi in internal.cpi_cases:
+        # θ=0°: wind up the slope. Low wall = windward (D), high wall = leeward (E). Two roof branches.
+        for branch, cpe_roof in (
+            ("θ=0° roof suction (uplift)", roof.theta0_cpe_suction),
+            ("θ=0° roof pressure (downforce)", roof.theta0_cpe_pressure),
+        ):
+            ncp_low = walls.cpe_windward - cpi
+            ncp_high = walls.cpe_leeward - cpi
+            ncp_roof = cpe_roof - cpi
+            cases.append(
+                MonopitchWindCase(
+                    name=f"cpi={cpi:+.2f}, {branch}",
+                    cpi=cpi,
+                    net_cp_low_wall=ncp_low,
+                    net_cp_high_wall=ncp_high,
+                    net_cp_roof=ncp_roof,
+                    low_column_udl_kn_per_m=qp * ncp_low * tributary_m,
+                    high_column_udl_kn_per_m=qp * ncp_high * tributary_m,
+                    rafter_udl_kn_per_m=qp * ncp_roof * tributary_m,
+                )
+            )
+        # θ=180°: wind over the high side. High wall = windward (D), low wall = leeward (E); roof suction.
+        ncp_low = walls.cpe_leeward - cpi
+        ncp_high = walls.cpe_windward - cpi
+        ncp_roof = roof.theta180_cpe_suction - cpi
+        cases.append(
+            MonopitchWindCase(
+                name=f"cpi={cpi:+.2f}, θ=180° roof suction (uplift)",
+                cpi=cpi,
+                net_cp_low_wall=ncp_low,
+                net_cp_high_wall=ncp_high,
+                net_cp_roof=ncp_roof,
+                low_column_udl_kn_per_m=qp * ncp_low * tributary_m,
+                high_column_udl_kn_per_m=qp * ncp_high * tributary_m,
+                rafter_udl_kn_per_m=qp * ncp_roof * tributary_m,
+            )
+        )
+
+    return MonopitchWindResult(
+        peak_velocity_pressure_kpa=qp,
+        reference_height_m=ze,
+        scenario=internal.scenario,
+        cases=tuple(cases),
+        clause="SANS 10160-3:2019 cl. 7–8 (mono-pitch, Table 8) — net = qp·(cpe − cpi)",
     )

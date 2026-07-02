@@ -504,6 +504,140 @@ class MonopitchAnalysis:
             "base_high": _forces_at(m, "base_high", "COL_H", high_mm),
         }
 
+    def _build_wind_model(
+        self,
+        *,
+        rafter_dead_udl_kn_per_m: float,
+        column_dead_udl_kn_per_m: float,
+        low_column_wind_udl_kn_per_m: float,
+        high_column_wind_udl_kn_per_m: float,
+        rafter_wind_udl_kn_per_m: float,
+    ) -> tuple[FEModel3D, float, float, float]:
+        """Build, load and solve a mono-pitch wind combination (factored dead + transverse wind).
+
+        PROVISIONAL (D12 wind) — the wind-on-frame application (sign conventions, asymmetric
+        low/high loading) must be validated against SANS worked examples by a registered engineer.
+        All UDLs are already FACTORED by the caller (kN/m = N/mm numerically). Conventions mirror
+        :meth:`PortalAnalysis._build_wind_model`:
+          * dead: GLOBAL vertical, downward (``FY``), on the rafter and both columns;
+          * column wind: GLOBAL horizontal (``FX``) — the LOW column (x=0) takes ``+X`` × its UDL,
+            the HIGH column (x=span) takes ``−X`` × its UDL, so each UDL's sign (pressure +, suction
+            −) resolves to the correct inward/outward direction for BOTH wind directions;
+          * rafter wind: NORMAL to the roof (local ``Fy``), applied as ``−UDL`` (matching the
+            duopitch convention: +ve UDL = pressure onto the roof, −ve = uplift).
+        """
+        geom = self.spec.geometry
+        span_mm = geom.span_m * 1_000.0
+        low_mm = geom.eaves_height_m * 1_000.0
+        high_mm = geom.high_eaves_height_m * 1_000.0
+        raf_len_mm = math.hypot(span_mm, high_mm - low_mm)
+
+        m = _new_model()
+        _add_section(m, "col_sec", self.col_sec)
+        _add_section(m, "raf_sec", self.raf_sec)
+        m.add_node("BL", 0, 0, 0)
+        m.add_node("EL", 0, low_mm, 0)
+        m.add_node("EH", span_mm, high_mm, 0)
+        m.add_node("BH", span_mm, 0, 0)
+        _pin_support(m, "BL")
+        _pin_support(m, "BH")
+        _fix_out_of_plane(m, "EL")
+        _fix_out_of_plane(m, "EH")
+        m.add_member("COL_L", "BL", "EL", "steel", "col_sec")
+        m.add_member("RAF", "EL", "EH", "steel", "raf_sec")
+        m.add_member("COL_H", "EH", "BH", "steel", "col_sec")
+
+        rd = rafter_dead_udl_kn_per_m
+        cd = column_dead_udl_kn_per_m
+        if rd != 0.0:
+            m.add_member_dist_load("RAF", "FY", -rd, -rd, case="DL")
+        if cd != 0.0:
+            m.add_member_dist_load("COL_L", "FY", -cd, -cd, case="DL")
+            m.add_member_dist_load("COL_H", "FY", -cd, -cd, case="DL")
+
+        low_c = low_column_wind_udl_kn_per_m
+        high_c = high_column_wind_udl_kn_per_m
+        if low_c != 0.0:
+            m.add_member_dist_load("COL_L", "FX", low_c, low_c, case="DL")  # low col: +X
+        if high_c != 0.0:
+            m.add_member_dist_load("COL_H", "FX", -high_c, -high_c, case="DL")  # high col: −X
+
+        rw = rafter_wind_udl_kn_per_m
+        if rw != 0.0:
+            m.add_member_dist_load("RAF", "Fy", -rw, -rw, case="DL")
+
+        m.add_load_combo(_COMBO, {"DL": 1.0})
+        m.analyze_linear(log=False, check_stability=False)
+        return m, low_mm, high_mm, raf_len_mm
+
+    def run_wind_combination(
+        self,
+        *,
+        rafter_dead_udl_kn_per_m: float,
+        column_dead_udl_kn_per_m: float,
+        low_column_wind_udl_kn_per_m: float,
+        high_column_wind_udl_kn_per_m: float,
+        rafter_wind_udl_kn_per_m: float,
+    ) -> MonopitchDemand:
+        """Governing member demands under a factored mono-pitch wind combination.
+
+        Same envelope basis as :meth:`demand` (worst |N|,|V|,|M| over each member). PROVISIONAL —
+        see :meth:`_build_wind_model`. ``rafter_sag_mm`` is 0.0 here (sag is an SLS-gravity check).
+        """
+        m, low_mm, high_mm, raf_len_mm = self._build_wind_model(
+            rafter_dead_udl_kn_per_m=rafter_dead_udl_kn_per_m,
+            column_dead_udl_kn_per_m=column_dead_udl_kn_per_m,
+            low_column_wind_udl_kn_per_m=low_column_wind_udl_kn_per_m,
+            high_column_wind_udl_kn_per_m=high_column_wind_udl_kn_per_m,
+            rafter_wind_udl_kn_per_m=rafter_wind_udl_kn_per_m,
+        )
+
+        def _envelope(member: str, length_mm: float) -> tuple[float, float, float]:
+            cu = vu = mu = 0.0
+            for i in range(self._N_SAMPLES):
+                x = length_mm * i / (self._N_SAMPLES - 1)
+                cu = max(cu, abs(m.members[member].axial(x, _COMBO)))
+                vu = max(vu, abs(m.members[member].shear("Fy", x, _COMBO)))
+                mu = max(mu, abs(m.members[member].moment("Mz", x, _COMBO)))
+            return cu / 1e3, vu / 1e3, mu / 1e6  # N→kN, N·mm→kN·m
+
+        raf_cu, raf_vu, raf_mu = _envelope("RAF", raf_len_mm)
+        low_cu, low_vu, low_mu = _envelope("COL_L", low_mm)
+        high_cu, high_vu, high_mu = _envelope("COL_H", high_mm)
+        return MonopitchDemand(
+            rafter_cu_kn=raf_cu, rafter_vu_kn=raf_vu, rafter_mu_knm=raf_mu,
+            low_col_cu_kn=low_cu, low_col_vu_kn=low_vu, low_col_mu_knm=low_mu,
+            high_col_cu_kn=high_cu, high_col_vu_kn=high_vu, high_col_mu_knm=high_mu,
+            rafter_sag_mm=0.0,
+        )
+
+    def wind_combination_displacements(
+        self,
+        *,
+        rafter_dead_udl_kn_per_m: float,
+        column_dead_udl_kn_per_m: float,
+        low_column_wind_udl_kn_per_m: float,
+        high_column_wind_udl_kn_per_m: float,
+        rafter_wind_udl_kn_per_m: float,
+    ) -> dict[str, dict[str, float]]:
+        """Node displacements (DX/DY, mm) under a factored mono-pitch wind combination.
+
+        Same model as :meth:`run_wind_combination`; used for the SLS-2 eaves-sway check.
+        Returns ``{node: {"DX", "DY"}}`` for BL, EL (low eaves), EH (high eaves), BH.
+        """
+        m, _, _, _ = self._build_wind_model(
+            rafter_dead_udl_kn_per_m=rafter_dead_udl_kn_per_m,
+            column_dead_udl_kn_per_m=column_dead_udl_kn_per_m,
+            low_column_wind_udl_kn_per_m=low_column_wind_udl_kn_per_m,
+            high_column_wind_udl_kn_per_m=high_column_wind_udl_kn_per_m,
+            rafter_wind_udl_kn_per_m=rafter_wind_udl_kn_per_m,
+        )
+        out: dict[str, dict[str, float]] = {}
+        for node_name in ("BL", "EL", "EH", "BH"):
+            node = m.nodes[node_name]
+            out[node_name] = {"DX": node.DX[_COMBO], "DY": node.DY[_COMBO]}
+        return out
+
 
 class MultiSpanDemand(NamedTuple):
     """Governing member demands for a multi-span frame (kN / kN·m), plus max rafter sag (mm)."""
