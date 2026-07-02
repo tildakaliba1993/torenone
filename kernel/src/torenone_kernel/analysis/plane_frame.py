@@ -764,6 +764,165 @@ class MultiSpanAnalysis:
             out["eaves_int"] = _forces_at(m, "eaves_int", "C1", eaves_mm)
         return out
 
+    def _build_wind_model(
+        self,
+        *,
+        rafter_dead_udl_kn_per_m: float,
+        column_dead_udl_kn_per_m: float,
+        windward_column_udl_kn_per_m: float,
+        leeward_column_udl_kn_per_m: float,
+        windward_rafter_udl_kn_per_m: float,
+        leeward_rafter_udl_kn_per_m: float,
+    ) -> tuple[FEModel3D, float, float, int]:
+        """Build, load and solve a multi-span wind combination (factored dead + transverse wind).
+
+        PROVISIONAL (D13 wind). Wind blows from the LEFT: the windward external wall is C0 (+X
+        inward), the leeward external wall is C{n} (−X); internal columns carry no direct wall wind.
+        Each span's windward slope (``RL{s}``) takes the windward-roof UDL, its leeward slope
+        (``RR{s}``) the leeward-roof UDL (conservatively the same duopitch coefficients on every
+        span). Conventions mirror :meth:`PortalAnalysis._build_wind_model`: dead = global vertical
+        ``FY``; column wind = global ``FX``; rafter wind = local ``Fy`` applied as ``−UDL``.
+        """
+        geom = self.spec.geometry
+        span_mm = geom.span_m * 1_000.0
+        eaves_mm = geom.eaves_height_m * 1_000.0
+        apex_mm = geom.apex_height_m * 1_000.0
+        n_spans = geom.number_of_spans
+        raf_half_len_mm = math.hypot(span_mm / 2.0, apex_mm - eaves_mm)
+
+        m = _new_model()
+        _add_section(m, "ext_col", self.ext_col_sec)
+        _add_section(m, "int_col", self.int_col_sec)
+        _add_section(m, "raf", self.raf_sec)
+        for i in range(n_spans + 1):
+            x = i * span_mm
+            m.add_node(f"B{i}", x, 0, 0)
+            m.add_node(f"E{i}", x, eaves_mm, 0)
+            _pin_support(m, f"B{i}")
+            _fix_out_of_plane(m, f"E{i}")
+        for s in range(n_spans):
+            m.add_node(f"R{s}", (s + 0.5) * span_mm, apex_mm, 0)
+            _fix_out_of_plane(m, f"R{s}")
+        for i in range(n_spans + 1):
+            sec = "ext_col" if (i == 0 or i == n_spans) else "int_col"
+            m.add_member(f"C{i}", f"B{i}", f"E{i}", "steel", sec)
+        for s in range(n_spans):
+            m.add_member(f"RL{s}", f"E{s}", f"R{s}", "steel", "raf")
+            m.add_member(f"RR{s}", f"R{s}", f"E{s + 1}", "steel", "raf")
+
+        rd = rafter_dead_udl_kn_per_m
+        cd = column_dead_udl_kn_per_m
+        for s in range(n_spans):
+            if rd != 0.0:
+                m.add_member_dist_load(f"RL{s}", "FY", -rd, -rd, case="DL")
+                m.add_member_dist_load(f"RR{s}", "FY", -rd, -rd, case="DL")
+        if cd != 0.0:
+            for i in range(n_spans + 1):
+                m.add_member_dist_load(f"C{i}", "FY", -cd, -cd, case="DL")
+
+        # Wall wind on the two EXTERNAL columns only (global FX).
+        ww_c = windward_column_udl_kn_per_m
+        lw_c = leeward_column_udl_kn_per_m
+        if ww_c != 0.0:
+            m.add_member_dist_load("C0", "FX", ww_c, ww_c, case="DL")  # windward: +X inward
+        if lw_c != 0.0:
+            m.add_member_dist_load(f"C{n_spans}", "FX", -lw_c, -lw_c, case="DL")  # leeward: −X
+
+        # Roof wind on every span's windward/leeward slopes (local Fy, applied as −UDL).
+        ww_r = windward_rafter_udl_kn_per_m
+        lw_r = leeward_rafter_udl_kn_per_m
+        for s in range(n_spans):
+            if ww_r != 0.0:
+                m.add_member_dist_load(f"RL{s}", "Fy", -ww_r, -ww_r, case="DL")
+            if lw_r != 0.0:
+                m.add_member_dist_load(f"RR{s}", "Fy", -lw_r, -lw_r, case="DL")
+
+        m.add_load_combo(_COMBO, {"DL": 1.0})
+        m.analyze_linear(log=False, check_stability=False)
+        return m, eaves_mm, raf_half_len_mm, n_spans
+
+    def run_wind_combination(
+        self,
+        *,
+        rafter_dead_udl_kn_per_m: float,
+        column_dead_udl_kn_per_m: float,
+        windward_column_udl_kn_per_m: float,
+        leeward_column_udl_kn_per_m: float,
+        windward_rafter_udl_kn_per_m: float,
+        leeward_rafter_udl_kn_per_m: float,
+    ) -> MultiSpanDemand:
+        """Governing member demands under a factored multi-span wind combination.
+
+        Same envelope basis as :meth:`demand` (worst |N|,|V|,|M| over the external columns, the
+        internal/valley columns, and all rafters). PROVISIONAL — see :meth:`_build_wind_model`.
+        ``rafter_sag_mm`` is 0.0 here (sag is an SLS-gravity check).
+        """
+        m, eaves_mm, raf_half_len_mm, n_spans = self._build_wind_model(
+            rafter_dead_udl_kn_per_m=rafter_dead_udl_kn_per_m,
+            column_dead_udl_kn_per_m=column_dead_udl_kn_per_m,
+            windward_column_udl_kn_per_m=windward_column_udl_kn_per_m,
+            leeward_column_udl_kn_per_m=leeward_column_udl_kn_per_m,
+            windward_rafter_udl_kn_per_m=windward_rafter_udl_kn_per_m,
+            leeward_rafter_udl_kn_per_m=leeward_rafter_udl_kn_per_m,
+        )
+
+        def _envelope(member: str, length_mm: float) -> tuple[float, float, float]:
+            cu = vu = mu = 0.0
+            for i in range(self._N_SAMPLES):
+                x = length_mm * i / (self._N_SAMPLES - 1)
+                cu = max(cu, abs(m.members[member].axial(x, _COMBO)))
+                vu = max(vu, abs(m.members[member].shear("Fy", x, _COMBO)))
+                mu = max(mu, abs(m.members[member].moment("Mz", x, _COMBO)))
+            return cu / 1e3, vu / 1e3, mu / 1e6
+
+        def _worst(members: list[str], length_mm: float) -> tuple[float, float, float]:
+            cu = vu = mu = 0.0
+            for name in members:
+                c, v, mo = _envelope(name, length_mm)
+                cu, vu, mu = max(cu, c), max(vu, v), max(mu, mo)
+            return cu, vu, mu
+
+        rafters = [f"RL{s}" for s in range(n_spans)] + [f"RR{s}" for s in range(n_spans)]
+        raf_cu, raf_vu, raf_mu = _worst(rafters, raf_half_len_mm)
+        ext_cu, ext_vu, ext_mu = _worst([f"C{i}" for i in (0, n_spans)], eaves_mm)
+        int_cols = [f"C{i}" for i in range(1, n_spans)]
+        int_cu, int_vu, int_mu = _worst(int_cols, eaves_mm) if int_cols else (0.0, 0.0, 0.0)
+
+        return MultiSpanDemand(
+            rafter_cu_kn=raf_cu, rafter_vu_kn=raf_vu, rafter_mu_knm=raf_mu, rafter_sag_mm=0.0,
+            ext_col_cu_kn=ext_cu, ext_col_vu_kn=ext_vu, ext_col_mu_knm=ext_mu,
+            int_col_cu_kn=int_cu, int_col_vu_kn=int_vu, int_col_mu_knm=int_mu,
+        )
+
+    def wind_combination_displacements(
+        self,
+        *,
+        rafter_dead_udl_kn_per_m: float,
+        column_dead_udl_kn_per_m: float,
+        windward_column_udl_kn_per_m: float,
+        leeward_column_udl_kn_per_m: float,
+        windward_rafter_udl_kn_per_m: float,
+        leeward_rafter_udl_kn_per_m: float,
+    ) -> dict[str, dict[str, float]]:
+        """Node displacements (DX/DY, mm) under a factored multi-span wind combination.
+
+        Same model as :meth:`run_wind_combination`; used for the SLS-2 eaves-sway check. Returns
+        ``{node: {"DX", "DY"}}`` for every eaves/valley node E0…E{n} (worst drift taken downstream).
+        """
+        m, _, _, n_spans = self._build_wind_model(
+            rafter_dead_udl_kn_per_m=rafter_dead_udl_kn_per_m,
+            column_dead_udl_kn_per_m=column_dead_udl_kn_per_m,
+            windward_column_udl_kn_per_m=windward_column_udl_kn_per_m,
+            leeward_column_udl_kn_per_m=leeward_column_udl_kn_per_m,
+            windward_rafter_udl_kn_per_m=windward_rafter_udl_kn_per_m,
+            leeward_rafter_udl_kn_per_m=leeward_rafter_udl_kn_per_m,
+        )
+        out: dict[str, dict[str, float]] = {}
+        for i in range(n_spans + 1):
+            node = m.nodes[f"E{i}"]
+            out[f"E{i}"] = {"DX": node.DX[_COMBO], "DY": node.DY[_COMBO]}
+        return out
+
 
 # ---------------------------------------------------------------------------
 # Portal builder from FrameSpec

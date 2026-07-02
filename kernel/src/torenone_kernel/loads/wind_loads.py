@@ -88,6 +88,69 @@ def wind_loads(spec: FrameSpec) -> WindLoadResult:
     )
 
 
+def multispan_wind_loads(spec: FrameSpec) -> WindLoadResult:
+    """Wind load cases for a MULTI-SPAN (duopitch) frame, transverse wind — SANS 10160-3:2019.
+
+    PROVISIONAL (D13 wind). A multi-span roof is duopitch per span; equal spans are left-right
+    symmetric, so one wind direction suffices. Reuses :class:`WindLoadCase` (windward wall →
+    external column C0, leeward wall → Cn, windward slope → every ``RL{s}``, leeward slope →
+    every ``RR{s}``). Differences from the single-span :func:`wind_loads`:
+      * ``h/d`` uses the FULL building width across all spans (the wind's fetch), not one span;
+      * the SAME duopitch zone-H/I coefficients are applied to EVERY span — this ignores the
+        code's reduction on downwind spans (cl. 8.3.6), so it is CONSERVATIVE and simple.
+    """
+    g = spec.geometry
+    w = spec.wind
+
+    ze = g.apex_height_m
+    vp = peak_wind_speed(ze, w.terrain_category, w.basic_wind_speed_ms)
+    qp = peak_velocity_pressure_kpa(vp, air_density(w.site_altitude_m))
+    tributary_m = g.bay_spacing_m
+
+    walls = wall_pressure_coefficients(ze / g.building_width_m)  # d = full width across spans
+    roof = duopitch_roof_pressure_coefficients(g.roof_pitch_deg)
+
+    if w.has_dominant_opening:
+        internal = dominant_opening_internal_pressure(walls.cpe_windward)
+    else:
+        internal = enclosed_internal_pressure()
+
+    roof_branches = (
+        ("roof suction (uplift)", roof.windward_cpe_suction),
+        ("roof pressure (downforce)", roof.windward_cpe_pressure),
+    )
+
+    cases: list[WindLoadCase] = []
+    for cpi in internal.cpi_cases:
+        for branch_name, cpe_roof_windward in roof_branches:
+            ncp_ww = walls.cpe_windward - cpi
+            ncp_lw = walls.cpe_leeward - cpi
+            ncp_rw = cpe_roof_windward - cpi
+            ncp_rl = roof.leeward_cpe_suction - cpi
+            cases.append(
+                WindLoadCase(
+                    name=f"cpi={cpi:+.2f}, {branch_name}",
+                    cpi=cpi,
+                    net_cp_windward_wall=ncp_ww,
+                    net_cp_leeward_wall=ncp_lw,
+                    net_cp_windward_roof=ncp_rw,
+                    net_cp_leeward_roof=ncp_rl,
+                    windward_column_udl_kn_per_m=qp * ncp_ww * tributary_m,
+                    leeward_column_udl_kn_per_m=qp * ncp_lw * tributary_m,
+                    windward_rafter_udl_kn_per_m=qp * ncp_rw * tributary_m,
+                    leeward_rafter_udl_kn_per_m=qp * ncp_rl * tributary_m,
+                )
+            )
+
+    return WindLoadResult(
+        peak_velocity_pressure_kpa=qp,
+        reference_height_m=ze,
+        scenario=internal.scenario,
+        cases=tuple(cases),
+        clause="SANS 10160-3:2019 cl. 7–8 (multi-span, duopitch per span) — net = qp·(cpe − cpi)",
+    )
+
+
 class MonopitchWindCase(NamedTuple):
     """One mono-pitch wind load case: per-member UDLs + the net coefficients used.
 

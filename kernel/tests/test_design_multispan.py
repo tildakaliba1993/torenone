@@ -44,13 +44,16 @@ def test_designs_rafter_external_and_internal_columns() -> None:
     assert r.total_steel_mass_kg and r.total_steel_mass_kg > 0
 
 
-def test_marked_provisional_with_last_mile_but_no_wind() -> None:
-    # v2: last mile (external eaves + valley connection + baseplate) designed; wind still deferred.
+def test_marked_provisional_with_last_mile_and_advisory_wind() -> None:
+    # v2: last mile (external eaves + valley connection + baseplate) designed, and wind is now
+    # CHECKED as an advisory (non-gating) action — increment 2d.
     r = design(_multispan_spec(2))
     blob = " ".join(r.warnings).lower()
     assert "provisional" in blob and "multi-span" in blob
-    assert "wind" in blob and "gravity" in blob
-    assert r.wind is None  # wind still not modelled for multi-span
+    assert "wind" in blob and "advisory" in blob
+    wind_checks = [c for c in r.checks if "wind" in c.name.lower()]
+    assert wind_checks, "expected advisory wind checks on the multi-span result"
+    assert all(c.informational for c in wind_checks)
     # The last mile IS designed now — an external eaves + a valley connection + a baseplate.
     assert r.baseplate is not None
     locations = {c.location for c in r.connections}

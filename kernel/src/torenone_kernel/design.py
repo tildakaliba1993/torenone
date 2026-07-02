@@ -62,7 +62,11 @@ from torenone_kernel.loads.combinations import (
 )
 from torenone_kernel.loads.dead import dead_loads
 from torenone_kernel.loads.imposed import imposed_roof_loads
-from torenone_kernel.loads.wind_loads import monopitch_wind_loads, wind_loads
+from torenone_kernel.loads.wind_loads import (
+    monopitch_wind_loads,
+    multispan_wind_loads,
+    wind_loads,
+)
 from torenone_kernel.models.enums import RoofType, SteelGrade
 from torenone_kernel.models.frame_spec import FrameSpec
 from torenone_kernel.models.results import (
@@ -440,6 +444,143 @@ def _monopitch_wind_sway_check(
             f"PROVISIONAL advisory (non-gating). Mono-pitch worst eaves drift "
             f"{worst_drift_mm:.1f} mm vs H/400 = {limit_mm:.1f} mm "
             f"(practice limit H/150 = {high_mm / 150.0:.1f} mm). Serviceability only; "
+            "wind-on-frame model pending registered-engineer validation."
+        ),
+    )
+
+
+def _multispan_wind_combination_checks(
+    spec: FrameSpec,
+    *,
+    ext_sec: SectionProperties,
+    int_sec: SectionProperties,
+    raf_sec: SectionProperties,
+    dead: DeadLoadResult,
+    combos: dict[str, LoadCombination],
+    fy_ext: float,
+    fy_int: float,
+    fy_raf: float,
+    kl_col_mm: float,
+    ltb_col_mm: float,
+    kl_raf_mm: float,
+    ltb_raf_mm: float,
+) -> list[CheckResult]:
+    """Check the multi-span members under wind combinations ULS-2/3 — INFORMATIONAL (non-gating).
+
+    Mirrors :func:`_wind_combination_checks` for the multi-span geometry (external + valley columns
+    + rafters), using :func:`multispan_wind_loads` and :meth:`MultiSpanAnalysis.run_wind_combination`.
+    PROVISIONAL (D13 wind): sized on gravity only; wind reported as advisory until validation.
+    """
+    wind = multispan_wind_loads(spec)
+    col_dead = dead.column_self_weight_kn_per_m + dead.wall_cladding_udl_kn_per_m
+    n_spans = spec.geometry.number_of_spans
+    best_per_key: dict[str, tuple[float, list[CheckResult]]] = {}
+    for key in ("ULS-2", "ULS-3"):
+        combo = combos.get(key)
+        if combo is None:
+            continue
+        g_g = combo.factors.get("dead", 1.0)
+        g_w = combo.factors.get("wind", 1.0)
+        for case in wind.cases:
+            dem = MultiSpanAnalysis(spec, ext_sec, int_sec, raf_sec).run_wind_combination(
+                rafter_dead_udl_kn_per_m=g_g * dead.rafter_udl_kn_per_m,
+                column_dead_udl_kn_per_m=g_g * col_dead,
+                windward_column_udl_kn_per_m=g_w * case.windward_column_udl_kn_per_m,
+                leeward_column_udl_kn_per_m=g_w * case.leeward_column_udl_kn_per_m,
+                windward_rafter_udl_kn_per_m=g_w * case.windward_rafter_udl_kn_per_m,
+                leeward_rafter_udl_kn_per_m=g_w * case.leeward_rafter_udl_kn_per_m,
+            )
+            try:
+                checks = run_member_checks(
+                    ext_sec, fy_ext, dem.ext_col_cu_kn, dem.ext_col_vu_kn, dem.ext_col_mu_knm,
+                    kl_col_mm, ltb_col_mm, member="column",
+                ) + run_member_checks(
+                    raf_sec, fy_raf, dem.rafter_cu_kn, dem.rafter_vu_kn, dem.rafter_mu_knm,
+                    kl_raf_mm, ltb_raf_mm, member="rafter",
+                )
+                if n_spans >= 2:
+                    checks += run_member_checks(
+                        int_sec, fy_int, dem.int_col_cu_kn, dem.int_col_vu_kn, dem.int_col_mu_knm,
+                        kl_col_mm, ltb_col_mm, member="internal column",
+                    )
+            except SectionIneligibleError:
+                continue
+            util = max((c.utilisation for c in checks), default=0.0)
+            prev = best_per_key.get(key)
+            if prev is None or util > prev[0]:
+                best_per_key[key] = (util, checks)
+
+    out: list[CheckResult] = []
+    for key in ("ULS-2", "ULS-3"):
+        entry = best_per_key.get(key)
+        if entry is None:
+            continue
+        combo = combos[key]
+        for c in entry[1]:
+            detail = (
+                f"PROVISIONAL advisory (non-gating). Multi-span wind-combination check "
+                f"({combo.name}). {c.detail or ''}"
+            ).strip()
+            out.append(
+                CheckResult(
+                    name=f"{c.name} [{key} wind]",
+                    clause=c.clause,
+                    utilisation=c.utilisation,
+                    passed=c.passed,
+                    informational=True,
+                    detail=detail,
+                )
+            )
+    return out
+
+
+def _multispan_wind_sway_check(
+    spec: FrameSpec,
+    *,
+    ext_sec: SectionProperties,
+    int_sec: SectionProperties,
+    raf_sec: SectionProperties,
+    dead: DeadLoadResult,
+    combos: dict[str, LoadCombination],
+) -> CheckResult | None:
+    """SLS-2 eaves wind-sway (lateral drift) for a multi-span — INFORMATIONAL (advisory-only).
+
+    Worst lateral drift of any eaves/valley node over all wind cases under SLS-2, vs H/400 at the
+    eaves height. PROVISIONAL (D13 wind); mirrors :func:`_wind_sway_check`. ``None`` if no SLS-2.
+    """
+    combo = combos.get("SLS-2")
+    if combo is None:
+        return None
+    wind = multispan_wind_loads(spec)
+    col_dead = dead.column_self_weight_kn_per_m + dead.wall_cladding_udl_kn_per_m
+    g_g = combo.factors.get("dead", 1.0)
+    g_w = combo.factors.get("wind", 1.0)
+    eaves_mm = spec.geometry.eaves_height_m * 1_000.0
+
+    worst_drift_mm = 0.0
+    for case in wind.cases:
+        disp = MultiSpanAnalysis(spec, ext_sec, int_sec, raf_sec).wind_combination_displacements(
+            rafter_dead_udl_kn_per_m=g_g * dead.rafter_udl_kn_per_m,
+            column_dead_udl_kn_per_m=g_g * col_dead,
+            windward_column_udl_kn_per_m=g_w * case.windward_column_udl_kn_per_m,
+            leeward_column_udl_kn_per_m=g_w * case.leeward_column_udl_kn_per_m,
+            windward_rafter_udl_kn_per_m=g_w * case.windward_rafter_udl_kn_per_m,
+            leeward_rafter_udl_kn_per_m=g_w * case.leeward_rafter_udl_kn_per_m,
+        )
+        worst_drift_mm = max(worst_drift_mm, *(abs(v["DX"]) for v in disp.values()))
+
+    base = horizontal_sway_check(worst_drift_mm, eaves_mm)
+    limit_mm = eaves_mm / 400.0
+    return CheckResult(
+        name=f"{base.name} [SLS-2 wind]",
+        clause=base.clause,
+        utilisation=base.utilisation,
+        passed=base.passed,
+        informational=True,
+        detail=(
+            f"PROVISIONAL advisory (non-gating). Multi-span worst eaves drift "
+            f"{worst_drift_mm:.1f} mm vs H/400 = {limit_mm:.1f} mm "
+            f"(practice limit H/150 = {eaves_mm / 150.0:.1f} mm). Serviceability only; "
             "wind-on-frame model pending registered-engineer validation."
         ),
     )
@@ -1027,8 +1168,9 @@ def _design_multispan(
     Gravity (ULS-1) sizing of the rafters, external columns and internal (valley) columns, reusing
     the validated SANS check pipeline on forces from the validated multi-span statics
     (:class:`MultiSpanAnalysis`). Each column class is given the section adequate for the WORST of
-    its members. **Wind and the last mile (connections/baseplates/footings) are NOT modelled for
-    multi-span yet** (see warnings). Mono-pitch multi-span is out of scope.
+    its members. The last mile (connections/baseplates/footing) is designed (v2 inc 1) and WIND
+    (SANS 10160-3) is CHECKED as an ADVISORY / non-gating action (v2 inc 2d) — both PROVISIONAL
+    (see warnings). Mono-pitch multi-span is out of scope.
     """
     if spec.geometry.roof_type == RoofType.MONOPITCH:
         raise ValueError("multi-span mono-pitch frames are not supported")
@@ -1142,9 +1284,24 @@ def _design_multispan(
 
     assert raf_result is not None and ext_result is not None and int_result is not None
     connections, baseplate, footing = _design_last_mile_multispan(spec, raf_sec, ext_sec, int_sec, code)
+    # Wind (ULS-2/3 member checks + SLS-2 eaves sway) — INFORMATIONAL / PROVISIONAL (D13 wind).
+    final_dead = dead_loads(spec, rafter=raf_sec, column=ext_sec)
+    fy_ext_final = code.material_fy(spec.materials.steel_grade, ext_sec.flange_thickness_mm)
+    fy_int_final = code.material_fy(spec.materials.steel_grade, int_sec.flange_thickness_mm)
+    fy_raf_final = code.material_fy(spec.materials.steel_grade, raf_sec.flange_thickness_mm)
+    multispan_wind_checks = _multispan_wind_combination_checks(
+        spec, ext_sec=ext_sec, int_sec=int_sec, raf_sec=raf_sec, dead=final_dead, combos=combos,
+        fy_ext=fy_ext_final, fy_int=fy_int_final, fy_raf=fy_raf_final,
+        kl_col_mm=KL_col_mm, ltb_col_mm=LTB_col_mm, kl_raf_mm=KL_raf_mm, ltb_raf_mm=LTB_raf_mm,
+    )
+    multispan_sway = _multispan_wind_sway_check(
+        spec, ext_sec=ext_sec, int_sec=int_sec, raf_sec=raf_sec, dead=final_dead, combos=combos
+    )
     all_checks = [
         *raf_result.checks, *ext_result.checks, *int_result.checks, deflection_check,
         *_last_mile_checks(connections, baseplate, footing),
+        *multispan_wind_checks,
+        *([multispan_sway] if multispan_sway is not None else []),
     ]
     sections = [
         SectionChoice(member="rafter", designation=raf_sec.designation),
@@ -1156,8 +1313,11 @@ def _design_multispan(
         f"MULTI-SPAN portal ({n_spans} spans, {n_spans - 1} internal/valley column line(s)) — "
         "PROVISIONAL geometry (Path B, sign-off-pack D13). The statics are validated but the method "
         "awaits registered-engineer sign-off before it is used in construction.",
-        "Members are sized on GRAVITY (ULS-1) only. WIND actions and the wind-on-frame checks are "
-        "NOT modelled for multi-span yet.",
+        "Members are sized on GRAVITY (ULS-1). WIND (SANS 10160-3) is now CHECKED for multi-span "
+        "(v2, PROVISIONAL) as an ADVISORY, NON-GATING action — reported with the ULS-2/3 member "
+        "checks and the SLS-2 eaves-sway. The same duopitch roof coefficients are applied to every "
+        "span (conservative; the code's downwind-span reductions are not taken). Wind does not size "
+        "members or gate the result until registered-engineer validation of the wind-on-frame method.",
         "The last mile (an external eaves + a valley connection, column baseplate, pad footing) is now "
         "designed for multi-span (v2, PROVISIONAL) — on GRAVITY (ULS-1) joint/base forces. The "
         "baseplate + footing use the WORSE column base (the valley column carries ~2× the axial of "
@@ -1184,7 +1344,8 @@ def _design_multispan(
         connections=connections,
         baseplate=baseplate,
         footing=footing,
-        # wind / diagram omitted — wind not modelled for multi-span v2 yet.
+        # wind (WindLoadResult) / diagram omitted — the advisory wind CHECKS are in `checks`;
+        # the persisted wind-actions audit table + BMD/SFD diagram are duopitch-single-span only.
     )
 
 

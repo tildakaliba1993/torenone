@@ -131,3 +131,50 @@ def test_monopitch_windward_dominant_opening_increases_uplift() -> None:
         for c in monopitch_wind_loads(_monopitch_spec(has_dominant_opening=True)).cases
     )
     assert dominant < enclosed  # more negative = larger uplift
+
+
+# --- Multi-span wind-load assembly (SANS 10160-3, duopitch per span, v2 inc 2d, PROVISIONAL D13) ---
+
+
+def _multispan_spec(n_spans: int = 2) -> FrameSpec:
+    return FrameSpec(
+        geometry=FrameGeometry(
+            span_m=20.0, eaves_height_m=6.0, roof_pitch_deg=10.0, bay_spacing_m=6.0,
+            number_of_bays=5, number_of_spans=n_spans,
+        ),
+        dead=DeadLoadInputs(roof_kpa=0.30),
+        wind=WindContext(basic_wind_speed_ms=40.0, terrain_category=TerrainCategory.B),
+    )
+
+
+def test_multispan_reference_height_is_apex() -> None:
+    from torenone_kernel.loads.wind_loads import multispan_wind_loads
+
+    r = multispan_wind_loads(_multispan_spec())
+    ze = 6.0 + 10.0 * math.tan(math.radians(10.0))  # apex over the half-span of one span
+    assert r.reference_height_m == pytest.approx(ze)
+
+
+def test_multispan_uses_full_building_width_for_h_over_d() -> None:
+    # A 2-span (wider) building has a larger d -> different (>= single-span) leeward wall cpe.
+    from torenone_kernel.loads.wind_loads import multispan_wind_loads
+
+    one = multispan_wind_loads(_multispan_spec(1)).cases[0].net_cp_leeward_wall
+    two = multispan_wind_loads(_multispan_spec(2)).cases[0].net_cp_leeward_wall
+    assert one != two  # h/d changed because d = full width across spans
+
+
+def test_multispan_enumerates_two_branches_per_cpi() -> None:
+    from torenone_kernel.loads.wind_loads import multispan_wind_loads
+
+    r = multispan_wind_loads(_multispan_spec())
+    assert len(r.cases) == 4  # 2 cpi cases × 2 windward-roof branches
+    assert "multi-span" in r.clause
+
+
+def test_multispan_uplift_case_has_negative_rafter_loads() -> None:
+    from torenone_kernel.loads.wind_loads import multispan_wind_loads
+
+    uplift = min(multispan_wind_loads(_multispan_spec()).cases,
+                 key=lambda c: c.windward_rafter_udl_kn_per_m)
+    assert uplift.windward_rafter_udl_kn_per_m < 0

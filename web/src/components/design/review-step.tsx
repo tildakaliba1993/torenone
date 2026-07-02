@@ -375,8 +375,8 @@ export function ReviewStep({
                   {nSpans - 1 > 1 ? "s" : ""}) is new and <strong>awaiting registered-engineer
                   validation</strong> — treat it as indicative only, not for construction, until your
                   firm&rsquo;s engineer has reviewed and stamped it. Gravity, the eaves and valley
-                  connections, the baseplate and the footing are designed (provisional); wind is not
-                  yet modelled for multi-span.
+                  connections, the baseplate and the footing are designed, and wind (SANS 10160-3) is
+                  now checked as an advisory, non-gating action (all provisional) for multi-span.
                 </p>
               </div>
             ) : null}
